@@ -44,6 +44,6 @@ class CfgDocument {
       if (l is KeyValueLine && l.isEdited) return '"${l.key}" "${l.value}"';
       return l.raw;
     }).join('\n');
-    return endsWithNewline && buf.isNotEmpty ? '$buf\n' : buf;
+    return endsWithNewline ? '$buf\n' : buf;
   }
 }

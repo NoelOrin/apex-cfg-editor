@@ -35,4 +35,16 @@ void main() {
     const src = '"setting.csm_enabled" ""';
     expect(p.parse(src).serialize(), src);
   });
+
+  test('roundtrip preserves a document that is a single newline', () {
+    expect(p.parse('\n').serialize(), '\n');
+  });
+
+  test('roundtrip preserves an empty document', () {
+    expect(p.parse('').serialize(), '');
+  });
+
+  test('roundtrip preserves a document of two newlines', () {
+    expect(p.parse('\n\n').serialize(), '\n\n');
+  });
 }
