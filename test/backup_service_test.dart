@@ -38,4 +38,18 @@ void main() {
     final l = b.listBackups(target.path);
     expect(l.first.compareTo(l.last), greaterThanOrEqualTo(0));
   });
+
+  test('list newest first with distinct hand-written timestamps', () {
+    final target = File('${tmp.path}/Documents/videoconfig.txt')
+      ..createSync(recursive: true)..writeAsStringSync('v\n');
+    final b = BackupService(baseDir: '${tmp.path}/appdata');
+    b.backupBeforeSave(target.path, 'v\n');
+    final backupDir = File(b.listBackups(target.path).first).parent;
+    File('${backupDir.path}/20260101-000000.cfg').writeAsStringSync('older\n');
+    File('${backupDir.path}/20270101-000000.cfg').writeAsStringSync('newer\n');
+    final l = b.listBackups(target.path);
+    expect(l, hasLength(3)); // 3 个独立文件，排除同秒合并干扰
+    expect(l.first.endsWith('20270101-000000.cfg'), isTrue); // 新→旧
+    expect(l.last.endsWith('20260101-000000.cfg'), isTrue);
+  });
 }
