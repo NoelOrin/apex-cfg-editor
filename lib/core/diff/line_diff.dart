@@ -18,6 +18,10 @@ class LineDiff {
 
   /// 基线 → 当前行级对齐视图（git 双栏风格）。
   List<DiffRow> diff(String baseline, String current) {
+    // 归一化：非空且不以 \n 结尾的文本补终止符，保证逐行切分不丢行；
+    // 补的终止符只用于行切分，不会出现在任何 DiffRow 文本中。
+    if (baseline.isNotEmpty && !baseline.endsWith('\n')) baseline += '\n';
+    if (current.isNotEmpty && !current.endsWith('\n')) current += '\n';
     if (baseline == current) return _allSame(baseline, current);
     // 1000ms（diff_match_patch 的 diffTimeout 单位是秒）。
     final engine = dmp.DiffMatchPatch()..diffTimeout = 1.0;
