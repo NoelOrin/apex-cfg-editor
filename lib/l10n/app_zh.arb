@@ -7,5 +7,6 @@
   "restore": "还原",
   "kbNotDocumented": "该键尚未收录说明，仍可编辑。",
   "emptyDocHint": "打开一个 cfg 文件开始编辑",
-  "noChanges": "无变更"
+  "noChanges": "无变更",
+  "kbRecommended": "推荐：{value}"
 }

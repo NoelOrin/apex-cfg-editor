@@ -31,4 +31,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get noChanges => '无变更';
+
+  @override
+  String kbRecommended(Object value) {
+    return '推荐：$value';
+  }
 }

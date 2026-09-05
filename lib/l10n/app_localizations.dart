@@ -145,6 +145,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No changes'**
   String get noChanges;
+
+  /// No description provided for @kbRecommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended: {value}'**
+  String kbRecommended(Object value);
 }
 
 class _AppLocalizationsDelegate

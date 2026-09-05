@@ -32,4 +32,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noChanges => 'No changes';
+
+  @override
+  String kbRecommended(Object value) {
+    return 'Recommended: $value';
+  }
 }
