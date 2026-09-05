@@ -1,0 +1,9 @@
+{
+  "@@locale": "en",
+  "appTitle": "Apex CFG Editor",
+  "modeTable": "Table",
+  "modeText": "Text",
+  "save": "Save",
+  "restore": "Restore",
+  "kbNotDocumented": "Key not documented yet. You can still edit it."
+}
