@@ -37,4 +37,26 @@ void main() {
     (doc.lines[0] as CvarLine).setNewValue('0');
     expect(doc.serialize(), 'fps_max 0 // cap\n');
   });
+
+  test('// inside quotes stays part of the value', () {
+    final doc = p.parse('bind "T" "say // hi"\n');
+    final kv = doc.lines[0] as CvarLine;
+    expect(kv.key, 'bind');
+    expect(kv.value, '"T" "say // hi"');
+    expect(kv.inlineComment, '');
+  });
+
+  test('unquoted // after quoted value still splits a comment', () {
+    final doc = p.parse('fps_max 128 // cap\n');
+    final kv = doc.lines[0] as CvarLine;
+    expect(kv.value, '128');
+    expect(kv.inlineComment, '// cap');
+  });
+
+  test('escaped quotes keep quote state, // inside stays value', () {
+    final doc = p.parse('bind "T" "say \\"// ok\\""\n');
+    final kv = doc.lines[0] as CvarLine;
+    expect(kv.value, '"T" "say \\"// ok\\""');
+    expect(kv.inlineComment, '');
+  });
 }

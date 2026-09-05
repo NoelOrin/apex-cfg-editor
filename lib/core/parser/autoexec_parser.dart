@@ -7,6 +7,27 @@ class AutoexecParser {
 
   static final _cvar = RegExp(r'^(\s*)([^\s/][^\s]*)(?:\s+(.*?))?(\s*)$');
 
+  /// 首个位于双引号字符串之外的 `//` 下标；无则 -1。
+  /// 引号内的 `//` 是值的一部分（Source 引擎语义）；`\\"` 等转义不改变引号状态。
+  static int _lineCommentStart(String s) {
+    var inQuote = false;
+    var i = 0;
+    while (i < s.length) {
+      final c = s[i];
+      if (c == '\\') {
+        i += 2; // 转义：连同下一字符跳过
+        continue;
+      }
+      if (c == '"') {
+        inQuote = !inQuote;
+      } else if (!inQuote && c == '/' && i + 1 < s.length && s[i + 1] == '/') {
+        return i;
+      }
+      i += 1;
+    }
+    return -1;
+  }
+
   CfgDocument parse(String src) {
     final hasTrailing = src.endsWith('\n');
     final rawLines = src.split('\n');
@@ -41,7 +62,7 @@ class AutoexecParser {
       }
       final rest = (m.group(3) ?? '').trim();
       String value = rest, comment = '';
-      final ci = rest.indexOf('//');
+      final ci = _lineCommentStart(rest);
       if (ci >= 0) {
         value = rest.substring(0, ci).trim();
         comment = rest.substring(ci).trim();
