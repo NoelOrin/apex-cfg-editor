@@ -6,5 +6,6 @@
   "save": "Save",
   "restore": "Restore",
   "kbNotDocumented": "Key not documented yet. You can still edit it.",
-  "emptyDocHint": "Open a cfg file to start editing"
+  "emptyDocHint": "Open a cfg file to start editing",
+  "noChanges": "No changes"
 }

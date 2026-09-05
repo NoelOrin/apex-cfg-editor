@@ -28,4 +28,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get emptyDocHint => '打开一个 cfg 文件开始编辑';
+
+  @override
+  String get noChanges => '无变更';
 }

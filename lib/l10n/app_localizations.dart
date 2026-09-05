@@ -139,6 +139,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open a cfg file to start editing'**
   String get emptyDocHint;
+
+  /// No description provided for @noChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes'**
+  String get noChanges;
 }
 
 class _AppLocalizationsDelegate

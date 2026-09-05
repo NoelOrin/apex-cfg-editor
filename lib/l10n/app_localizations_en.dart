@@ -29,4 +29,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get emptyDocHint => 'Open a cfg file to start editing';
+
+  @override
+  String get noChanges => 'No changes';
 }
