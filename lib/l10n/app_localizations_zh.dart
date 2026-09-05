@@ -25,4 +25,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get kbNotDocumented => '该键尚未收录说明，仍可编辑。';
+
+  @override
+  String get emptyDocHint => '打开一个 cfg 文件开始编辑';
 }

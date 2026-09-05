@@ -133,6 +133,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Key not documented yet. You can still edit it.'**
   String get kbNotDocumented;
+
+  /// No description provided for @emptyDocHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a cfg file to start editing'**
+  String get emptyDocHint;
 }
 
 class _AppLocalizationsDelegate

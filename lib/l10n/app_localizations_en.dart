@@ -26,4 +26,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get kbNotDocumented =>
       'Key not documented yet. You can still edit it.';
+
+  @override
+  String get emptyDocHint => 'Open a cfg file to start editing';
 }
