@@ -22,7 +22,34 @@ void main() {
       ..writeAsBytesSync(gbk.encode('// 帧数优化\nfps_max 128\n'));
     final r = CfgFileIo.read(f.path);
     expect(r.encoding, CfgEncoding.gbk);
+    expect(r.hasBadBytes, isFalse);
     expect(r.text.contains('帧数优化'), isTrue);
+  });
+
+  test('bom file with bad bytes flagged, not thrown', () {
+    final r = CfgFileIo.readBytes([0xEF, 0xBB, 0xBF, 0x61, 0xFF]);
+    expect(r.encoding, CfgEncoding.utf8);
+    expect(r.hasBadBytes, isTrue);
+    expect(r.text.startsWith('a'), isTrue);
+    expect(r.text.contains('\u{FFFD}'), isTrue);
+  });
+
+  test('gbk text writes back by original encoding', () {
+    final f = File('${tmp.path}/c.cfg')
+      ..writeAsBytesSync(gbk.encode('// 帧数优化\nfps_max 128\n'));
+    final r = CfgFileIo.read(f.path);
+    expect(r.hasBadBytes, isFalse);
+    final gbkPath = '${tmp.path}/c-gbk.cfg';
+    CfgFileIo.write(gbkPath, r.text, r.encoding);
+    expect(File(gbkPath).readAsBytesSync(), f.readAsBytesSync());
+    final r2 = CfgFileIo.read(gbkPath);
+    expect(r2.encoding, CfgEncoding.gbk);
+    expect(r2.text, r.text);
+    final utf8Path = '${tmp.path}/c-utf8.cfg';
+    CfgFileIo.write(utf8Path, r.text, CfgEncoding.utf8);
+    expect(File(utf8Path).readAsBytesSync(), isNot(f.readAsBytesSync()));
+    expect(gbk.decode(File(utf8Path).readAsBytesSync()).contains('\u{FFFD}'),
+        isFalse);
   });
 
   test('bad bytes flagged via U+FFFD', () {
