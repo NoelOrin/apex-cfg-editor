@@ -76,7 +76,11 @@ class EditBloc extends Bloc<EditEvent, EditState> {
         (e, em) => em(state.copyWith(doc: e.doc, dirty: true)));
     on<SelectionChanged>(
         (e, em) => em(state.copyWith(selectedIndex: () => e.index)));
-    on<DocumentSaved>(
-        (e, em) => em(state.copyWith(baseline: e.newBaseline, dirty: false)));
+    on<DocumentSaved>((e, em) => em(state.copyWith(
+        baseline: e.newBaseline,
+        // 正常路径 serialize==newBaseline → false；saveImpl await 窗口内
+        // 有交错编辑时 newBaseline 落后于当前 serialize → 保持 dirty，
+        // 防止新编辑被静默吞掉（下次 SaveRequested 不会被 !dirty no-op）。
+        dirty: state.doc?.serialize() != e.newBaseline)));
   }
 }

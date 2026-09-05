@@ -79,6 +79,25 @@ void main() {
             .having((s) => s.baseline, 'baseline', _edited),
       ],
     );
+
+    blocTest<EditBloc, EditState>(
+      'stale baseline save keeps dirty for interleaved edits',
+      build: () => EditBloc(),
+      act: (b) {
+        b.add(DocumentOpened(doc: _doc(), baseline: _baseline));
+        b.add(LineValueChanged(index: 0, value: '144'));
+        // 旧 serialize：模拟 saveImpl await 窗口内发生交错编辑后，
+        // DocumentSaved 携带的基线已落后于当前 doc。
+        b.add(DocumentSaved(_baseline));
+      },
+      expect: () => [
+        isA<EditState>().having((s) => s.dirty, 'dirty', false),
+        isA<EditState>().having((s) => s.dirty, 'dirty', true),
+        isA<EditState>()
+            .having((s) => s.dirty, 'dirty', true)
+            .having((s) => s.baseline, 'baseline', _baseline),
+      ],
+    );
   });
 
   group('diff bloc', () {
@@ -267,6 +286,58 @@ void main() {
       expect(edit.state.baseline, _edited);
       expect(edit.state.doc!.serialize(), _edited);
       expect(edit.state.dirty, false);
+      await bloc.close();
+      await edit.close();
+    });
+
+    test('save after stale baseline is not no-op', () async {
+      final file = File('${tmp.path}/videoconfig.txt')
+        ..writeAsStringSync(_baseline);
+      final edit = EditBloc();
+      final saves = <(String, String, CfgEncoding)>[];
+      final bloc = FileBloc(
+        editBloc: edit,
+        saveImpl: (p, text, enc) async => saves.add((p, text, enc)),
+        listBackupsImpl: (_) => const [],
+        restoreImpl: (_, _) async {},
+      );
+      bloc.add(OpenRequested(file.path));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      edit.add(LineValueChanged(index: 0, value: '144'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      edit.add(DocumentSaved(_baseline)); // 旧 serialize：模拟保存竞态残留
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(edit.state.dirty, true);
+      bloc.add(SaveRequested());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(saves, [(file.path, _edited, CfgEncoding.utf8)]);
+      expect(edit.state.dirty, false);
+      await bloc.close();
+      await edit.close();
+    });
+
+    test('open failure resets state and a retry recovers', () async {
+      final file = File('${tmp.path}/videoconfig.txt')
+        ..writeAsStringSync(_baseline);
+      final edit = EditBloc();
+      final bloc = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) async {},
+        listBackupsImpl: (_) => const [],
+        restoreImpl: (_, _) async {},
+      );
+      bloc.add(OpenRequested('${tmp.path}/no_such_file.txt'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(bloc.state.busy, false);
+      expect(bloc.state.warning, 'fileOpenFailed');
+      expect(bloc.state.path, isNull);
+      bloc.add(OpenRequested(file.path));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(bloc.state.path, file.path);
+      expect(bloc.state.kind, CfgKind.videoconfig);
+      expect(bloc.state.busy, false);
+      expect(bloc.state.warning, isNull);
+      expect(edit.state.doc!.serialize(), _baseline);
       await bloc.close();
       await edit.close();
     });

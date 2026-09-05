@@ -70,20 +70,25 @@ class FileBloc extends Bloc<FileEvent, FileState> {
   }) : super(const FileState()) {
     on<OpenRequested>((e, em) async {
       em(state.copyWith(busy: true, warning: () => null));
-      final data = CfgFileIo.read(e.path);
-      final kind = e.path.endsWith('videoconfig.txt')
-          ? CfgKind.videoconfig
-          : CfgKind.autoexec;
-      final doc = kind == CfgKind.videoconfig
-          ? VideoconfigParser().parse(data.text)
-          : AutoexecParser().parse(data.text);
-      editBloc.add(DocumentOpened(doc: doc, baseline: data.text));
-      em(FileState(
-          path: e.path,
-          kind: kind,
-          busy: false,
-          warning: data.hasBadBytes ? 'fileBadEncoding' : null,
-          backups: listBackupsImpl(e.path)));
+      try {
+        final data = CfgFileIo.read(e.path);
+        final kind = e.path.endsWith('videoconfig.txt')
+            ? CfgKind.videoconfig
+            : CfgKind.autoexec;
+        final doc = kind == CfgKind.videoconfig
+            ? VideoconfigParser().parse(data.text)
+            : AutoexecParser().parse(data.text);
+        editBloc.add(DocumentOpened(doc: doc, baseline: data.text));
+        em(FileState(
+            path: e.path,
+            kind: kind,
+            busy: false,
+            warning: data.hasBadBytes ? 'fileBadEncoding' : null,
+            backups: listBackupsImpl(e.path)));
+      } catch (_) {
+        // 打开失败回到无文件状态：busy 复位 + 告警，避免 UI 死锁。
+        em(const FileState(busy: false, warning: 'fileOpenFailed'));
+      }
     });
     on<SaveRequested>((e, em) async {
       final doc = editBloc.state.doc;
