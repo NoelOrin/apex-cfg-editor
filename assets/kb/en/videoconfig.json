@@ -1,0 +1,358 @@
+{
+  "setting.defaultres": {
+    "name": "Resolution Width",
+    "description": "Horizontal pixel count of the game's render resolution. Combined with resolution height it defines the rendered picture; it should normally match your monitor's native resolution.",
+    "recommended": "Match your monitor's native resolution, e.g. 1920",
+    "risk": "low",
+    "values": [
+      {"v": "1920", "label": "1920 (1080p)"},
+      {"v": "2560", "label": "2560 (1440p)"},
+      {"v": "3840", "label": "3840 (4K)"}
+    ]
+  },
+  "setting.defaultresheight": {
+    "name": "Resolution Height",
+    "description": "Vertical pixel count of the game's render resolution, used together with resolution width. Lowering it improves FPS but the image gets blurrier.",
+    "recommended": "Match your monitor's native resolution, e.g. 1080",
+    "risk": "low",
+    "values": [
+      {"v": "1080", "label": "1080 (1080p)"},
+      {"v": "1440", "label": "1440 (1440p)"},
+      {"v": "2160", "label": "2160 (4K)"}
+    ]
+  },
+  "setting.fullscreen": {
+    "name": "Fullscreen Mode",
+    "description": "Controls the display mode: 1 is exclusive fullscreen, 0 is windowed (borderless depends on setting.nowindowborder). Exclusive fullscreen usually gives lower input lag and steadier performance.",
+    "recommended": "1 for lowest input lag",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Windowed"},
+      {"v": "1", "label": "Exclusive fullscreen"}
+    ]
+  },
+  "setting.nowindowborder": {
+    "name": "Borderless Window",
+    "description": "When 1, the game runs as a borderless window: faster alt-tabbing, at the cost of possibly slightly higher input lag. 0 pairs with fullscreen mode.",
+    "recommended": "0 for lowest input lag",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.mat_vsync_mode": {
+    "name": "V-Sync Mode",
+    "description": "Controls how the picture is synchronized with the monitor's refresh signal. Disabling V-Sync lowers input lag but may cause screen tearing.",
+    "recommended": "0 (off) in competitive play",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.mat_backbuffer_count": {
+    "name": "Swap Chain Buffers",
+    "description": "Number of render back buffers; affects frame queuing depth and input lag. Changing it may cause compatibility or stability issues, so test carefully.",
+    "recommended": "Keep the default unless you know why you are changing it",
+    "risk": "medium",
+    "values": [
+      {"v": "1", "label": "1 (less queuing)"},
+      {"v": "3", "label": "3 (classic triple buffering)"}
+    ]
+  },
+  "setting.mat_antialias_mode": {
+    "name": "Anti-Aliasing Mode",
+    "description": "Anti-aliasing scheme that smooths model edges; 0 disables it. Higher settings look smoother but cost more rendering time.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"}
+    ]
+  },
+  "setting.dvs_enable": {
+    "name": "Dynamic V-Sync",
+    "description": "Automatically switches between V-Sync on and off based on GPU frame time, balancing tearing against input lag.",
+    "recommended": "Keep 0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.dvs_gpuframetime_min": {
+    "name": "Dynamic V-Sync Min Frame Time",
+    "description": "Target minimum GPU time per frame in microseconds. Together with the max frame time it defines the dynamic V-Sync window. Irrelevant when dynamic V-Sync is off.",
+    "recommended": "Keep default 15000",
+    "risk": "low",
+    "values": [
+      {"v": "15000", "label": "15000 (default)"}
+    ]
+  },
+  "setting.dvs_gpuframetime_max": {
+    "name": "Dynamic V-Sync Max Frame Time",
+    "description": "Maximum allowed GPU time per frame in microseconds. When exceeded, dynamic V-Sync stops waiting for the vertical blank to keep FPS up.",
+    "recommended": "Keep default 15000",
+    "risk": "low",
+    "values": [
+      {"v": "15000", "label": "15000 (default)"}
+    ]
+  },
+  "setting.dvs_supersample_enable": {
+    "name": "Dynamic V-Sync Supersampling",
+    "description": "Allows dynamic V-Sync to render at higher resolution when frame time allows. Better image quality, but more FPS variance.",
+    "recommended": "Keep 0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.gamma": {
+    "name": "Gamma (Brightness)",
+    "description": "Overall picture brightness. Higher values make dark areas easier to see, but wash out contrast and make the image look flat.",
+    "recommended": "Fine-tune around 1.0 to taste",
+    "risk": "low",
+    "values": []
+  },
+  "setting.csm_enabled": {
+    "name": "Cascaded Shadow Maps",
+    "description": "Master switch for dynamic shadow rendering. Turning it off gives a large FPS boost, but character and object shadows disappear, removing shadow-based positional information.",
+    "recommended": "0 for FPS, 1 if you rely on shadow cues",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.csm_coverage": {
+    "name": "Shadow Coverage",
+    "description": "Scene coverage range of cascaded shadows. Smaller values cover a shorter distance with lower cost.",
+    "recommended": "Lower it on weaker hardware",
+    "risk": "low",
+    "values": []
+  },
+  "setting.csm_cascade_res": {
+    "name": "Shadow Cascade Resolution",
+    "description": "Resolution of the cascaded shadow maps. Lower values give coarser shadows at lower cost.",
+    "recommended": "Lower it on weaker hardware",
+    "risk": "low",
+    "values": []
+  },
+  "setting.shadow_enable": {
+    "name": "Shadow Rendering",
+    "description": "Master switch for scene shadows. Turning it off removes most shadows and notably improves FPS, at the cost of shadow-based information.",
+    "recommended": "0 for FPS, 1 if you rely on shadow cues",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.shadow_depth_dimen_min": {
+    "name": "Shadow Map Minimum Size",
+    "description": "Minimum allowed size of shadow depth maps. Lowering it saves VRAM but reduces shadow quality.",
+    "recommended": "Keep the default",
+    "risk": "low",
+    "values": []
+  },
+  "setting.shadow_depth_upres_factor_max": {
+    "name": "Shadow Upres Factor Max",
+    "description": "Maximum upscaling factor for shadow maps. Lowering it saves performance but makes shadows blurrier.",
+    "recommended": "Keep the default",
+    "risk": "low",
+    "values": []
+  },
+  "setting.shadow_maxdynamic": {
+    "name": "Max Dynamic Shadows",
+    "description": "Cap on simultaneously rendered dynamic light shadows. Setting it to 0 disables dynamic shadow rendering.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Disabled"}
+    ]
+  },
+  "setting.new_shadow_settings": {
+    "name": "New Shadow Settings Toggle",
+    "description": "Whether the new shadow parameter set is active. It changes how several other shadow entries in this file behave.",
+    "recommended": "Keep the current value; do not change it",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.ssao_enabled": {
+    "name": "Ambient Occlusion (SSAO)",
+    "description": "Screen-space ambient occlusion, producing contact shadows where objects meet. Turning it off improves FPS; depth perception is slightly reduced.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.ssao_downsample": {
+    "name": "SSAO Downsample",
+    "description": "Downsampling factor for ambient occlusion. Higher values cost less but produce coarser occlusion.",
+    "recommended": "Increase downsampling on weaker hardware",
+    "risk": "low",
+    "values": []
+  },
+  "setting.volumetric_lighting": {
+    "name": "Volumetric Lighting",
+    "description": "Light scattering through air (light shafts and similar). Turning it off improves FPS; scene atmosphere is slightly reduced.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.volumetric_fog": {
+    "name": "Volumetric Fog",
+    "description": "Volumetric fog effects in the scene. Turning it off improves FPS; distant visibility changes slightly in some maps.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.mat_forceaniso": {
+    "name": "Anisotropic Filtering",
+    "description": "Keeps textures sharp at oblique viewing angles. The FPS cost is small.",
+    "recommended": "0 (off), or 4 to 16 to taste",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "4", "label": "4x"},
+      {"v": "8", "label": "8x"},
+      {"v": "16", "label": "16x"}
+    ]
+  },
+  "setting.mat_mip_linear": {
+    "name": "Linear Texture Filtering",
+    "description": "Controls whether linear mip filtering is used. Turning it off makes distant textures sharper but noticeably shimmery and noisy.",
+    "recommended": "Keep 1 (on)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.mat_picmip": {
+    "name": "Texture Detail",
+    "description": "Texture mip bias: 0 is the highest detail, 4 the lowest. Lower detail improves FPS and saves VRAM at the cost of blurrier textures; works together with setting.stream_memory.",
+    "recommended": "4 on low-end systems, 0 to 1 for image quality",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0 (highest detail)"},
+      {"v": "1", "label": "1 (high)"},
+      {"v": "4", "label": "4 (lowest detail)"}
+    ]
+  },
+  "setting.stream_memory": {
+    "name": "Texture Streaming Memory",
+    "description": "Memory budget for texture streaming. Too low a value leaves textures blurry for long stretches; 0 combined with mat_picmip 4 forces the lowest texture detail.",
+    "recommended": "Keep the default 300000 if unsure",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0 (with lowest textures)"},
+      {"v": "300000", "label": "300000 (default)"}
+    ]
+  },
+  "setting.particle_cpu_level": {
+    "name": "Particle Effect Level",
+    "description": "Quality level of CPU-side particle effects. Lowering it reduces performance dips during fights.",
+    "recommended": "0 on low-end systems",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Lowest"}
+    ]
+  },
+  "setting.cl_gib_allow": {
+    "name": "Gib Effects",
+    "description": "Allows flying debris when characters or objects are destroyed. Turning it off reduces the effect load with little visible change in combat.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.cl_particle_fallback_base": {
+    "name": "Particle Fallback Base",
+    "description": "Base tier for falling back to simpler particle effects under load. Higher values fall back more aggressively.",
+    "recommended": "Raise it on low-end systems",
+    "risk": "low",
+    "values": []
+  },
+  "setting.cl_particle_fallback_multiplier": {
+    "name": "Particle Fallback Multiplier",
+    "description": "Multiplier for particle degradation under load. Higher values switch to cheaper effects more readily.",
+    "recommended": "Raise it on low-end systems",
+    "risk": "low",
+    "values": []
+  },
+  "setting.cl_ragdoll_maxcount": {
+    "name": "Ragdoll Count Cap",
+    "description": "Maximum number of simultaneous ragdolls (death physics). Setting it to 0 disables ragdolls and reduces physics cost in fights.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Disabled"}
+    ]
+  },
+  "setting.cl_ragdoll_self_collision": {
+    "name": "Ragdoll Self Collision",
+    "description": "Collision between ragdoll body parts. Turning it off saves a little performance; poses look slightly less natural.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.r_createmodeldecals": {
+    "name": "Model Decals",
+    "description": "Generates bullet holes and similar decals on model surfaces. Turning it off improves FPS stability during firefights.",
+    "recommended": "0 for maximum FPS",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "setting.r_decals": {
+    "name": "Decal Count",
+    "description": "Number of decals (bullet holes, marks) kept in the scene at once. Lower values cost less.",
+    "recommended": "Lower it for FPS",
+    "risk": "low",
+    "values": []
+  },
+  "setting.r_lod_switch_scale": {
+    "name": "LOD Switch Distance",
+    "description": "Scale for model level-of-detail (LOD) switch distances. Lower values swap distant models to lower detail earlier: better FPS, coarser distant geometry.",
+    "recommended": "0.4 to 0.6 on low-end systems, 1.0 for image quality",
+    "risk": "medium",
+    "values": [
+      {"v": "0.4", "label": "0.4 (common for low-end)"},
+      {"v": "1.0", "label": "1.0 (near default)"}
+    ]
+  },
+  "setting.fadedistscale": {
+    "name": "Fade Distance Scale",
+    "description": "Scales the distance at which objects fade out. Lower values drop distant scenery earlier, reducing render load but making pop-in easier to notice.",
+    "recommended": "Keep the default; lower slightly on weak hardware",
+    "risk": "medium",
+    "values": []
+  },
+  "setting.configversion": {
+    "name": "Config File Version",
+    "description": "Version marker of the videoconfig.txt structure, used by the game to identify the file format and field meanings.",
+    "recommended": "Keep the original value; do not edit",
+    "risk": "low",
+    "values": []
+  }
+}

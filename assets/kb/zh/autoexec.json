@@ -1,0 +1,395 @@
+{
+  "fps_max": {
+    "name": "帧率上限",
+    "description": "限制游戏渲染的最大帧率，0 表示不限制。设置一个稳定能达到的数值可以减少帧时间波动，画面节奏更一致。",
+    "recommended": "0（不限制）或稳定超过显示器刷新率的数值",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "不限制"},
+      {"v": "144", "label": "144"},
+      {"v": "240", "label": "240"}
+    ]
+  },
+  "fps_max_usec": {
+    "name": "帧率上限（微秒）",
+    "description": "以微秒为单位限制帧间隔的帧率上限，作用与 fps_max 相同但精度更高，0 表示不限制。若当前版本引擎未启用该指令则无效果。",
+    "recommended": "一般设为 0 或与 fps_max 配合使用",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "不限制"}
+    ]
+  },
+  "mat_queue_mode": {
+    "name": "材质系统线程模式",
+    "description": "控制材质系统的线程化方式：-1 为引擎默认，0 为单线程同步，1 为单线程队列，2 为多线程队列。多线程队列在多数环境帧率更好，但在部分系统上可能引起渲染异常或卡顿，改动后应在实战中充分测试。",
+    "recommended": "多数环境 2，出现渲染问题回退 -1",
+    "risk": "medium",
+    "values": [
+      {"v": "-1", "label": "-1（引擎默认）"},
+      {"v": "0", "label": "0（单线程同步）"},
+      {"v": "1", "label": "1（单线程队列）"},
+      {"v": "2", "label": "2（多线程队列）"}
+    ]
+  },
+  "threads": {
+    "name": "主机线程数",
+    "description": "指定引擎主循环使用的线程数。设置不当可能导致卡顿、崩溃或性能明显下降，多数现代系统让引擎自行管理更稳定。",
+    "recommended": "不设置或保持默认；确需尝试请逐级实测",
+    "risk": "high",
+    "values": []
+  },
+  "r_createhairpretesselation": {
+    "name": "头发预细分",
+    "description": "控制角色头发的预细分渲染。关闭可减少相关渲染开销，日常观感差异很小。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "r_fullscreen_gamma": {
+    "name": "全屏伽马",
+    "description": "调整全屏模式下的画面伽马（亮度），直接影响暗部区域的可见度。",
+    "recommended": "按显示器与个人观感调整",
+    "risk": "low",
+    "values": []
+  },
+  "cl_showfps": {
+    "name": "帧率显示",
+    "description": "在屏幕角落显示帧率等性能调试信息，数值越大信息越详细。仅用于观察，不影响游戏运行。",
+    "recommended": "调试时 1 或 4，平时 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "1（简易）"},
+      {"v": "4", "label": "4（详细）"}
+    ]
+  },
+  "showfps_enabled": {
+    "name": "内置性能显示",
+    "description": "游戏自带的性能显示开关，可查看帧率、帧时间曲线与输入延迟等信息。",
+    "recommended": "平时 0，观察性能表现时 1",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "shownet_enabled": {
+    "name": "网络信息显示",
+    "description": "显示延迟、丢包等网络图形，便于观察连接质量。仅用于排查问题。",
+    "recommended": "平时 0，排查网络问题时 1",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "cl_showpos": {
+    "name": "位置速度调试显示",
+    "description": "在屏幕上显示当前速度、位置与朝向等调试数据，练习移速与身法时常用。",
+    "recommended": "练习时 1，平时 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "m_rawinput": {
+    "name": "原始输入",
+    "description": "让游戏直接读取鼠标原始输入，绕过系统指针加速与灵敏度设置。部分版本中该指令已被锁定，无效时不影响正常游戏。",
+    "recommended": "1（开启）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "m_filter": {
+    "name": "鼠标平滑过滤",
+    "description": "对鼠标输入做平滑过滤，会引入额外插值。关闭后瞄准跟随更直接。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "mouse_sensitivity": {
+    "name": "鼠标灵敏度",
+    "description": "游戏内鼠标灵敏度倍率，与鼠标 DPI 共同决定最终手感。",
+    "recommended": "按个人习惯设置",
+    "risk": "low",
+    "values": []
+  },
+  "bind": {
+    "name": "键位绑定",
+    "description": "把某个按键绑定到一条命令或一组命令，是 autoexec 中最常用的指令之一，写入后启动即生效。例如 bind F3 exec autoexec.cfg。",
+    "recommended": "无固定推荐，按个人键位习惯配置",
+    "risk": "low",
+    "values": []
+  },
+  "exec": {
+    "name": "执行配置文件",
+    "description": "读取并执行另一个 cfg 文件。常用 exec autoexec.cfg 配合启动参数 +exec 加载个人配置，也可绑定按键一键重载。",
+    "recommended": "配合启动参数 +exec autoexec 使用",
+    "risk": "low",
+    "values": []
+  },
+  "rate": {
+    "name": "网络带宽上限",
+    "description": "客户端与服务器通信的每秒最大字节数。设置过低可能限制数据更新，盲目调高并不会降低延迟。",
+    "recommended": "保持默认或 1280000",
+    "risk": "medium",
+    "values": [
+      {"v": "1280000", "label": "1280000"}
+    ]
+  },
+  "cl_updaterate": {
+    "name": "每秒更新请求数",
+    "description": "请求服务器每秒发送的世界状态更新次数。Apex 的实际更新频率主要由服务器控制，客户端设置仅在部分情况下生效。",
+    "recommended": "保持默认，除非明确了解改动效果",
+    "risk": "medium",
+    "values": []
+  },
+  "cl_updaterate_mp": {
+    "name": "多人模式更新频率",
+    "description": "Apex 实际使用的多人模式世界状态更新频率设置，作用类似传统的 cl_updaterate。",
+    "recommended": "保持默认，改动收益有限",
+    "risk": "medium",
+    "values": []
+  },
+  "cl_interp": {
+    "name": "插值时间",
+    "description": "客户端对其他玩家位置做插值的缓冲时间（秒）。设得过低可能出现角色抖动；很多版本中该值由服务器统一控制。",
+    "recommended": "0（交由 cl_interp_ratio 推导）",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0（自动）"}
+    ]
+  },
+  "cl_interp_ratio": {
+    "name": "插值比例",
+    "description": "按更新频率自动计算插值缓冲的倍率。1 为低缓冲、2 更保守，改动可能影响命中判定的表现。",
+    "recommended": "1，网络不稳定可用 2",
+    "risk": "medium",
+    "values": [
+      {"v": "1", "label": "1（低缓冲）"},
+      {"v": "2", "label": "2（保守）"}
+    ]
+  },
+  "projectile_prediction": {
+    "name": "弹道预测",
+    "description": "客户端对投射物弹道做预测与补偿，影响自己看到的弹道表现。",
+    "recommended": "1（开启）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "cl_smooth": {
+    "name": "预测误差平滑",
+    "description": "对客户端预测误差做平滑处理。关闭后画面跟随更直接，但可能出现抖动，建议改动后实测。",
+    "recommended": "保持 1，追求极限响应可试 0",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "mat_vsync": {
+    "name": "垂直同步",
+    "description": "控制画面是否等待显示器垂直同步信号。关闭可降低输入延迟，可能出现画面撕裂。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "mat_antialias": {
+    "name": "抗锯齿倍率",
+    "description": "多重采样抗锯齿的倍率，0 为关闭。数值越高边缘越平滑、开销越大。",
+    "recommended": "追求帧率 0，画质优先 2 到 4",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "2", "label": "2x"},
+      {"v": "4", "label": "4x"},
+      {"v": "8", "label": "8x"}
+    ]
+  },
+  "mat_forceaniso": {
+    "name": "各向异性过滤",
+    "description": "强制各向异性过滤等级，让斜视角下的纹理更清晰，对帧率影响较小。",
+    "recommended": "0 或按喜好 4 到 16",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "4", "label": "4x"},
+      {"v": "8", "label": "8x"},
+      {"v": "16", "label": "16x"}
+    ]
+  },
+  "mat_picmip": {
+    "name": "纹理精度",
+    "description": "纹理 mip 精度选择，0 为最高、4 为最低。与 stream_memory 配合，降低精度可提升帧率并减少显存占用，画面更模糊。",
+    "recommended": "低配 4，画质优先 0 到 1",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0（最高精度）"},
+      {"v": "1", "label": "1（高）"},
+      {"v": "4", "label": "4（最低精度）"}
+    ]
+  },
+  "stream_memory": {
+    "name": "纹理流送内存",
+    "description": "纹理流送可用的内存预算。数值过低时纹理会长时间模糊；设为 0 时配合 mat_picmip 4 使用最低纹理精度。",
+    "recommended": "保持默认 300000，或低配方案 0",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0（配合最低纹理）"},
+      {"v": "300000", "label": "300000（默认）"}
+    ]
+  },
+  "ssao_enabled": {
+    "name": "环境光遮蔽",
+    "description": "屏幕空间环境光遮蔽效果。关闭可提升帧率，画面立体感略降。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "r_createmodeldecals": {
+    "name": "模型贴花",
+    "description": "在模型表面生成弹孔等贴花。关闭可提升交火时的帧率稳定性。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "r_decals": {
+    "name": "贴花上限",
+    "description": "场景中同时存在的贴花（弹孔、痕迹等）数量上限，降低可减少渲染与内存开销。",
+    "recommended": "追求帧率设 0 或较低数值",
+    "risk": "low",
+    "values": []
+  },
+  "r_lod_switch_scale": {
+    "name": "LOD 切换距离",
+    "description": "模型细节层级切换的距离比例。调低后远处模型更早换成低模，帧率更好但远景更粗糙。",
+    "recommended": "低配 0.4 到 0.6，画质优先 1.0",
+    "risk": "medium",
+    "values": [
+      {"v": "0.4", "label": "0.4"},
+      {"v": "1.0", "label": "1.0（默认附近）"}
+    ]
+  },
+  "cl_ragdoll_maxcount": {
+    "name": "布娃娃数量上限",
+    "description": "同时存在的布娃娃（尸体物理）数量上限，设为 0 可禁用，减少战斗中的物理计算开销。",
+    "recommended": "0（禁用）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "禁用"}
+    ]
+  },
+  "cl_gib_allow": {
+    "name": "碎块效果",
+    "description": "允许死亡或物体破坏时产生飞散碎块。关闭可减少特效开销。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "particle_cpu_level": {
+    "name": "粒子效果等级",
+    "description": "CPU 侧粒子效果的质量等级，降低可减少交火时的性能波动。",
+    "recommended": "低配设为 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "最低"}
+    ]
+  },
+  "mat_postprocess_enable": {
+    "name": "后处理效果",
+    "description": "控制 HDR 等后处理。关闭后画面对比与色调变化明显，可提升帧率，建议改动前先截图对比。",
+    "recommended": "追求帧率 0，重视画面 1",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "r_shadows": {
+    "name": "阴影渲染",
+    "description": "阴影渲染开关。设为 0 可关闭大部分阴影，帧率提升明显，同时失去阴影带来的位置信息。",
+    "recommended": "追求帧率 0，重视阴影信息 1",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "r_waterdrawreflection": {
+    "name": "水面反射",
+    "description": "水面反射的渲染开关。关闭后含水域的场景帧率更好，水面观感更平淡。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "snd_mixahead": {
+    "name": "音频缓冲",
+    "description": "设置声音混合的缓冲时长。适当调小可降低音频延迟，过小可能出现爆音或杂音。",
+    "recommended": "0.05",
+    "risk": "low",
+    "values": [
+      {"v": "0.05", "label": "0.05"}
+    ]
+  },
+  "snd_setmixer": {
+    "name": "单通道音量",
+    "description": "对指定音频通道单独调整音量，例如 snd_setmixer GlobalFootsteps vol 1.2 放大全局脚步声，常用于突出敌人脚步、压低自己的脚步音量。",
+    "recommended": "按听感微调，如 GlobalFootsteps vol 1.2",
+    "risk": "low",
+    "values": []
+  },
+  "miles_occlusion": {
+    "name": "声音遮挡",
+    "description": "模拟声音被墙壁遮挡的效果。关闭后隔墙声音更清晰直接，但听声辨位的距离感会略有变化。",
+    "recommended": "多数配置选择 0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "cl_fovscale": {
+    "name": "视野倍率",
+    "description": "调整游戏视野（FOV）倍率，1.55 约等于游戏内 110 度。数值越大视野越广，边缘畸变与目标缩小越明显。",
+    "recommended": "1.55（约 110 度），按个人习惯调整",
+    "risk": "low",
+    "values": [
+      {"v": "1.47", "label": "1.47（约 104 度）"},
+      {"v": "1.55", "label": "1.55（约 110 度）"}
+    ]
+  },
+  "mat_setvideomode": {
+    "name": "运行中修改分辨率",
+    "description": "在游戏中直接切换分辨率，例如 mat_setvideomode 1728 1080 0，常配合 bind 按键用于快速切换拉伸分辨率。",
+    "recommended": "按需配合 bind 使用",
+    "risk": "medium",
+    "values": []
+  }
+}
