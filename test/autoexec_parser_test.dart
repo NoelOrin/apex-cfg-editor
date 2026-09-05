@@ -59,4 +59,21 @@ void main() {
     expect(kv.value, '"T" "say \\"// ok\\""');
     expect(kv.inlineComment, '');
   });
+
+  test('mid-line block comment opens comment region', () {
+    final doc = p.parse('fps_max 128 /* note\nmat_queue_mode 2\n');
+    final kv = doc.lines[0] as CvarLine;
+    expect(kv.key, 'fps_max');
+    expect(kv.value, '128');
+    expect(kv.inlineComment, '/* note');
+    expect(doc.lines[1], isA<CommentLine>());
+  });
+
+  test('self-closing mid-line block comment stays on one line', () {
+    final doc = p.parse('fps_max 128 /* note */\nmat_queue_mode 2\n');
+    final kv = doc.lines[0] as CvarLine;
+    expect(kv.value, '128');
+    expect(kv.inlineComment, '/* note */');
+    expect(doc.lines[1], isA<CvarLine>());
+  });
 }

@@ -7,9 +7,9 @@ class AutoexecParser {
 
   static final _cvar = RegExp(r'^(\s*)([^\s/][^\s]*)(?:\s+(.*?))?(\s*)$');
 
-  /// 首个位于双引号字符串之外的 `//` 下标；无则 -1。
-  /// 引号内的 `//` 是值的一部分（Source 引擎语义）；`\\"` 等转义不改变引号状态。
-  static int _lineCommentStart(String s) {
+  /// 首个位于双引号字符串之外的注释起点（`//` 或 `/*`）下标；无则 -1。
+  /// 引号内的 `//`、`/*` 是值的一部分（Source 引擎语义）；`\\"` 等转义不改变引号状态。
+  static int _commentStart(String s) {
     var inQuote = false;
     var i = 0;
     while (i < s.length) {
@@ -20,7 +20,10 @@ class AutoexecParser {
       }
       if (c == '"') {
         inQuote = !inQuote;
-      } else if (!inQuote && c == '/' && i + 1 < s.length && s[i + 1] == '/') {
+      } else if (!inQuote &&
+          c == '/' &&
+          i + 1 < s.length &&
+          (s[i + 1] == '/' || s[i + 1] == '*')) {
         return i;
       }
       i += 1;
@@ -62,10 +65,14 @@ class AutoexecParser {
       }
       final rest = (m.group(3) ?? '').trim();
       String value = rest, comment = '';
-      final ci = _lineCommentStart(rest);
+      final ci = _commentStart(rest);
       if (ci >= 0) {
         value = rest.substring(0, ci).trim();
         comment = rest.substring(ci).trim();
+        // 行中 `/*` 亦开启注释区段：该行内无闭合 `*/` 则后续行进入块注释。
+        if (rest.startsWith('/*', ci) && !rest.contains('*/', ci)) {
+          inBlock = true;
+        }
       }
       lines.add(CvarLine(
         key: m.group(2)!,
