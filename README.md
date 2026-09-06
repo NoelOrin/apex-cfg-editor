@@ -15,8 +15,64 @@
   而不是静默丢内容。
 - **自动备份与还原**：每次保存前字节级备份旧文件；顶栏「还原」可回滚到
   任意历史备份。备份位置：`%APPDATA%\ApexCfgEditor\backups`。
+- **自动探测安装**（v2）：合并三类来源自动定位 Apex——Steam（注册表
+  SteamPath / InstallPath + 各库 `libraryfolders.vdf`）、EA App（卸载表
+  DisplayName 扫描 + `EA Games` / `Origin Games` 常见根与 C-F 盘符探测）、
+  文档根（`USERPROFILE\Documents` 与 OneDrive 重定向的 `Documents` /
+  `文档`）下的 `videoconfig.txt`；探测全空时回退用户记忆的
+  `customInstallDir`（指定过一次即记住）。
+- **autoexec.cfg 缺失也有入口**：找到安装但 `autoexec.cfg` 不存在时提供
+  「创建 autoexec.cfg」，一键写入全注释的中英双语模板（帧数优化示例行，
+  不改变游戏行为）并自动打开。
 - **退出保护**：有未保存修改时关闭窗口给出 保存 / 放弃 / 取消 三选。
 - **i18n**：中文 / English 全量界面文案。
+
+## 获取应用
+
+### 安装器（推荐）
+
+到 [Releases](https://github.com/NoelOrin/apex-cfg-editor/releases) 下载
+`ApexCfgEditorSetup-v*.exe`（Inno Setup 单文件安装器，含 MIT 许可文本），
+双击安装。默认安装到 `{autopf}\ApexCfgEditor`，可选创建桌面图标，可按需
+选择「仅为当前用户安装」。
+
+### 便携版（免安装）
+
+同一 Release 下载 `apex-cfg-editor-windows-v*.zip`，解压到任意目录直接运行
+`apex_cfg_editor.exe`。两者内容一致，选其一即可。CI 的每次构建也会在
+Artifacts 里上传未打 tag 的开发产物。
+
+## 自动探测与手动兜底
+
+启动时按以下顺序探测（`lib/core/paths/install_locator.dart`）：
+
+1. **文档根 videoconfig.txt**：`%USERPROFILE%\Documents`、
+   `%OneDrive%\Documents`、`%OneDrive%\文档`（`OneDrive` /
+   `OneDriveCommercial` / `OneDriveConsumer` 三个变量都查）下的
+   `Respawn\Apex\local\videoconfig.txt`，命中即自动打开。
+2. **Steam**：注册表 `HKCU\Software\Valve\Steam\SteamPath` 与
+   `HKLM\SOFTWARE\WOW6432Node\Valve\Steam\InstallPath` → 各库
+   `steamapps\libraryfolders.vdf` 的全部 `"path"` →
+   `steamapps\common\Apex Legends`（**自定义库照样扫到**）。
+3. **EA App**：卸载表（HKLM 64/32 位视图 + HKCU）中 DisplayName 含
+   "Apex" 的 `InstallLocation`；加上
+   `C:\Program Files\EA Games\Apex Legends`、`C:\Program Files\Origin
+   Games\Apex Legends` 与 C-F 各盘符根下的 `EA Games\Apex Legends` /
+   `Origin Games\Apex Legends` / `Apex Legends`。
+4. **用户记忆目录**：以上全空时回退 `customInstallDir`（settings.json）。
+
+对每个安装目录，autoexec 候选目录为 `cfg`、`global\cfg`、`r2\cfg`
+（目录存在即算，文件可缺失；都不存在时用 `cfg` 作为可创建位置）。
+
+兜底入口：
+
+- **多个安装**（如 Steam + EA App 双装）：启动后弹出选择对话框，选哪个
+  就处理哪个的 autoexec。
+- **autoexec.cfg 不存在**：界面出现「创建 autoexec.cfg」，点击写入全注释
+  模板（帧数优化示例，去掉行首 `//` 才生效）并自动打开。
+- **完全找不到 Apex**：界面出现「指定 Apex 目录」，用目录选择器指到
+  Apex 安装目录（或 Steam 库根），应用记住该路径并重新探测；顶栏
+  「打开文件」也始终可手动选择 `videoconfig.txt` / `autoexec.cfg`。
 
 ## 构建与运行
 
@@ -52,18 +108,23 @@ flutter build windows --release
 
 `.github/workflows/windows-build.yml` 在**推送 `v*` tag** 时触发（也可在
 Actions 页面手动 `workflow_dispatch`），流程：windows-latest 上启用
-Windows 桌面 → `flutter test` → `flutter build windows --release` → 把
-Release 目录上传为 artifact `apex-cfg-editor-windows`。发布即：
+Windows 桌面 → `flutter test` → `flutter build windows --release` →
+Inno Setup 编译单文件安装器（runner 预装 ISCC，缺失时 `choco install
+innosetup` 兜底）→ Release 目录压缩为便携 zip → setup exe 与 zip 一起
+上传为 artifact `apex-cfg-editor-windows`。发布即：
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-构建完成后到该次 run 的 Artifacts 里下载。
+构建完成后到该次 run 的 Artifacts 里下载，tag 触发的构建会把
+`ApexCfgEditorSetup-v*.exe` 与 `apex-cfg-editor-windows-v*.zip` 挂到
+GitHub Release。
 
 - 界面语言跟随系统 locale（zh / en），窗口最小尺寸 960x640。
-- 生产环境自动探测 Apex 配置路径；未找到时用顶栏「打开文件」手动选择。
+- 生产环境自动探测 Apex 配置路径（见上节）；未找到时用顶栏「打开文件」
+  手动选择，或「指定 Apex 目录」后重试。
 
 ## 知识库扩展
 
