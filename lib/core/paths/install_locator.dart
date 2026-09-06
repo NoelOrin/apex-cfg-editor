@@ -294,3 +294,44 @@ class InstallLocator {
     return r;
   }
 }
+
+/// 从「成功打开的文件所在目录」推导 Apex 安装根（探测 v2 的
+/// customInstallDir 回写规则）：autoexec 的 cfg/global/r2 目录父级、
+/// 或 `steamapps/common/Apex Legends` 树内 → 安装根；videoconfig 的
+/// Documents 文档根与其余任意目录都不是安装目录 → null。结果与
+/// [InstallLocator.locate] 的 customInstallDir 语义对齐（可直接回填）。
+String? apexInstallDirFromOpenedDir(String dirPath) {
+  final dir = _normPath(dirPath);
+  final segments = dir.split('/');
+
+  // <install>/(cfg|global/cfg|r2/cfg) → <install>。长候选优先，
+  // 否则 global/cfg 会被 'cfg' 先剥一半。
+  for (final cand in const ['global/cfg', 'r2/cfg', 'cfg']) {
+    final suffix = cand.split('/');
+    if (segments.length > suffix.length) {
+      final tail = segments.sublist(segments.length - suffix.length);
+      if (tail.join('/').toLowerCase() == cand) {
+        return segments
+            .sublist(0, segments.length - suffix.length)
+            .join('/');
+      }
+    }
+  }
+
+  // Steam 安装树：根为 .../steamapps/common/Apex Legends（大小写不敏感）。
+  for (var i = 0; i < segments.length; i++) {
+    if (segments[i].toLowerCase() == 'apex legends') {
+      return segments.sublist(0, i + 1).join('/');
+    }
+  }
+  return null;
+}
+
+/// 归一化规则与 [InstallLocator._norm] 一致的顶层复用。
+String _normPath(String p) {
+  var r = p.replaceAll('\\', '/');
+  while (r.length > 1 && r.endsWith('/')) {
+    r = r.substring(0, r.length - 1);
+  }
+  return r;
+}

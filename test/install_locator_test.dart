@@ -430,4 +430,34 @@ void main() {
       expect(r[1].installDir, steamApex);
     });
   });
+
+  group('apexInstallDirFromOpenedDir (customInstallDir 回写推导)', () {
+    test('cfg / global/cfg / r2/cfg 父目录 → 剥到安装根', () {
+      const f = apexInstallDirFromOpenedDir;
+      expect(f('${tmp.path}/Apex/cfg'), '${tmp.path}/Apex');
+      expect(f('${tmp.path}/Apex/global/cfg'), '${tmp.path}/Apex');
+      expect(f('${tmp.path}/Apex/r2/cfg'), '${tmp.path}/Apex');
+    });
+
+    test('Steam 安装树内任意文件 → 根为 Apex Legends 目录', () {
+      const f = apexInstallDirFromOpenedDir;
+      final apex = '${tmp.path}/Lib/steamapps/common/Apex Legends';
+      expect(f('$apex/cfg'), apex);
+      expect(f('$apex/whatever/deep/dir'), apex);
+      expect(f(apex), apex);
+    });
+
+    test('videoconfig 文档目录 → null（Documents 根不是安装目录）', () {
+      expect(
+          apexInstallDirFromOpenedDir(
+              '${tmp.path}/Documents/Respawn/Apex/local'),
+          isNull);
+    });
+
+    test('随机目录 → null；反斜杠输入归一化', () {
+      expect(apexInstallDirFromOpenedDir('${tmp.path}/Downloads'), isNull);
+      expect(
+          apexInstallDirFromOpenedDir(r'C:\Game\Apex\cfg'), 'C:/Game/Apex');
+    });
+  });
 }
