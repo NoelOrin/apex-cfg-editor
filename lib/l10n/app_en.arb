@@ -1,0 +1,41 @@
+{
+  "@@locale": "en",
+  "appTitle": "Apex CFG Editor",
+  "modeTable": "Table",
+  "modeText": "Text",
+  "save": "Save",
+  "restore": "Restore",
+  "kbNotDocumented": "Key not documented yet. You can still edit it.",
+  "emptyDocHint": "Open a cfg file to start editing",
+  "noChanges": "No changes",
+  "kbRecommended": "Recommended: {value}",
+  "@kbRecommended": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "riskHigh": "High risk",
+  "risk": "Risk",
+  "openFile": "Open file",
+  "fileOpenFailed": "Failed to open file",
+  "fileBadEncoding": "File contains bytes that cannot be decoded; saving may lose them",
+  "fileSaveFailed": "Failed to save file",
+  "fileRestoreFailed": "Failed to restore from backup",
+  "fileBadBytesDirty": "File contains bytes that cannot be mapped; saving now would re-encode the whole file and make the damage worse. Restore a backup or fix the file manually first.",
+  "restoreDialogTitle": "Restore from backup",
+  "backupEmpty": "No backups yet. A backup is kept before every save.",
+  "restoreDirtyTitle": "Discard unsaved changes?",
+  "restoreDirtyBody": "Restoring a backup will lose your unsaved changes.",
+  "confirm": "Confirm",
+  "quitDialogTitle": "Unsaved changes",
+  "quitDialogBody": "Save changes before exiting?",
+  "saveAndExit": "Save and exit",
+  "discardAndExit": "Discard and exit",
+  "cancel": "Cancel",
+  "find": "Find",
+  "replace": "Replace",
+  "replaceAll": "Replace all",
+  "findPrev": "Previous",
+  "findNext": "Next",
+  "close": "Close"
+}

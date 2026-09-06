@@ -1,0 +1,395 @@
+{
+  "fps_max": {
+    "name": "FPS Cap",
+    "description": "Caps the maximum rendered frame rate; 0 means uncapped. A stable achievable cap reduces frame time variance and keeps pacing consistent.",
+    "recommended": "0 (uncapped) or a value steadily above your monitor refresh rate",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Uncapped"},
+      {"v": "144", "label": "144"},
+      {"v": "240", "label": "240"}
+    ]
+  },
+  "fps_max_usec": {
+    "name": "FPS Cap (Microseconds)",
+    "description": "Caps the frame interval in microseconds; same purpose as fps_max with higher precision. 0 means uncapped. Ineffective if the current engine build does not expose this command.",
+    "recommended": "Generally 0, or used alongside fps_max",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Uncapped"}
+    ]
+  },
+  "mat_queue_mode": {
+    "name": "Material System Thread Mode",
+    "description": "Controls threading of the material system: -1 engine default, 0 single-threaded synchronous, 1 single-threaded queued, 2 multi-threaded queued. Mode 2 usually improves FPS but can cause rendering glitches or stutters on some systems; test thoroughly after changing.",
+    "recommended": "2 for most systems; fall back to -1 if rendering issues appear",
+    "risk": "medium",
+    "values": [
+      {"v": "-1", "label": "-1 (engine default)"},
+      {"v": "0", "label": "0 (single-threaded sync)"},
+      {"v": "1", "label": "1 (single-threaded queue)"},
+      {"v": "2", "label": "2 (multi-threaded queue)"}
+    ]
+  },
+  "threads": {
+    "name": "Host Thread Count",
+    "description": "Number of threads the engine main loop uses. A bad value can cause stutters, crashes or clearly worse performance; on most modern systems letting the engine manage it is more reliable.",
+    "recommended": "Leave unset or default; if you must experiment, test step by step",
+    "risk": "high",
+    "values": []
+  },
+  "r_createhairpretesselation": {
+    "name": "Hair Pre-Tessellation",
+    "description": "Controls pre-tessellated rendering of character hair. Disabling it removes a small rendering cost with barely visible change.",
+    "recommended": "0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "r_fullscreen_gamma": {
+    "name": "Fullscreen Gamma",
+    "description": "Adjusts picture gamma in fullscreen mode, directly affecting visibility in dark areas.",
+    "recommended": "Adjust to your monitor and taste",
+    "risk": "low",
+    "values": []
+  },
+  "cl_showfps": {
+    "name": "FPS Display",
+    "description": "Shows FPS and other performance debug info in a screen corner; higher values are more verbose. For observation only, no gameplay effect.",
+    "recommended": "1 or 4 while debugging, 0 otherwise",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "1 (basic)"},
+      {"v": "4", "label": "4 (detailed)"}
+    ]
+  },
+  "showfps_enabled": {
+    "name": "Built-in Performance Display",
+    "description": "The game's built-in performance overlay, showing FPS, frame time graphs and input latency information.",
+    "recommended": "0 normally, 1 while checking performance",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "shownet_enabled": {
+    "name": "Network Info Display",
+    "description": "Shows network graphics such as latency and packet loss, useful for diagnosing connection quality.",
+    "recommended": "0 normally, 1 while diagnosing network issues",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "cl_showpos": {
+    "name": "Position/Velocity Debug Display",
+    "description": "Shows current speed, position and orientation as debug data on screen, commonly used while practicing movement.",
+    "recommended": "1 while practicing, 0 otherwise",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "m_rawinput": {
+    "name": "Raw Input",
+    "description": "Makes the game read raw mouse input directly, bypassing OS pointer acceleration and sensitivity. Locked in some game versions; if ineffective it does not affect normal play.",
+    "recommended": "1 (on)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "m_filter": {
+    "name": "Mouse Filtering",
+    "description": "Applies smoothing/interpolation to mouse input. Turning it off makes aim tracking feel more direct.",
+    "recommended": "0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "mouse_sensitivity": {
+    "name": "Mouse Sensitivity",
+    "description": "In-game mouse sensitivity multiplier; combined with mouse DPI it determines the final feel.",
+    "recommended": "Set to your personal preference",
+    "risk": "low",
+    "values": []
+  },
+  "bind": {
+    "name": "Key Binding",
+    "description": "Binds a key to one command or a chain of commands; one of the most used commands in autoexec and effective immediately. Example: bind F3 exec autoexec.cfg.",
+    "recommended": "No fixed recommendation; configure to your key layout",
+    "risk": "low",
+    "values": []
+  },
+  "exec": {
+    "name": "Execute Config File",
+    "description": "Reads and executes another cfg file. Commonly exec autoexec.cfg with the +exec launch option to load a personal config, or bound to a key for one-click reload.",
+    "recommended": "Use with the +exec autoexec launch option",
+    "risk": "low",
+    "values": []
+  },
+  "rate": {
+    "name": "Network Bandwidth Cap",
+    "description": "Maximum bytes per second the client sends to the server. Too low a value may limit updates; raising it beyond need gives no benefit.",
+    "recommended": "Keep the default or 1280000",
+    "risk": "medium",
+    "values": [
+      {"v": "1280000", "label": "1280000"}
+    ]
+  },
+  "cl_updaterate": {
+    "name": "Update Requests Per Second",
+    "description": "Number of world-state update packets requested from the server per second. Apex's actual rate is mostly server-controlled, so the client setting only applies in some cases.",
+    "recommended": "Keep the default unless you know the effect",
+    "risk": "medium",
+    "values": []
+  },
+  "cl_updaterate_mp": {
+    "name": "Multiplayer Update Rate",
+    "description": "The world-state update rate setting Apex actually uses in multiplayer, similar in purpose to the classic cl_updaterate.",
+    "recommended": "Keep the default; gains from changing it are limited",
+    "risk": "medium",
+    "values": []
+  },
+  "cl_interp": {
+    "name": "Interpolation Time",
+    "description": "Buffer time in seconds used to interpolate other players' positions. Too low a value can cause jitter; in many versions this value is enforced by the server.",
+    "recommended": "0 (derived from cl_interp_ratio)",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0 (automatic)"}
+    ]
+  },
+  "cl_interp_ratio": {
+    "name": "Interpolation Ratio",
+    "description": "Multiplier that derives the interpolation buffer from the update rate. 1 is low buffering, 2 more conservative; changes can affect how hit registration feels.",
+    "recommended": "1; use 2 on unstable networks",
+    "risk": "medium",
+    "values": [
+      {"v": "1", "label": "1 (low buffering)"},
+      {"v": "2", "label": "2 (conservative)"}
+    ]
+  },
+  "projectile_prediction": {
+    "name": "Projectile Prediction",
+    "description": "Client-side prediction and compensation for projectile trajectories; affects how your own projectiles appear.",
+    "recommended": "1 (on)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "cl_smooth": {
+    "name": "Prediction Error Smoothing",
+    "description": "Smooths client prediction errors. Off feels more direct but can jitter; test in-game after changing.",
+    "recommended": "Keep 1; try 0 only if chasing maximum responsiveness",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "mat_vsync": {
+    "name": "V-Sync",
+    "description": "Waits for the monitor's vertical sync signal. Disabling it lowers input lag but may cause screen tearing.",
+    "recommended": "0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "mat_antialias": {
+    "name": "Anti-Aliasing Level",
+    "description": "Multisample anti-aliasing level; 0 disables it. Higher levels smooth edges more at greater cost.",
+    "recommended": "0 for FPS, 2 to 4 for image quality",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "2", "label": "2x"},
+      {"v": "4", "label": "4x"},
+      {"v": "8", "label": "8x"}
+    ]
+  },
+  "mat_forceaniso": {
+    "name": "Anisotropic Filtering",
+    "description": "Forces an anisotropic filtering level so textures stay sharp at oblique angles; small FPS cost.",
+    "recommended": "0, or 4 to 16 to taste",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "4", "label": "4x"},
+      {"v": "8", "label": "8x"},
+      {"v": "16", "label": "16x"}
+    ]
+  },
+  "mat_picmip": {
+    "name": "Texture Detail",
+    "description": "Texture mip bias: 0 highest detail, 4 lowest. Together with stream_memory, lowering detail improves FPS and saves VRAM at the cost of blurrier textures.",
+    "recommended": "4 on low-end systems, 0 to 1 for image quality",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0 (highest detail)"},
+      {"v": "1", "label": "1 (high)"},
+      {"v": "4", "label": "4 (lowest detail)"}
+    ]
+  },
+  "stream_memory": {
+    "name": "Texture Streaming Memory",
+    "description": "Memory budget for texture streaming. Too low a value leaves textures blurry for long stretches; 0 combined with mat_picmip 4 forces the lowest texture detail.",
+    "recommended": "Keep the default 300000, or 0 for the low-end preset",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0 (with lowest textures)"},
+      {"v": "300000", "label": "300000 (default)"}
+    ]
+  },
+  "ssao_enabled": {
+    "name": "Ambient Occlusion",
+    "description": "Screen-space ambient occlusion. Turning it off improves FPS; depth perception is slightly reduced.",
+    "recommended": "0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "r_createmodeldecals": {
+    "name": "Model Decals",
+    "description": "Generates bullet holes and similar decals on model surfaces. Turning it off improves FPS stability during firefights.",
+    "recommended": "0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "r_decals": {
+    "name": "Decal Cap",
+    "description": "Cap on decals (bullet holes, marks) kept in the scene at once; lowering it reduces render and memory cost.",
+    "recommended": "0 or a low value for FPS",
+    "risk": "low",
+    "values": []
+  },
+  "r_lod_switch_scale": {
+    "name": "LOD Switch Distance",
+    "description": "Scale for model level-of-detail switch distances. Lower values swap distant models to lower detail earlier: better FPS, coarser distant geometry.",
+    "recommended": "0.4 to 0.6 on low-end systems, 1.0 for image quality",
+    "risk": "medium",
+    "values": [
+      {"v": "0.4", "label": "0.4"},
+      {"v": "1.0", "label": "1.0 (near default)"}
+    ]
+  },
+  "cl_ragdoll_maxcount": {
+    "name": "Ragdoll Count Cap",
+    "description": "Maximum number of simultaneous ragdolls (death physics). Setting it to 0 disables them and reduces physics cost in fights.",
+    "recommended": "0 (disabled)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Disabled"}
+    ]
+  },
+  "cl_gib_allow": {
+    "name": "Gib Effects",
+    "description": "Allows flying debris when characters or objects are destroyed. Turning it off reduces the effect load.",
+    "recommended": "0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "particle_cpu_level": {
+    "name": "Particle Effect Level",
+    "description": "Quality level of CPU-side particle effects. Lowering it reduces performance dips during fights.",
+    "recommended": "0 on low-end systems",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Lowest"}
+    ]
+  },
+  "mat_postprocess_enable": {
+    "name": "Post-Processing",
+    "description": "Controls HDR and other post effects. Turning it off visibly changes contrast and color grading while improving FPS; compare screenshots before deciding.",
+    "recommended": "0 for FPS, 1 for image quality",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "r_shadows": {
+    "name": "Shadow Rendering",
+    "description": "Shadow rendering switch. Setting it to 0 removes most shadows with a clear FPS gain, at the cost of shadow-based information.",
+    "recommended": "0 for FPS, 1 if you rely on shadow cues",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "r_waterdrawreflection": {
+    "name": "Water Reflection",
+    "description": "Renders reflections on water surfaces. Turning it off improves FPS in maps with water; water looks plainer.",
+    "recommended": "0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "snd_mixahead": {
+    "name": "Audio Mix Buffer",
+    "description": "Duration of the sound mixing buffer. Slightly lower values reduce audio latency; too low can cause pops or crackling.",
+    "recommended": "0.05",
+    "risk": "low",
+    "values": [
+      {"v": "0.05", "label": "0.05"}
+    ]
+  },
+  "snd_setmixer": {
+    "name": "Per-Channel Volume",
+    "description": "Adjusts the volume of a single audio channel, e.g. snd_setmixer GlobalFootsteps vol 1.2 to boost global footsteps; commonly used to emphasize enemy footsteps over your own.",
+    "recommended": "Fine-tune by ear, e.g. GlobalFootsteps vol 1.2",
+    "risk": "low",
+    "values": []
+  },
+  "miles_occlusion": {
+    "name": "Sound Occlusion",
+    "description": "Simulates sound being muffled by walls. Turning it off makes through-wall audio clearer and more direct, but changes the perceived distance of sounds.",
+    "recommended": "Most configs use 0 (off)",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "Off"},
+      {"v": "1", "label": "On"}
+    ]
+  },
+  "cl_fovscale": {
+    "name": "FOV Scale",
+    "description": "Scales the game's field of view; 1.55 is about 110 degrees in-game. Larger values widen the view but increase edge distortion and shrink distant targets.",
+    "recommended": "1.55 (about 110 degrees), adjust to taste",
+    "risk": "low",
+    "values": [
+      {"v": "1.47", "label": "1.47 (about 104 degrees)"},
+      {"v": "1.55", "label": "1.55 (about 110 degrees)"}
+    ]
+  },
+  "mat_setvideomode": {
+    "name": "Change Resolution In-Game",
+    "description": "Switches resolution directly in-game, e.g. mat_setvideomode 1728 1080 0; often combined with bind for quick stretched-resolution switching.",
+    "recommended": "Use with bind as needed",
+    "risk": "medium",
+    "values": []
+  }
+}

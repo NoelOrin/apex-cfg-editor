@@ -1,0 +1,358 @@
+{
+  "setting.defaultres": {
+    "name": "分辨率宽度",
+    "description": "游戏渲染分辨率的横向像素数，与分辨率高度共同决定画面大小，通常应与显示器原生分辨率一致。",
+    "recommended": "与显示器原生分辨率一致，如 1920",
+    "risk": "low",
+    "values": [
+      {"v": "1920", "label": "1920（1080p）"},
+      {"v": "2560", "label": "2560（1440p）"},
+      {"v": "3840", "label": "3840（4K）"}
+    ]
+  },
+  "setting.defaultresheight": {
+    "name": "分辨率高度",
+    "description": "游戏渲染分辨率的纵向像素数，与分辨率宽度配合使用。降低分辨率可提升帧率，但画面会变模糊。",
+    "recommended": "与显示器原生分辨率一致，如 1080",
+    "risk": "low",
+    "values": [
+      {"v": "1080", "label": "1080（1080p）"},
+      {"v": "1440", "label": "1440（1440p）"},
+      {"v": "2160", "label": "2160（4K）"}
+    ]
+  },
+  "setting.fullscreen": {
+    "name": "全屏模式",
+    "description": "控制显示模式：1 为独占全屏，0 为窗口模式（是否去边框由 setting.nowindowborder 决定）。独占全屏通常有更低的输入延迟和更稳定的性能。",
+    "recommended": "追求最低输入延迟设为 1",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "窗口模式"},
+      {"v": "1", "label": "独占全屏"}
+    ]
+  },
+  "setting.nowindowborder": {
+    "name": "无边框窗口",
+    "description": "设为 1 时以无边框窗口运行，切换其他程序更快，但可能引入少量输入延迟；设为 0 时配合全屏模式使用。",
+    "recommended": "追求最低输入延迟设为 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.mat_vsync_mode": {
+    "name": "垂直同步模式",
+    "description": "控制画面与显示器刷新信号的同步方式。关闭垂直同步可降低输入延迟，但可能出现画面撕裂。",
+    "recommended": "竞技环境一般设为 0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.mat_backbuffer_count": {
+    "name": "交换链缓冲数",
+    "description": "渲染后备缓冲区的数量，影响帧排队深度与输入延迟。改动后可能出现兼容性或稳定性问题，建议逐项实测。",
+    "recommended": "保持默认，除非明确了解改动目的",
+    "risk": "medium",
+    "values": [
+      {"v": "1", "label": "1（较少排队）"},
+      {"v": "3", "label": "3（传统三重缓冲）"}
+    ]
+  },
+  "setting.mat_antialias_mode": {
+    "name": "抗锯齿模式",
+    "description": "平滑模型边缘锯齿的抗锯齿方案，0 为关闭。开启后边缘更平滑，但渲染开销随之增加。",
+    "recommended": "追求帧率设为 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"}
+    ]
+  },
+  "setting.dvs_enable": {
+    "name": "动态垂直同步",
+    "description": "根据 GPU 帧时间在垂直同步与不同步之间自动切换，用于平衡画面撕裂与输入延迟。",
+    "recommended": "一般保持 0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.dvs_gpuframetime_min": {
+    "name": "动态垂直同步最小帧时间",
+    "description": "GPU 渲染一帧的目标最短时间（微秒），与最大帧时间共同构成动态垂直同步的切换区间。未启用动态垂直同步时无需修改。",
+    "recommended": "保持默认 15000",
+    "risk": "low",
+    "values": [
+      {"v": "15000", "label": "15000（默认）"}
+    ]
+  },
+  "setting.dvs_gpuframetime_max": {
+    "name": "动态垂直同步最大帧时间",
+    "description": "GPU 渲染一帧允许的最长时间（微秒），超出后动态垂直同步会放弃等待垂直同步信号以维持帧率。",
+    "recommended": "保持默认 15000",
+    "risk": "low",
+    "values": [
+      {"v": "15000", "label": "15000（默认）"}
+    ]
+  },
+  "setting.dvs_supersample_enable": {
+    "name": "动态垂直同步超采样",
+    "description": "允许动态垂直同步在帧时间富余时以更高分辨率渲染，画质更好但帧率波动更大。",
+    "recommended": "一般保持 0（关闭）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.gamma": {
+    "name": "画面亮度（伽马）",
+    "description": "调整整体画面亮度，数值越高画面越亮、暗部越容易看清，过高会冲淡对比度并让画面发灰。",
+    "recommended": "按个人观感在 1.0 附近微调",
+    "risk": "low",
+    "values": []
+  },
+  "setting.csm_enabled": {
+    "name": "级联阴影贴图",
+    "description": "动态阴影渲染的总开关。关闭可显著提升帧率，但角色与物体的实时阴影消失，会减少可用于判断位置的阴影信息。",
+    "recommended": "追求帧率设 0，依赖阴影信息设 1",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.csm_coverage": {
+    "name": "阴影覆盖范围",
+    "description": "级联阴影覆盖的场景范围，数值越小覆盖越近、渲染开销越低。",
+    "recommended": "低配可适当降低",
+    "risk": "low",
+    "values": []
+  },
+  "setting.csm_cascade_res": {
+    "name": "阴影级联分辨率",
+    "description": "级联阴影贴图的分辨率，越低阴影边缘越粗糙、开销越低。",
+    "recommended": "低配可适当降低",
+    "risk": "low",
+    "values": []
+  },
+  "setting.shadow_enable": {
+    "name": "阴影渲染",
+    "description": "场景阴影总开关。关闭后大部分阴影消失，帧率提升明显，同时失去阴影带来的位置信息。",
+    "recommended": "追求帧率设 0，重视阴影信息设 1",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.shadow_depth_dimen_min": {
+    "name": "阴影贴图最小尺寸",
+    "description": "阴影深度贴图允许的最小尺寸，降低可减少显存占用，阴影质量随之下降。",
+    "recommended": "保持默认",
+    "risk": "low",
+    "values": []
+  },
+  "setting.shadow_depth_upres_factor_max": {
+    "name": "阴影放大系数上限",
+    "description": "控制阴影贴图最大的放大倍率，降低可节省性能但阴影会更模糊。",
+    "recommended": "保持默认",
+    "risk": "low",
+    "values": []
+  },
+  "setting.shadow_maxdynamic": {
+    "name": "动态阴影数量上限",
+    "description": "同时渲染的动态光源阴影数量上限，设为 0 可禁用动态阴影渲染。",
+    "recommended": "追求帧率设 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "禁用"}
+    ]
+  },
+  "setting.new_shadow_settings": {
+    "name": "新版阴影设置开关",
+    "description": "是否启用新版阴影参数组，改动会影响文件中多个阴影项的实际效果。",
+    "recommended": "保持当前值，不建议修改",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.ssao_enabled": {
+    "name": "环境光遮蔽（SSAO）",
+    "description": "屏幕空间环境光遮蔽，在物体交界处生成接触阴影。关闭可提升帧率，画面立体感略降。",
+    "recommended": "追求帧率设 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.ssao_downsample": {
+    "name": "SSAO 降采样",
+    "description": "环境光遮蔽的降采样比例，数值越高计算量越低、遮蔽效果越粗糙。",
+    "recommended": "低配可提高降采样",
+    "risk": "low",
+    "values": []
+  },
+  "setting.volumetric_lighting": {
+    "name": "体积光",
+    "description": "光线穿过空气产生的散射效果（如光柱），关闭可提升帧率，场景氛围略降。",
+    "recommended": "追求帧率设 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.volumetric_fog": {
+    "name": "体积雾",
+    "description": "场景中的体积雾效果，关闭可提升帧率，部分场景的远景能见度会略有变化。",
+    "recommended": "追求帧率设 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.mat_forceaniso": {
+    "name": "各向异性过滤",
+    "description": "让倾斜视角下的地面与墙面纹理保持清晰，对帧率影响较小。",
+    "recommended": "0（关闭）或按喜好 4 到 16",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "4", "label": "4x"},
+      {"v": "8", "label": "8x"},
+      {"v": "16", "label": "16x"}
+    ]
+  },
+  "setting.mat_mip_linear": {
+    "name": "纹理线性过滤",
+    "description": "控制是否使用线性 mipmap 过滤。关闭后远处纹理更锐利，但闪烁与噪点明显。",
+    "recommended": "保持 1（开启）",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.mat_picmip": {
+    "name": "纹理精度",
+    "description": "纹理 mip 精度选择：0 为最高精度，4 为最低。降低可提升帧率并减少显存占用，画面纹理更模糊，与 setting.stream_memory 配合生效。",
+    "recommended": "低配 4，画质优先 0 到 1",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0（最高精度）"},
+      {"v": "1", "label": "1（高）"},
+      {"v": "4", "label": "4（最低精度）"}
+    ]
+  },
+  "setting.stream_memory": {
+    "name": "纹理流送内存",
+    "description": "纹理流送可使用的内存预算。数值过低时纹理会长时间处于模糊状态；设为 0 时配合 mat_picmip 4 使用最低纹理精度。",
+    "recommended": "不清楚时保持默认 300000",
+    "risk": "medium",
+    "values": [
+      {"v": "0", "label": "0（配合最低纹理）"},
+      {"v": "300000", "label": "300000（默认）"}
+    ]
+  },
+  "setting.particle_cpu_level": {
+    "name": "粒子效果等级",
+    "description": "CPU 侧粒子效果的质量等级，降低可减少交火时的性能波动。",
+    "recommended": "低配设为 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "最低"}
+    ]
+  },
+  "setting.cl_gib_allow": {
+    "name": "碎块效果",
+    "description": "允许死亡或物体破坏时产生飞散碎块。关闭可减少特效负担，战斗中的观感变化较小。",
+    "recommended": "追求帧率设 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.cl_particle_fallback_base": {
+    "name": "粒子降级基准",
+    "description": "负载过高时回落到更简单粒子效果的基准档位，数值越高降级越激进、特效越简化。",
+    "recommended": "低配可调高",
+    "risk": "low",
+    "values": []
+  },
+  "setting.cl_particle_fallback_multiplier": {
+    "name": "粒子降级倍率",
+    "description": "粒子效果在高负载时降级的倍率，数值越高越容易切换为低开销特效。",
+    "recommended": "低配可调高",
+    "risk": "low",
+    "values": []
+  },
+  "setting.cl_ragdoll_maxcount": {
+    "name": "布娃娃数量上限",
+    "description": "同时存在的布娃娃（尸体物理）数量上限，设为 0 可禁用布娃娃，减少战斗中的物理计算开销。",
+    "recommended": "追求帧率设 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "禁用"}
+    ]
+  },
+  "setting.cl_ragdoll_self_collision": {
+    "name": "布娃娃自碰撞",
+    "description": "布娃娃各部件之间的碰撞计算。关闭可节省少量性能，尸体姿态略不自然。",
+    "recommended": "追求帧率设 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.r_createmodeldecals": {
+    "name": "模型贴花",
+    "description": "在模型表面生成弹孔等贴花。关闭可提升交火时的帧率稳定性。",
+    "recommended": "追求帧率设 0",
+    "risk": "low",
+    "values": [
+      {"v": "0", "label": "关闭"},
+      {"v": "1", "label": "开启"}
+    ]
+  },
+  "setting.r_decals": {
+    "name": "贴花数量",
+    "description": "场景中同时保留的贴花（弹孔、痕迹等）数量，越低开销越小。",
+    "recommended": "追求帧率可降低数值",
+    "risk": "low",
+    "values": []
+  },
+  "setting.r_lod_switch_scale": {
+    "name": "LOD 切换距离",
+    "description": "模型细节层级（LOD）切换距离的比例。调低后远处模型更早换成低模，帧率更好但远景更粗糙。",
+    "recommended": "低配 0.4 到 0.6，画质优先 1.0",
+    "risk": "medium",
+    "values": [
+      {"v": "0.4", "label": "0.4（低配常用）"},
+      {"v": "1.0", "label": "1.0（默认附近）"}
+    ]
+  },
+  "setting.fadedistscale": {
+    "name": "淡出距离比例",
+    "description": "控制物体按距离淡出的比例。调低后远景更早消失，可减少渲染负担，但更容易看到场景元素凭空出现。",
+    "recommended": "保持默认，低配可小幅调低",
+    "risk": "medium",
+    "values": []
+  },
+  "setting.configversion": {
+    "name": "配置文件版本号",
+    "description": "videoconfig.txt 的结构版本标记，游戏用它识别文件格式与字段含义。",
+    "recommended": "保持原值，不要修改",
+    "risk": "low",
+    "values": []
+  }
+}
