@@ -1,7 +1,8 @@
 import 'dart:io';
 
-// 探测引擎 v2：统一产出 ApexInstall 列表（探测引擎 v1 ApexPathFinder 的
-// 继任者，覆盖 EA App / OneDrive / 自定义 Steam 库等 v1 扫不到的场景）。
+// 探测引擎 v2：统一产出 ApexInstall 列表（取代 v1 homeDir 相对推导的
+// ApexPathFinder，覆盖 EA App / OneDrive / 自定义 Steam 库等 v1 扫不到
+// 的场景）。
 //
 // 平台专有访问（注册表、盘符枚举）经由 RegistryReader / DriveLister
 // 抽象注入：生产传 win32 实现（windows_registry.dart），测试注入假实现，

@@ -8,8 +8,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../core/io/cfg_file_io.dart';
-import '../core/paths/apex_paths.dart';
+import '../core/paths/install_locator.dart';
+import '../core/paths/windows_registry.dart';
 import '../core/settings/settings_store.dart';
+import '../core/templates/autoexec_template.dart';
 import '../state/diff_bloc.dart';
 import '../state/edit_bloc.dart';
 import '../state/file_bloc.dart';
@@ -34,13 +36,27 @@ String warningText(BuildContext context, String key) {
   };
 }
 
+/// 探测后的界面状态（决定空态横幅内容；打开文件成功后横幅自动隐藏）。
+enum _DetectPhase {
+  /// 未探测 / 已有文件打开 / videoconfig 优先打开成功。
+  idle,
+
+  /// 探测全空：提示手动选择或指定 Apex 目录。
+  notFound,
+
+  /// 找到安装但 autoexec.cfg 缺失：提供创建模板入口。
+  autoexecMissing,
+}
+
 /// 主界面三区布局：顶栏（文件名/模式切换/保存/还原）+
 /// 编辑区（flex 6）+ 底部区（高 220，内含知识卡 280 宽 + 行级 diff）。
 /// 三个 bloc 均由外部注入（测试接缝）。
 ///
-/// 本屏同时承担装配期行为：启动自动探测（[homeDirOverride]）、「打开文件」
-/// 手动选择（[pickFile]）、还原对话框接线和退出保护
-///（PopScope + window_manager WindowListener，均经 [ExitGuard] 决策）。
+/// 本屏同时承担装配期行为：启动自动探测（探测引擎 v2，见
+/// [InstallLocator]）、「打开文件」手动选择（[pickFile]）、指定 Apex 目录
+/// （探测 v2 的 customInstallDir 回写）、创建 autoexec.cfg 模板、还原
+/// 对话框接线和退出保护（PopScope + window_manager WindowListener，
+/// 均经 [ExitGuard] 决策）。
 class EditorScreen extends StatefulWidget {
   final EditBloc editBloc;
   final DiffBloc diffBloc;
@@ -49,15 +65,24 @@ class EditorScreen extends StatefulWidget {
   /// 启动自动探测开关（initState 后帧执行）；默认开，测试可关。
   final bool autoDetect;
 
-  /// 自动探测的 home 根目录。null → Platform.environment['USERPROFILE']
-  /// （macOS 开发期通常为 null → 静默跳过，绝不去探测真实盘）。
+  /// 自动探测的 home 根目录。null → 真实环境变量（macOS 开发期
+  /// USERPROFILE 通常为 null → 文档根落空，注册表走空实现，绝不去
+  /// 探测真实盘）。
   final String? homeDirOverride;
 
   /// 「打开文件」选择器。null → file_picker（.cfg/.txt）；测试注入。
   final Future<String?> Function()? pickFile;
 
+  /// 「指定 Apex 目录」选择器。null → file_picker 目录选择；测试注入。
+  final Future<String?> Function()? pickDirectory;
+
+  /// 探测引擎 v2。null → 生产装配（Windows 真实注册表 + C-F 盘符枚举，
+  /// 非 Windows 注册表走空实现）。
+  final InstallLocator? locator;
+
   /// 上次打开路径存储（规格 R7）：选择器以 lastOpenDir 作为
-  /// initialDirectory 打开。null → 不带初始目录。
+  /// initialDirectory 打开；探测 v2 读写 customInstallDir。
+  /// null → 不带初始目录、不读写记忆路径。
   final SettingsStore? settings;
 
   const EditorScreen({
@@ -68,6 +93,8 @@ class EditorScreen extends StatefulWidget {
     this.autoDetect = true,
     this.homeDirOverride,
     this.pickFile,
+    this.pickDirectory,
+    this.locator,
     this.settings,
   });
 
@@ -77,6 +104,11 @@ class EditorScreen extends StatefulWidget {
 
 class _EditorScreenState extends State<EditorScreen> with WindowListener {
   bool _textMode = false;
+
+  _DetectPhase _phase = _DetectPhase.idle;
+
+  /// 用户在多安装选择对话框中选定的安装（创建 autoexec 的目标）。
+  ApexInstall? _activeInstall;
 
   /// 还原后递增，作为 TextEditorView 的 key 强制重建子树（见 _onRestored）。
   int _textEpoch = 0;
@@ -131,17 +163,158 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     await _exitGuard.confirmExit();
   }
 
-  /// 启动自动探测：优先 videoconfig，其次 autoexec；home 缺失（macOS
-  /// 开发期）或两个目标都不存在时静默，由顶部「打开文件」按钮兜底。
+  /// 启动自动探测（探测引擎 v2）：videoconfig 优先自动打开，其次所选
+  /// 安装的 autoexec.cfg；autoexec 缺失或探测全空时进入对应横幅状态。
   void _autoDetectAndOpen() {
     if (!widget.autoDetect) return;
-    final home = widget.homeDirOverride ?? Platform.environment['USERPROFILE'];
-    if (home == null || home.isEmpty) return;
-    final finder = ApexPathFinder(homeDir: home);
-    final path = finder.findVideoconfig() ?? finder.findAutoexec();
-    if (path != null && widget.fileBloc.state.path == null) {
-      widget.fileBloc.add(OpenRequested(path));
+    _applyResults(_runLocator());
+  }
+
+  /// 组装探测器：优先注入（测试），否则生产装配。homeDirOverride 仅测试
+  /// 注入，映射为 USERPROFILE 环境变量供文档根推导。
+  InstallLocator _buildLocator() {
+    if (widget.locator != null) return widget.locator!;
+    final home = widget.homeDirOverride;
+    return InstallLocator(
+      registry: defaultRegistryReader(),
+      drives: fixedDriveLister,
+      env: (home != null && home.isNotEmpty)
+          ? <String, String?>{'USERPROFILE': home}
+          : null,
+    );
+  }
+
+  List<ApexInstall> _runLocator({String? customInstallDir}) =>
+      _buildLocator().locate(
+        customInstallDir: customInstallDir ??
+            widget.settings?.readCustomInstallDir(),
+      );
+
+  /// 探测结果落地：文档根（videoconfig）优先自动打开；安装候选多于一个
+  /// 时弹选择对话框；所选安装有 autoexec.cfg 就打开，只有目录就进入
+  /// 「创建 autoexec.cfg」横幅；全空进入「未找到」横幅。
+  Future<void> _applyResults(List<ApexInstall> results) async {
+    final docResults =
+        results.where((r) => r.videoconfigPath != null).toList();
+    final installs = results.where((r) => r.videoconfigPath == null).toList();
+
+    ApexInstall? chosen;
+    if (installs.length > 1) {
+      if (!mounted) return;
+      chosen = await _showInstallChooser(installs);
+      if (!mounted) return;
+      // 用户取消选择：不再自动处理 autoexec，退回「未找到」横幅
+      // （顶栏「打开文件」始终可用）。
+    } else if (installs.isNotEmpty) {
+      chosen = installs.first;
     }
+
+    final openPath = docResults.isNotEmpty
+        ? docResults.first.videoconfigPath
+        : chosen?.autoexecPath;
+    if (openPath != null && widget.fileBloc.state.path == null) {
+      widget.fileBloc.add(OpenRequested(openPath));
+    }
+    if (!mounted) return;
+    setState(() {
+      _activeInstall = chosen;
+      _phase = openPath != null
+          ? _DetectPhase.idle
+          : chosen != null
+              ? _DetectPhase.autoexecMissing
+              : _DetectPhase.notFound;
+    });
+  }
+
+  /// 多安装选择对话框（Steam + EA App 双装等）。取消返回 null。
+  Future<ApexInstall?> _showInstallChooser(List<ApexInstall> installs) {
+    final l = AppLocalizations.of(context)!;
+    String sourceLabel(InstallSource s) => switch (s) {
+          InstallSource.steam => l.installSourceSteam,
+          InstallSource.eaApp => l.installSourceEaApp,
+          _ => l.installSourceCustom,
+        };
+    IconData sourceIcon(InstallSource s) => switch (s) {
+          InstallSource.steam => LucideIcons.gamepad2,
+          InstallSource.eaApp => LucideIcons.appWindow,
+          _ => LucideIcons.folder,
+        };
+    return showDialog<ApexInstall>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(l.chooseInstallTitle),
+        children: [
+          for (final install in installs)
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(install),
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                leading: Icon(sourceIcon(install.source)),
+                title: Text(sourceLabel(install.source)),
+                subtitle: Text(install.installDir, maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l.cancel),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 「创建 autoexec.cfg」：写入全注释模板（目录按可创建位置补建）后
+  /// 自动打开。模板不改变任何游戏行为。
+  Future<void> _createAutoexec() async {
+    final dir = _activeInstall?.autoexecDir;
+    if (dir == null) return;
+    final file = File('$dir/autoexec.cfg');
+    try {
+      if (!file.existsSync()) {
+        file.parent.createSync(recursive: true);
+        file.writeAsStringSync(autoexecTemplate);
+      }
+    } catch (_) {
+      // 建档失败（权限等）：交由 OpenRequested 的失败告警反馈。
+    }
+    if (!mounted) return;
+    setState(() => _phase = _DetectPhase.idle);
+    if (widget.fileBloc.state.path == null) {
+      widget.fileBloc.add(OpenRequested(file.path));
+    }
+  }
+
+  /// 「指定 Apex 目录」：选择目录 → 记入 customInstallDir → 以该目录
+  /// 重新探测（locate 内部按 fallback 语义合并候选）。
+  Future<void> _pickApexDir() async {
+    final l = AppLocalizations.of(context)!;
+    String? dir;
+    try {
+      final pick = widget.pickDirectory;
+      dir = pick != null
+          ? await pick()
+          : await FilePicker.getDirectoryPath(
+              initialDirectory: widget.settings?.readLastOpenDir(),
+            );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.filePickerFailed)),
+        );
+      }
+      return;
+    }
+    if (dir == null || dir.isEmpty || !mounted) return; // 用户取消
+    widget.settings?.writeCustomInstallDir(dir);
+    await _applyResults(_runLocator(customInstallDir: dir));
   }
 
   Future<void> _openFileManually() async {
@@ -207,6 +380,61 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
       return;
     }
     setState(() => _textEpoch++);
+  }
+
+  /// 探测状态横幅（常规样式；酸性视觉重构归属下一轮 UI 波次）。
+  Widget _buildDetectBanner(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return BlocBuilder<FileBloc, FileState>(
+      bloc: widget.fileBloc,
+      // 常驻状态按「有无文件」门控，避免每次状态发射都重建横幅。
+      buildWhen: (prev, cur) => (prev.path == null) != (cur.path == null),
+      builder: (context, s) {
+        if (s.path != null || _phase == _DetectPhase.idle) {
+          return const SizedBox.shrink();
+        }
+        final missing = _phase == _DetectPhase.autoexecMissing;
+        final title = missing ? l.autoexecMissingTitle : l.apexNotFoundTitle;
+        final hint = missing ? l.autoexecMissingHint : l.apexNotFoundHint;
+        return Card(
+          margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+          child: Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(missing ? LucideIcons.filePlus2 : LucideIcons.searchX,
+                    size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(title,
+                          style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: 2),
+                      Text(hint,
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                missing
+                    ? FilledButton.tonal(
+                        onPressed: _createAutoexec,
+                        child: Text(l.createAutoexec),
+                      )
+                    : TextButton(
+                        onPressed: _pickApexDir,
+                        child: Text(l.specifyApexDir),
+                      ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -289,6 +517,9 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
           },
           child: Column(
             children: [
+              // 探测 v2 空态横幅：autoexec 缺失（创建入口）或未找到
+              // （指定目录入口）；打开文件成功后自动隐藏。
+              _buildDetectBanner(context),
               Expanded(
                 flex: 6,
                 child: _textMode

@@ -38,5 +38,15 @@
   "replaceAll": "Replace all",
   "findPrev": "Previous",
   "findNext": "Next",
-  "close": "Close"
+  "close": "Close",
+  "createAutoexec": "Create autoexec.cfg",
+  "autoexecMissingTitle": "Apex install found, but autoexec.cfg is missing",
+  "autoexecMissingHint": "Create a commented template to start configuring; it changes nothing until you edit it.",
+  "apexNotFoundTitle": "Apex not found",
+  "apexNotFoundHint": "No Apex installation was detected. Open a file manually or specify your Apex install directory.",
+  "specifyApexDir": "Specify Apex directory",
+  "chooseInstallTitle": "Multiple Apex installations detected",
+  "installSourceSteam": "Steam",
+  "installSourceEaApp": "EA App",
+  "installSourceCustom": "Custom directory"
 }

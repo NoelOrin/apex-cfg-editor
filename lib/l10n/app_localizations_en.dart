@@ -116,4 +116,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
+
+  @override
+  String get createAutoexec => 'Create autoexec.cfg';
+
+  @override
+  String get autoexecMissingTitle =>
+      'Apex install found, but autoexec.cfg is missing';
+
+  @override
+  String get autoexecMissingHint =>
+      'Create a commented template to start configuring; it changes nothing until you edit it.';
+
+  @override
+  String get apexNotFoundTitle => 'Apex not found';
+
+  @override
+  String get apexNotFoundHint =>
+      'No Apex installation was detected. Open a file manually or specify your Apex install directory.';
+
+  @override
+  String get specifyApexDir => 'Specify Apex directory';
+
+  @override
+  String get chooseInstallTitle => 'Multiple Apex installations detected';
+
+  @override
+  String get installSourceSteam => 'Steam';
+
+  @override
+  String get installSourceEaApp => 'EA App';
+
+  @override
+  String get installSourceCustom => 'Custom directory';
 }

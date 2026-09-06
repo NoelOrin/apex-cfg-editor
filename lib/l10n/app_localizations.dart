@@ -301,6 +301,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get close;
+
+  /// No description provided for @createAutoexec.
+  ///
+  /// In en, this message translates to:
+  /// **'Create autoexec.cfg'**
+  String get createAutoexec;
+
+  /// No description provided for @autoexecMissingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Apex install found, but autoexec.cfg is missing'**
+  String get autoexecMissingTitle;
+
+  /// No description provided for @autoexecMissingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a commented template to start configuring; it changes nothing until you edit it.'**
+  String get autoexecMissingHint;
+
+  /// No description provided for @apexNotFoundTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Apex not found'**
+  String get apexNotFoundTitle;
+
+  /// No description provided for @apexNotFoundHint.
+  ///
+  /// In en, this message translates to:
+  /// **'No Apex installation was detected. Open a file manually or specify your Apex install directory.'**
+  String get apexNotFoundHint;
+
+  /// No description provided for @specifyApexDir.
+  ///
+  /// In en, this message translates to:
+  /// **'Specify Apex directory'**
+  String get specifyApexDir;
+
+  /// No description provided for @chooseInstallTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Multiple Apex installations detected'**
+  String get chooseInstallTitle;
+
+  /// No description provided for @installSourceSteam.
+  ///
+  /// In en, this message translates to:
+  /// **'Steam'**
+  String get installSourceSteam;
+
+  /// No description provided for @installSourceEaApp.
+  ///
+  /// In en, this message translates to:
+  /// **'EA App'**
+  String get installSourceEaApp;
+
+  /// No description provided for @installSourceCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom directory'**
+  String get installSourceCustom;
 }
 
 class _AppLocalizationsDelegate

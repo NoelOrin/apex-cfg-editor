@@ -33,5 +33,15 @@
   "replaceAll": "全部替换",
   "findPrev": "上一个",
   "findNext": "下一个",
-  "close": "关闭"
+  "close": "关闭",
+  "createAutoexec": "创建 autoexec.cfg",
+  "autoexecMissingTitle": "已找到 Apex 安装目录，但缺少 autoexec.cfg",
+  "autoexecMissingHint": "可创建一个全注释的模板文件开始配置；在你编辑前不会改变任何游戏行为。",
+  "apexNotFoundTitle": "未找到 Apex",
+  "apexNotFoundHint": "未检测到 Apex 安装。可手动选择文件，或指定 Apex 安装目录。",
+  "specifyApexDir": "指定 Apex 目录",
+  "chooseInstallTitle": "检测到多个 Apex 安装",
+  "installSourceSteam": "Steam",
+  "installSourceEaApp": "EA App",
+  "installSourceCustom": "自定义目录"
 }

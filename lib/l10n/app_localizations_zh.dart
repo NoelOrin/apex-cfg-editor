@@ -112,4 +112,34 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get close => '关闭';
+
+  @override
+  String get createAutoexec => '创建 autoexec.cfg';
+
+  @override
+  String get autoexecMissingTitle => '已找到 Apex 安装目录，但缺少 autoexec.cfg';
+
+  @override
+  String get autoexecMissingHint => '可创建一个全注释的模板文件开始配置；在你编辑前不会改变任何游戏行为。';
+
+  @override
+  String get apexNotFoundTitle => '未找到 Apex';
+
+  @override
+  String get apexNotFoundHint => '未检测到 Apex 安装。可手动选择文件，或指定 Apex 安装目录。';
+
+  @override
+  String get specifyApexDir => '指定 Apex 目录';
+
+  @override
+  String get chooseInstallTitle => '检测到多个 Apex 安装';
+
+  @override
+  String get installSourceSteam => 'Steam';
+
+  @override
+  String get installSourceEaApp => 'EA App';
+
+  @override
+  String get installSourceCustom => '自定义目录';
 }
