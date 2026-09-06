@@ -17,6 +17,7 @@
   "openFile": "Open file",
   "fileOpenFailed": "Failed to open file",
   "fileBadEncoding": "File contains bytes that cannot be decoded; saving may lose them",
+  "fileSaveFailed": "Failed to save file",
   "restoreDialogTitle": "Restore from backup",
   "backupEmpty": "No backups yet. A backup is kept before every save.",
   "quitDialogTitle": "Unsaved changes",

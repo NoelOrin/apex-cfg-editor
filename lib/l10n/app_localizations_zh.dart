@@ -47,6 +47,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileBadEncoding => '文件包含无法解码的字节，保存可能丢失这些内容';
 
   @override
+  String get fileSaveFailed => '保存文件失败';
+
+  @override
   String get restoreDialogTitle => '从备份还原';
 
   @override

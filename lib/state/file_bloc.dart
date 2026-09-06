@@ -95,9 +95,19 @@ class FileBloc extends Bloc<FileEvent, FileState> {
       final path = state.path;
       if (doc == null || path == null) return;
       final st = editBloc.state;
-      final cur = File(path).readAsBytesSync();
       if (!st.dirty) return; // 未编辑：不产生新备份
-      await saveImpl(path, doc.serialize(), CfgFileIo.readBytes(cur).encoding);
+      // 先清告警：重试保存失败时（warning 值不变）UI 的 listenWhen 仍能
+      // 重新触发提示；fileBadEncoding 属于打开期一次性提示，可安全清除。
+      em(state.copyWith(warning: () => null));
+      try {
+        final cur = File(path).readAsBytesSync();
+        await saveImpl(path, doc.serialize(), CfgFileIo.readBytes(cur).encoding);
+      } catch (_) {
+        // 保存失败：不派发 DocumentSaved（dirty 保持 true，重试不被
+        // !dirty no-op 吞掉），置告警由 ExitGuard/UI 中止退出或提示。
+        em(state.copyWith(warning: () => 'fileSaveFailed'));
+        return;
+      }
       editBloc.add(DocumentSaved(doc.serialize()));
       em(state.copyWith(backups: listBackupsImpl(path)));
     });

@@ -49,6 +49,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'File contains bytes that cannot be decoded; saving may lose them';
 
   @override
+  String get fileSaveFailed => 'Failed to save file';
+
+  @override
   String get restoreDialogTitle => 'Restore from backup';
 
   @override

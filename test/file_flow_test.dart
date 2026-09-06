@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:apex_cfg_editor/core/backup/backup_service.dart';
@@ -37,13 +38,15 @@ Future<void> _settle() => Future<void>.delayed(const Duration(milliseconds: 50))
   return (file, edit, diff);
 }
 
-List<File> _backupFiles(String backupBase, String fileName) => Directory(
-      '$backupBase/$fileName',
-    )
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.cfg'))
-        .toList();
+List<File> _backupFiles(String backupBase, String fileName) {
+  final dir = Directory('$backupBase/$fileName');
+  if (!dir.existsSync()) return const [];
+  return dir
+      .listSync()
+      .whereType<File>()
+      .where((f) => f.path.endsWith('.cfg'))
+      .toList();
+}
 
 Widget _host(Widget home) => MaterialApp(
       locale: const Locale('en'),
@@ -425,6 +428,80 @@ void main() {
       expect(File(cfg.path).readAsStringSync(), _old); // 未写盘
       expect(edit.state.dirty, true); // 编辑状态原样保留（进程随即退出）
 
+      await file.close();
+      await diff.close();
+      await edit.close();
+    });
+
+    test('save failure aborts exit: no destroy, warning raised, dirty kept',
+        () async {
+      final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_old);
+      final backupBase = '${tmp.path}/backups';
+      final backups = BackupService(baseDir: backupBase);
+      final edit = EditBloc();
+      final diff = DiffBloc(editStream: edit.stream);
+      final file = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) async => throw Exception('disk full'),
+        listBackupsImpl: backups.listBackups,
+        restoreImpl: backups.restore,
+      );
+      file.add(OpenRequested(cfg.path));
+      await _settle();
+      edit.add(LineValueChanged(index: 0, value: '144'));
+      await _settle();
+
+      var destroyed = 0;
+      final guard = ExitGuard(
+        editBloc: edit,
+        fileBloc: file,
+        askUser: () async => QuitChoice.save,
+        destroy: () async => destroyed++,
+        // 缩短等待，便于测试观测（生产为 5s）。
+        saveTimeout: const Duration(milliseconds: 200),
+      );
+
+      expect(await guard.confirmExit(), isFalse); // 中止退出
+      expect(destroyed, 0); // 窗口未销毁
+      expect(file.state.warning, 'fileSaveFailed'); // 告警出现
+      expect(edit.state.dirty, true); // 未落盘，保持脏
+      expect(File(cfg.path).readAsStringSync(), _old); // 磁盘未被写坏
+      expect(_backupFiles(backupBase, 'videoconfig.txt'), isEmpty);
+
+      await file.close();
+      await diff.close();
+      await edit.close();
+    });
+
+    test('save timeout aborts exit without destroying', () async {
+      final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_old);
+      final (file, edit, diff) = _wire('${tmp.path}/backups');
+      file.add(OpenRequested(cfg.path));
+      await _settle();
+      edit.add(LineValueChanged(index: 0, value: '144'));
+      await _settle();
+
+      // saveImpl 永不完成：模拟写盘挂死。
+      final never = Completer<void>();
+      final stalled = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) => never.future,
+        listBackupsImpl: BackupService(baseDir: '${tmp.path}/b2').listBackups,
+        restoreImpl: (_, _) async {},
+      );
+      var destroyed = 0;
+      final guard = ExitGuard(
+        editBloc: edit,
+        fileBloc: stalled,
+        askUser: () async => QuitChoice.save,
+        destroy: () async => destroyed++,
+        saveTimeout: const Duration(milliseconds: 50),
+      );
+
+      expect(await guard.confirmExit(), isFalse); // 超时：宁可留下再试
+      expect(destroyed, 0); // 不销毁窗口（不静默丢数据）
+
+      await stalled.close();
       await file.close();
       await diff.close();
       await edit.close();

@@ -170,6 +170,12 @@ abstract class AppLocalizations {
   /// **'File contains bytes that cannot be decoded; saving may lose them'**
   String get fileBadEncoding;
 
+  /// No description provided for @fileSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save file'**
+  String get fileSaveFailed;
+
   /// No description provided for @restoreDialogTitle.
   ///
   /// In en, this message translates to:
