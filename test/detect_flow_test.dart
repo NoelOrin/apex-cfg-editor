@@ -11,6 +11,9 @@ import 'package:apex_cfg_editor/ui/editor_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Windows 上探测引擎用 `\` 拼接（文件系统等价），断言前归一化到 `/`。
+String _norm(String p) => p.replaceAll(r'\', '/');
+
 class FakeRegistry implements RegistryReader {
   final Map<String, String?> values;
   FakeRegistry({this.values = const {}});
@@ -105,9 +108,9 @@ void main() {
     )));
     await t.pumpAndSettle();
 
-    expect(file.state.path, autoexec.path);
+    expect(_norm(file.state.path!), _norm(autoexec.path));
     // 打开成功回写 customInstallDir（main.dart 装配语义）。
-    expect(store.readCustomInstallDir(), apex.path);
+    expect(_norm(store.readCustomInstallDir()!), _norm(apex.path));
   });
 
   testWidgets('autoexec missing → create button writes template and opens',
@@ -147,7 +150,7 @@ void main() {
 
     final created = File('${apex.path}/cfg/autoexec.cfg');
     expect(created.existsSync(), isTrue);
-    expect(file.state.path, created.path);
+    expect(_norm(file.state.path!), _norm(created.path));
     for (final line in created.readAsStringSync().split('\n')) {
       if (line.trim().isEmpty) continue;
       expect(line.trimLeft().startsWith('//'), isTrue, reason: line);
@@ -186,8 +189,9 @@ void main() {
     await t.pumpAndSettle();
 
     expect(
-        file.state.path,
-        '${tmp.path}/Lib3/steamapps/common/Apex Legends/cfg/autoexec.cfg');
+        _norm(file.state.path!),
+        _norm(
+            '${tmp.path}/Lib3/steamapps/common/Apex Legends/cfg/autoexec.cfg'));
   });
 
   testWidgets('two installs → chooser dialog; picking one opens its autoexec',
@@ -237,7 +241,7 @@ void main() {
     await t.tap(find.text('EA App'));
     await t.pumpAndSettle();
 
-    expect(file.state.path, '$eaApex/global/cfg/autoexec.cfg');
+    expect(_norm(file.state.path!), _norm('$eaApex/global/cfg/autoexec.cfg'));
   });
 
   testWidgets('nothing found → empty-state hint; specify dir re-probes and '
@@ -272,7 +276,7 @@ void main() {
     await t.tap(find.text('Specify Apex directory'));
     await t.pumpAndSettle();
 
-    expect(file.state.path, autoexec.path);
-    expect(store.readCustomInstallDir(), apex.path);
+    expect(_norm(file.state.path!), _norm(autoexec.path));
+    expect(_norm(store.readCustomInstallDir()!), _norm(apex.path));
   });
 }
