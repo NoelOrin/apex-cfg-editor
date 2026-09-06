@@ -107,4 +107,45 @@ void main() {
       await edit.close();
     });
   });
+
+group('customInstallDir (用户记忆的 Apex 安装目录)', () {
+  test('roundtrips via json without clobbering lastOpenDir', () {
+    final path = '${tmp.path}/settings.json';
+    final store = SettingsStore(settingsPath: path);
+    expect(store.readCustomInstallDir(), isNull);
+
+    store.writeLastOpenDir('${tmp.path}/docs');
+    store.writeCustomInstallDir('D:/Games/Apex Legends');
+    expect(store.readCustomInstallDir(), 'D:/Games/Apex Legends');
+    // 两个字段互不覆盖：写 customInstallDir 后 lastOpenDir 仍在。
+    expect(store.readLastOpenDir(), '${tmp.path}/docs');
+    // 反向亦然：再写 lastOpenDir 不丢 customInstallDir。
+    store.writeLastOpenDir('${tmp.path}/other');
+    expect(store.readCustomInstallDir(), 'D:/Games/Apex Legends');
+  });
+
+  test('missing/empty/non-string and invalid json are null', () {
+    expect(SettingsStore.customInstallDirFromJson('{}'), isNull);
+    expect(
+        SettingsStore.customInstallDirFromJson('{"customInstallDir": ""}'),
+        isNull);
+    expect(
+        SettingsStore.customInstallDirFromJson('{"customInstallDir": 42}'),
+        isNull);
+    expect(SettingsStore.customInstallDirFromJson('not json'), isNull);
+  });
+
+  test('missing file reads as null without throwing', () {
+    final store = SettingsStore(settingsPath: '${tmp.path}/none.json');
+    expect(store.readCustomInstallDir(), isNull);
+  });
+
+  test('unwritable path write fails silently', () {
+    final blocker = File('${tmp.path}/blocker2')..writeAsStringSync('x');
+    final store = SettingsStore(settingsPath: '${blocker.path}/settings.json');
+    expect(
+        () => store.writeCustomInstallDir('${tmp.path}/a'), returnsNormally);
+    expect(store.readCustomInstallDir(), isNull);
+  });
+});
 }
