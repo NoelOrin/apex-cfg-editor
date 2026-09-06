@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:apex_cfg_editor/core/parser/cfg_document.dart';
 import 'package:apex_cfg_editor/core/parser/videoconfig_parser.dart';
+import 'package:apex_cfg_editor/l10n/app_localizations.dart';
 import 'package:apex_cfg_editor/state/edit_bloc.dart';
 import 'package:apex_cfg_editor/state/file_bloc.dart';
 import 'package:apex_cfg_editor/ui/widgets/text_editor_view.dart';
@@ -30,6 +31,9 @@ FileBloc _realFileBloc(EditBloc edit) => FileBloc(
     );
 
 Widget _host(Widget child, {FileBloc? fileBloc}) => MaterialApp(
+      // 查找替换栏的文案走 AppLocalizations：host 需要挂 delegates。
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: fileBloc == null
           ? Scaffold(body: child)
           : BlocProvider<FileBloc>.value(
@@ -124,5 +128,88 @@ void main() {
       '"F6" "quit"',
     );
     expect(edit.state.dirty, isTrue);
+  });
+
+  group('find & replace bar (spec R4)', () {
+    testWidgets('find next selects the match', (t) async {
+      final edit = _realEditBloc();
+      addTearDown(edit.close);
+
+      await t.pumpWidget(_host(TextEditorView(editBloc: edit)));
+      await t.pumpAndSettle();
+      // 输入触发 FullTextChanged 后再查找（与规格 R4 用户路径一致）。
+      await t.enterText(find.byType(CodeField), '$_src// tuned\n');
+      await t.pump(const Duration(milliseconds: 400));
+      await t.pump();
+      expect(edit.state.dirty, isTrue);
+
+      await t.tap(find.byTooltip('Find'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const ValueKey('findField')), 'fps_max');
+      await t.tap(find.byTooltip('Next'));
+      await t.pumpAndSettle();
+
+      final ctrl = t.widget<CodeField>(find.byType(CodeField)).controller;
+      // '"setting.' 长 9：首个 fps_max 在 [9, 16)。
+      expect(ctrl.selection.baseOffset, 9);
+      expect(ctrl.selection.extentOffset, 16);
+    });
+
+    testWidgets('find prev goes back; next wraps around at end', (t) async {
+      final edit = _realEditBloc(
+          src: '"setting.fps_max" "0"\nfps_max 256\n');
+      addTearDown(edit.close);
+
+      await t.pumpWidget(_host(TextEditorView(editBloc: edit)));
+      await t.pumpAndSettle();
+
+      await t.tap(find.byTooltip('Find'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const ValueKey('findField')), 'fps_max');
+
+      await t.tap(find.byTooltip('Next'));
+      await t.pumpAndSettle();
+      final ctrl = t.widget<CodeField>(find.byType(CodeField)).controller;
+      expect(ctrl.selection.baseOffset, 9); // 第一个匹配
+
+      await t.tap(find.byTooltip('Next'));
+      await t.pumpAndSettle();
+      expect(ctrl.selection.baseOffset, 22); // 第二个（行首 22 = 9+7 处第二段）
+
+      await t.tap(find.byTooltip('Next'));
+      await t.pumpAndSettle();
+      expect(ctrl.selection.baseOffset, 9); // 回卷到开头
+
+      await t.tap(find.byTooltip('Previous'));
+      await t.pumpAndSettle();
+      expect(ctrl.selection.baseOffset, 22); // 向前 = 回卷到末尾
+    });
+
+    testWidgets('replace all rewrites text, serialize updates, stays dirty',
+        (t) async {
+      final edit = _realEditBloc();
+      addTearDown(edit.close);
+
+      await t.pumpWidget(_host(TextEditorView(editBloc: edit)));
+      await t.pumpAndSettle();
+      await t.enterText(find.byType(CodeField), '$_src// fps_max here\n');
+      await t.pump(const Duration(milliseconds: 400));
+      await t.pump();
+
+      await t.tap(find.byTooltip('Find'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const ValueKey('findField')), 'fps_max');
+      await t.enterText(
+          find.byKey(const ValueKey('replaceField')), 'r_gamma');
+      await t.tap(find.byTooltip('Replace all'));
+      await t.pump(const Duration(milliseconds: 400)); // 越过防抖
+      await t.pump();
+
+      expect(edit.state.dirty, isTrue);
+      expect(edit.state.doc!.serialize(), contains('r_gamma'));
+      expect(edit.state.doc!.serialize(), isNot(contains('fps_max')));
+      final ctrl = t.widget<CodeField>(find.byType(CodeField)).controller;
+      expect(ctrl.text, isNot(contains('fps_max')));
+    });
   });
 }

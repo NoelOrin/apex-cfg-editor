@@ -95,4 +95,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancel => 'Cancel';
+
+  @override
+  String get find => 'Find';
+
+  @override
+  String get replace => 'Replace';
+
+  @override
+  String get replaceAll => 'Replace all';
+
+  @override
+  String get findPrev => 'Previous';
+
+  @override
+  String get findNext => 'Next';
+
+  @override
+  String get close => 'Close';
 }

@@ -91,4 +91,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cancel => '取消';
+
+  @override
+  String get find => '查找';
+
+  @override
+  String get replace => '替换';
+
+  @override
+  String get replaceAll => '全部替换';
+
+  @override
+  String get findPrev => '上一个';
+
+  @override
+  String get findNext => '下一个';
+
+  @override
+  String get close => '关闭';
 }

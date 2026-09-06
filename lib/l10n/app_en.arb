@@ -31,5 +31,11 @@
   "quitDialogBody": "Save changes before exiting?",
   "saveAndExit": "Save and exit",
   "discardAndExit": "Discard and exit",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "find": "Find",
+  "replace": "Replace",
+  "replaceAll": "Replace all",
+  "findPrev": "Previous",
+  "findNext": "Next",
+  "close": "Close"
 }
