@@ -8,12 +8,13 @@ import '../state/file_bloc.dart';
 /// 每项显示备份文件名（时间戳形如 20260101-000000.cfg）及格式化时间；
 /// 选择即派发 RestoreRequested 并关闭对话框。
 ///
-/// [onRestored] 在还原发起后回调（还原因 FileBloc 未暴露完成 Future，
-/// 由屏幕层延后一拍再刷新），供 EditorScreen 做文本模式强制回显。
+/// [onRestored] 在还原发起后以所选备份路径回调（还原因 FileBloc 未暴露
+/// 完成 Future，由屏幕层等待重开到达后再刷新），供 EditorScreen 做
+/// 文本模式强制回显。
 Future<void> showRestoreDialog(
   BuildContext context, {
   required FileBloc fileBloc,
-  required VoidCallback onRestored,
+  required void Function(String backupPath) onRestored,
 }) {
   final l = AppLocalizations.of(context)!;
   final backups = fileBloc.state.backups;
@@ -39,7 +40,7 @@ Future<void> showRestoreDialog(
                     onTap: () {
                       fileBloc.add(RestoreRequested(path));
                       Navigator.of(dialogContext).pop();
-                      onRestored();
+                      onRestored(path);
                     },
                   );
                 },

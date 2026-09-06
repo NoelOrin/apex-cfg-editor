@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../core/io/cfg_file_io.dart';
 import '../core/paths/apex_paths.dart';
 import '../state/diff_bloc.dart';
 import '../state/edit_bloc.dart';
@@ -71,6 +72,9 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
 
   /// 还原后递增，作为 TextEditorView 的 key 强制重建子树（见 _onRestored）。
   int _textEpoch = 0;
+
+  /// 还原刷新等待重开（baseline == 备份内容）的超时上限。
+  static const _restoreWaitTimeout = Duration(seconds: 3);
 
   @override
   void initState() {
@@ -152,14 +156,38 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     return file?.path;
   }
 
-  /// 还原完成通知。还原链路 RestoreRequested → (FileBloc) →
-  /// OpenRequested → DocumentOpened 是异步事件链，让一拍事件循环跑完；
-  /// 随后递增 _textEpoch 重建编辑区子树——文本模式的 TextEditorView
-  /// 控制器只在 initState 初始化一次（任务 14 取舍），换 key 重建是
-  /// 让还原内容回显的最小手段；表格模式天然跟随 BlocBuilder 无需处理。
-  Future<void> _onRestored() async {
-    await Future<void>.delayed(const Duration(milliseconds: 10));
+  /// 还原完成刷新。还原链路 RestoreRequested → restoreImpl →
+  /// OpenRequested → DocumentOpened 全异步（慢盘/杀毒扫描下可能明显晚于
+  /// 对话框关闭），因此不做延时竞速，而是订阅 EditBloc 流等待「baseline
+  /// 等于备份内容」的重开状态到达，到达后才递增 _textEpoch 重建编辑区——
+  /// 文本模式的 TextEditorView 控制器只在 initState 初始化一次（任务 14
+  /// 取舍），换 key 重建是让还原内容回显的最小手段；表格模式天然跟随
+  /// BlocBuilder 无需处理。
+  ///
+  /// 等待超时（3s）自愈失败 → 强制切回表格模式：文档视图由 BlocBuilder
+  /// 跟随最新状态，滞留旧内容的文本编辑器随视图销毁，杜绝用户继续输入
+  /// 把刚还原的文档整个回灌覆盖（自愈后切回文本模式即可取到新内容）。
+  Future<void> _onRestored(String backupPath) async {
+    final String expected;
+    try {
+      expected = CfgFileIo.read(backupPath).text;
+    } catch (_) {
+      // 备份在列出后被删除等异常：无从校验，退回表格模式最稳。
+      if (!mounted) return;
+      setState(() => _textMode = false);
+      return;
+    }
+    final opened = widget.editBloc.stream
+        .firstWhere((s) => s.doc != null && s.baseline == expected)
+        .then<EditState?>((s) => s)
+        .catchError((Object _) => null);
+    final openedState =
+        await opened.timeout(_restoreWaitTimeout, onTimeout: () => null);
     if (!mounted) return;
+    if (openedState == null) {
+      setState(() => _textMode = false); // 超时：强制表格模式
+      return;
+    }
     setState(() => _textEpoch++);
   }
 

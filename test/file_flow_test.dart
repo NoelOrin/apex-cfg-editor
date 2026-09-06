@@ -12,6 +12,7 @@ import 'package:apex_cfg_editor/state/edit_bloc.dart';
 import 'package:apex_cfg_editor/state/file_bloc.dart';
 import 'package:apex_cfg_editor/ui/editor_screen.dart';
 import 'package:apex_cfg_editor/ui/exit_guard.dart';
+import 'package:apex_cfg_editor/ui/widgets/kv_table_view.dart';
 import 'package:apex_cfg_editor/ui/widgets/text_editor_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
@@ -296,6 +297,120 @@ void main() {
       expect(t.widget<TextEditorView>(find.byType(TextEditorView)).key,
           const ValueKey<int>(1));
       expect(t.widget<CodeField>(find.byType(CodeField)).controller.text, _old);
+    });
+
+    testWidgets(
+        'restore refresh waits for reopened baseline on slow disk (300ms)',
+        (t) async {
+      final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
+      final backupBase = '${tmp.path}/backups';
+      Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
+      File('$backupBase/videoconfig.txt/20260101-000000.cfg')
+          .writeAsStringSync(_old);
+      final backups = BackupService(baseDir: backupBase);
+      final edit = EditBloc();
+      final diff = DiffBloc(editStream: edit.stream);
+      // 慢盘注入：restoreImpl 300ms 后才复制完成，DocumentOpened 明显晚于
+      // 对话框关闭——epoch 递增必须等 baseline 到达，不得竞速。
+      final file = FileBloc(
+        editBloc: edit,
+        saveImpl: (p, text, enc) => backupThenWrite(backups, p, text, enc),
+        listBackupsImpl: backups.listBackups,
+        restoreImpl: (target, backup) async {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+          File(target).writeAsBytesSync(File(backup).readAsBytesSync());
+        },
+      );
+      addTearDown(() async {
+        await file.close();
+        await diff.close();
+        await edit.close();
+      });
+
+      await t.pumpWidget(_host(EditorScreen(
+        editBloc: edit,
+        diffBloc: diff,
+        fileBloc: file,
+        autoDetect: false,
+      )));
+      file.add(OpenRequested(cfg.path));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Text'));
+      await t.pumpAndSettle();
+
+      await t.tap(find.byTooltip('Restore'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('20260101-000000.cfg'));
+
+      // 50ms：baseline 未到（仍是还原前内容），epoch 必须未递增。
+      await t.pump(const Duration(milliseconds: 50));
+      expect(edit.state.baseline, _new);
+      expect(t.widget<TextEditorView>(find.byType(TextEditorView)).key,
+          const ValueKey<int>(0));
+
+      // 300ms 到点：DocumentOpened 到达 baseline == 备份内容后才递增。
+      await t.pump(const Duration(milliseconds: 300));
+      await t.pumpAndSettle();
+      expect(edit.state.baseline, _old);
+      expect(t.widget<TextEditorView>(find.byType(TextEditorView)).key,
+          const ValueKey<int>(1));
+      expect(t.widget<CodeField>(find.byType(CodeField)).controller.text, _old);
+    });
+
+    testWidgets('restore refresh timeout falls back to table mode',
+        (t) async {
+      final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
+      final backupBase = '${tmp.path}/backups';
+      Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
+      File('$backupBase/videoconfig.txt/20260101-000000.cfg')
+          .writeAsStringSync(_old);
+      final backups = BackupService(baseDir: backupBase);
+      final edit = EditBloc();
+      final diff = DiffBloc(editStream: edit.stream);
+      // restoreImpl 3.5s 才完成：3s 等待上限先到，自愈失败走超时分支。
+      // （不用永不完成的 future：widget 测试隔离区里挂起的 bloc handler
+      // 会阻止 isolate 退出，与被测行为无关。）
+      final file = FileBloc(
+        editBloc: edit,
+        saveImpl: (p, text, enc) => backupThenWrite(backups, p, text, enc),
+        listBackupsImpl: backups.listBackups,
+        restoreImpl: (target, backup) async {
+          await Future<void>.delayed(const Duration(milliseconds: 3500));
+          File(target).writeAsBytesSync(File(backup).readAsBytesSync());
+        },
+      );
+      addTearDown(() async {
+        await file.close();
+        await diff.close();
+        await edit.close();
+      });
+
+      await t.pumpWidget(_host(EditorScreen(
+        editBloc: edit,
+        diffBloc: diff,
+        fileBloc: file,
+        autoDetect: false,
+      )));
+      file.add(OpenRequested(cfg.path));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Text'));
+      await t.pumpAndSettle();
+
+      await t.tap(find.byTooltip('Restore'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('20260101-000000.cfg'));
+
+      // 3.2s：超过 3s 等待上限（还原尚未完成）→ 强制切回表格模式。
+      await t.pump(const Duration(milliseconds: 3200));
+      await t.pumpAndSettle();
+      expect(find.byType(KvTableView), findsOneWidget);
+      expect(find.byType(TextEditorView), findsNothing);
+
+      // 3.5s 还原完成后：表格模式天然跟随最新文档（自愈可见）。
+      await t.pump(const Duration(milliseconds: 500));
+      await t.pumpAndSettle();
+      expect(edit.state.baseline, _old);
+      expect(find.byType(KvTableView), findsOneWidget);
     });
 
     testWidgets('open failure warning surfaces as snackbar text', (t) async {
