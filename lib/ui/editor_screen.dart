@@ -27,6 +27,7 @@ String warningText(BuildContext context, String key) {
     'fileBadEncoding' => l.fileBadEncoding,
     'fileOpenFailed' => l.fileOpenFailed,
     'fileSaveFailed' => l.fileSaveFailed,
+    'fileRestoreFailed' => l.fileRestoreFailed,
     _ => key,
   };
 }

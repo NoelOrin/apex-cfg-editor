@@ -316,6 +316,51 @@ void main() {
       await edit.close();
     });
 
+    test('restore without an open file is a guarded no-op', () async {
+      final edit = EditBloc();
+      var restoreCalls = 0;
+      final bloc = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) async {},
+        listBackupsImpl: (_) => const [],
+        restoreImpl: (_, _) async => restoreCalls++,
+      );
+      bloc.add(RestoreRequested('${tmp.path}/whatever.cfg'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(restoreCalls, 0);
+      expect(bloc.state.path, isNull);
+      await bloc.close();
+      await edit.close();
+    });
+
+    test('restore failure raises warning and bloc stays operable', () async {
+      final file = File('${tmp.path}/videoconfig.txt')
+        ..writeAsStringSync(_baseline);
+      final edit = EditBloc();
+      final bloc = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) async {},
+        listBackupsImpl: (_) => const [],
+        restoreImpl: (_, _) async => throw Exception('disk error'),
+      );
+      bloc.add(OpenRequested(file.path));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(bloc.state.warning, isNull);
+
+      bloc.add(RestoreRequested('${tmp.path}/missing.cfg'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // 还原失败：告警出现、无异常逃逸，文件未被改写所以不重开。
+      expect(bloc.state.warning, 'fileRestoreFailed');
+      expect(bloc.state.path, file.path);
+      expect(edit.state.baseline, _baseline);
+      // bloc 流程未挂起：后续编辑与还原重试照常处理。
+      edit.add(LineValueChanged(index: 0, value: '144'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(edit.state.dirty, true);
+      await bloc.close();
+      await edit.close();
+    });
+
     test('open failure resets state and a retry recovers', () async {
       final file = File('${tmp.path}/videoconfig.txt')
         ..writeAsStringSync(_baseline);

@@ -56,6 +56,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileSaveFailed => '保存文件失败';
 
   @override
+  String get fileRestoreFailed => '还原备份失败';
+
+  @override
   String get restoreDialogTitle => '从备份还原';
 
   @override

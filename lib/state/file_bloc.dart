@@ -112,8 +112,19 @@ class FileBloc extends Bloc<FileEvent, FileState> {
       em(state.copyWith(backups: listBackupsImpl(path)));
     });
     on<RestoreRequested>((e, em) async {
-      await restoreImpl(state.path!, e.backupPath);
-      add(OpenRequested(state.path!));
+      final path = state.path;
+      if (path == null) return; // 未打开文件：无还原目标
+      try {
+        await restoreImpl(path, e.backupPath);
+      } catch (_) {
+        // 还原失败：文件未被改写，不重开（OpenRequested 仅在成功后派发，
+        // 避免把未恢复的文件当成已还原内容重新载入）。告警提示，bloc
+        // 保持可用：用户可重试或另选备份。bloc 9.2.1 会把 handler 异常
+        // rethrow 成未捕获异常并挂起事件流，这里必须就地消化。
+        em(state.copyWith(warning: () => 'fileRestoreFailed'));
+        return;
+      }
+      add(OpenRequested(path));
     });
   }
 }

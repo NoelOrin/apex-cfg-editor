@@ -188,6 +188,12 @@ abstract class AppLocalizations {
   /// **'Failed to save file'**
   String get fileSaveFailed;
 
+  /// No description provided for @fileRestoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to restore from backup'**
+  String get fileRestoreFailed;
+
   /// No description provided for @restoreDialogTitle.
   ///
   /// In en, this message translates to:

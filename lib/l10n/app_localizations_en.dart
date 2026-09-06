@@ -58,6 +58,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileSaveFailed => 'Failed to save file';
 
   @override
+  String get fileRestoreFailed => 'Failed to restore from backup';
+
+  @override
   String get restoreDialogTitle => 'Restore from backup';
 
   @override

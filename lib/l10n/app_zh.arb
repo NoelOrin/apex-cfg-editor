@@ -15,6 +15,7 @@
   "fileOpenFailed": "打开文件失败",
   "fileBadEncoding": "文件包含无法解码的字节，保存可能丢失这些内容",
   "fileSaveFailed": "保存文件失败",
+  "fileRestoreFailed": "还原备份失败",
   "restoreDialogTitle": "从备份还原",
   "backupEmpty": "暂无备份。每次保存前都会自动备份。",
   "quitDialogTitle": "有未保存的修改",
