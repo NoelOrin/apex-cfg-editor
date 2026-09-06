@@ -1,6 +1,6 @@
 # Apex CFG Editor
 
-桌面端 Apex Legends 配置编辑器（Windows 优先，macOS 可开发调试）：把
+桌面端 Apex Legends 配置编辑器（Windows 优先，macOS 可跑测试开发调试）：把
 `videoconfig.txt` 与 `autoexec.cfg` 的裸文本编辑升级为「表格 + 全文」双模式，
 配行级 diff、内置知识库与自动备份，免手改引号键值、不怕改坏回不去。
 
@@ -22,13 +22,19 @@
 
 ### macOS（开发调试）
 
+本仓库只有 `windows/` runner（无 `macos/`），macOS 上 `flutter run -d macos`
+**不可用**。日常开发回路是测试 + 静态分析（业务与 UI 逻辑都不依赖平台
+通道，`flutter test` 环境下 window_manager 等原生通道调用被 try/catch
+静默跳过，仅测试环境安全）：
+
 ```bash
 flutter pub get
-flutter run -d macos
+flutter analyze   # 0 issues
+flutter test      # 全量单测 / widget 测试
 ```
 
-无原生窗口通道时优雅降级（window_manager 初始化失败被忽略，退出保护退化为
-PopScope 守护；备份根目录兜底系统临时目录），日常逻辑开发不受影响。
+如需真实运行 UI（原生窗口、关窗拦截、文件选择器），需要 Windows 机器
+本地构建，或下载 CI 打包产物（见下节 GitHub Actions）。
 
 ### Windows（发布打包）
 
@@ -100,9 +106,10 @@ assets/kb/en/videoconfig.json   assets/kb/en/autoexec.json
 
 ## 开发注意事项
 
-- **平台分工**：macOS 负责日常开发与全量测试（`flutter test` 无平台依赖，
-  原生窗口通道缺失时优雅降级）；Windows 打包（本地或 CI）只在发布时做。
-  macOS 上 `flutter build windows` 不可用，不要尝试。
+- **平台分工**：日常开发在任意平台跑 `flutter test` + `flutter analyze`
+  （无平台依赖；仓库只有 windows/ runner，macOS 上无法 `flutter run`）；
+  真实 UI 运行与打包（本地或 CI）只在 Windows 做。macOS 上
+  `flutter build windows` 不可用，不要尝试。
 - **编码红线**：`videoconfig.txt` 为 UTF-8、`autoexec.cfg` 常见 GBK，
   一律走 `CfgFileIo` 的探测/写回链路，不要用 `File.writeAsString` 直写，
   否则会把 GBK 文件写成 UTF-8 导致游戏内中文注释乱码。
