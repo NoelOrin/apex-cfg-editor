@@ -128,3 +128,7 @@ assets/kb/en/videoconfig.json   assets/kb/en/autoexec.json
 flutter analyze   # 0 issues
 flutter test      # 全量单测 / widget 测试（含夹具 roundtrip 与 KB 数据校验）
 ```
+
+## License
+
+[MIT](LICENSE)
