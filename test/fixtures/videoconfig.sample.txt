@@ -1,0 +1,60 @@
+// videoconfig.txt 样例（脱敏整理）：39 个 setting.* 键与知识库一致
+// Sample videoconfig.txt (sanitized): 39 setting.* keys, matching the knowledge base.
+// 游戏每次启动会重写此文件，编辑前务必备份。
+// The game rewrites this file on every launch. Back it up before editing.
+
+"setting.defaultres"      "1920"
+"setting.defaultresheight"      "1080"
+"setting.fullscreen"    "1"
+"setting.nowindowborder"    "0"
+
+// 显示与同步 / Display & sync
+"setting.mat_vsync_mode"    "0"
+"setting.mat_backbuffer_count"    "3"
+"setting.mat_antialias_mode"    "0"
+"setting.dvs_enable"    "0"
+"setting.dvs_gpuframetime_min"    "15000"
+"setting.dvs_gpuframetime_max"    "15000"
+"setting.dvs_supersample_enable"    "0"
+"setting.gamma"    "1.6"
+
+// 阴影 / Shadows
+"setting.csm_enabled"    "0"
+"setting.csm_coverage"    "1"
+"setting.csm_cascade_res"    "2"
+"setting.shadow_enable"    "1"
+"setting.shadow_depth_dimen_min"    "1024"
+"setting.shadow_depth_upres_factor_max"    "0"
+"setting.shadow_maxdynamic"    "512"
+"setting.new_shadow_settings"    "1"
+
+// 材质与粒子 / Materials & particles
+"setting.ssao_enabled"    "0"
+"setting.ssao_downsample"    "0"
+"setting.volumetric_lighting"    "0"
+"setting.volumetric_fog"    "1"
+"setting.mat_forceaniso"    "4"
+"setting.mat_mip_linear"    "1"
+"setting.mat_picmip"    "1"
+"setting.stream_memory"    "300000"
+"setting.particle_cpu_level"    "2"
+
+// 特效 / Effects
+"setting.cl_gib_allow"    "1"
+"setting.cl_particle_fallback_base"    "1"
+"setting.cl_particle_fallback_multiplier"    "1"
+"setting.cl_ragdoll_maxcount"    "1"
+"setting.cl_ragdoll_self_collision"    "1"
+"setting.r_createmodeldecals"    "1"
+"setting.r_decals"    "256"
+"setting.r_lod_switch_scale"    "1.0"
+"setting.fadedistscale"    "1.0"
+
+// 历史遗留的无引号行：解析器降级为未知行，原样保留
+// Legacy unquoted line: degrades to a raw line and is kept verbatim.
+mat_monitorgamma 1.6
+
+// 末尾追加的覆盖键（重复键：启动器/工具追加覆盖的常见形态）
+// Override keys appended at the end (duplicate keys, as the launcher often does).
+"setting.configversion"    "7"
+"setting.mat_picmip"    "4"
