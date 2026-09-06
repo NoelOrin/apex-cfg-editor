@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:apex_cfg_editor/core/backup/backup_service.dart';
 import 'package:apex_cfg_editor/core/diff/line_diff.dart';
+import 'package:apex_cfg_editor/core/parser/cfg_document.dart';
 import 'package:apex_cfg_editor/knowledge/kb_service.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
 import 'package:apex_cfg_editor/main.dart';
@@ -14,6 +15,7 @@ import 'package:apex_cfg_editor/ui/widgets/text_editor_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fast_gbk/fast_gbk.dart';
 
 const _old = '"setting.fps_max" "0"\n"setting.r_full" "1"\n';
 const _new = '"setting.fps_max" "144"\n"setting.r_full" "1"\n';
@@ -137,6 +139,44 @@ void main() {
       expect(kb.lookup(KbFile.videoconfig, 'setting.fps_max', 'en')?.name,
           'FPS Cap');
       expect(kb.lookup(KbFile.videoconfig, 'setting.gamma', 'zh'), isNotNull);
+    });
+
+    test('GBK file full chain: save rewrites GBK, backup keeps original bytes',
+        () async {
+      const comment = '// 中文注释\n';
+      final originalBytes = gbk.encode('$comment"setting.fps_max" "0"\n');
+      final cfg = File('${tmp.path}/videoconfig.txt')
+        ..writeAsBytesSync(originalBytes);
+      final backupBase = '${tmp.path}/backups';
+      final (file, edit, diff) = _wire(backupBase);
+
+      file.add(OpenRequested(cfg.path));
+      await _settle();
+      // 合法 GBK：经 gbk 回退解码，无坏字节告警。
+      expect(file.state.warning, isNull);
+      expect(edit.state.doc!.lines.first, isA<CommentLine>());
+      expect(edit.state.dirty, false);
+
+      // 行 0 是注释，键值行在行 1。
+      edit.add(LineValueChanged(index: 1, value: '144'));
+      await _settle();
+      expect(edit.state.dirty, true);
+
+      file.add(SaveRequested());
+      await _settle();
+
+      // 磁盘为新值且仍是 GBK 编码。
+      expect(File(cfg.path).readAsBytesSync(),
+          gbk.encode('$comment"setting.fps_max" "144"\n'));
+      // 备份目录 1 个文件且字节等于原 GBK 内容（字节级复制）。
+      final backups = _backupFiles(backupBase, 'videoconfig.txt');
+      expect(backups, hasLength(1));
+      expect(backups.single.readAsBytesSync(), originalBytes);
+      expect(edit.state.dirty, false);
+
+      await file.close();
+      await diff.close();
+      await edit.close();
     });
   });
 

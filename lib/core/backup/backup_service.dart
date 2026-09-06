@@ -9,7 +9,9 @@ class BackupService {
     return '$baseDir/$name';
   }
 
-  void backupBeforeSave(String path, String currentText) {
+  /// 字节级复制当前文件内容（规格 §7：备份 = 字节级复制），
+  /// 不做任何解码/重编码——GBK 等非 UTF-8 内容原样保存。
+  void backupBeforeSave(String path, List<int> currentBytes) {
     final dir = Directory(_dirFor(path))..createSync(recursive: true);
     final now = DateTime.now();
     final stamp = '${now.year.toString().padLeft(4, '0')}'
@@ -17,7 +19,7 @@ class BackupService {
         '-${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}'
         '${now.second.toString().padLeft(2, '0')}';
     final tmp = '${dir.path}/.$stamp.tmp';
-    File(tmp).writeAsStringSync(currentText, flush: true);
+    File(tmp).writeAsBytesSync(currentBytes, flush: true);
     File(tmp).renameSync('${dir.path}/$stamp.cfg'); // 原子替换；同秒重名即覆盖合并
   }
 

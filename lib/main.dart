@@ -33,15 +33,16 @@ String defaultBackupBase() {
 }
 
 /// saveImpl 装配（FileBloc 契约：`Future<void> Function(path, text, enc)`）：
-/// 先把磁盘上的旧内容写入备份，再按打开时探测到的编码写盘。
-/// 顺序不可颠倒——写盘完成后旧内容即丢失。
+/// 先把磁盘上的旧内容按字节级复制进备份（readAsStringSync 会因 utf8 严格
+/// 解码对 GBK 文件抛 FileSystemException，必须走字节），再按打开时探测到
+/// 的编码写盘。顺序不可颠倒——写盘完成后旧内容即丢失。
 Future<void> backupThenWrite(
   BackupService backups,
   String path,
   String text,
   CfgEncoding enc,
 ) async {
-  backups.backupBeforeSave(path, File(path).readAsStringSync());
+  backups.backupBeforeSave(path, File(path).readAsBytesSync());
   CfgFileIo.write(path, text, enc);
 }
 
