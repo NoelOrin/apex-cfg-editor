@@ -13,5 +13,15 @@
     "placeholders": {
       "value": {}
     }
-  }
+  },
+  "openFile": "Open file",
+  "fileOpenFailed": "Failed to open file",
+  "fileBadEncoding": "File contains bytes that cannot be decoded; saving may lose them",
+  "restoreDialogTitle": "Restore from backup",
+  "backupEmpty": "No backups yet. A backup is kept before every save.",
+  "quitDialogTitle": "Unsaved changes",
+  "quitDialogBody": "Save changes before exiting?",
+  "saveAndExit": "Save and exit",
+  "discardAndExit": "Discard and exit",
+  "cancel": "Cancel"
 }

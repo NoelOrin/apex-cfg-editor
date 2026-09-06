@@ -8,5 +8,15 @@
   "kbNotDocumented": "该键尚未收录说明，仍可编辑。",
   "emptyDocHint": "打开一个 cfg 文件开始编辑",
   "noChanges": "无变更",
-  "kbRecommended": "推荐：{value}"
+  "kbRecommended": "推荐：{value}",
+  "openFile": "打开文件",
+  "fileOpenFailed": "打开文件失败",
+  "fileBadEncoding": "文件包含无法解码的字节，保存可能丢失这些内容",
+  "restoreDialogTitle": "从备份还原",
+  "backupEmpty": "暂无备份。每次保存前都会自动备份。",
+  "quitDialogTitle": "有未保存的修改",
+  "quitDialogBody": "退出前要保存修改吗？",
+  "saveAndExit": "保存并退出",
+  "discardAndExit": "放弃并退出",
+  "cancel": "取消"
 }

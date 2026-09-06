@@ -36,4 +36,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String kbRecommended(Object value) {
     return '推荐：$value';
   }
+
+  @override
+  String get openFile => '打开文件';
+
+  @override
+  String get fileOpenFailed => '打开文件失败';
+
+  @override
+  String get fileBadEncoding => '文件包含无法解码的字节，保存可能丢失这些内容';
+
+  @override
+  String get restoreDialogTitle => '从备份还原';
+
+  @override
+  String get backupEmpty => '暂无备份。每次保存前都会自动备份。';
+
+  @override
+  String get quitDialogTitle => '有未保存的修改';
+
+  @override
+  String get quitDialogBody => '退出前要保存修改吗？';
+
+  @override
+  String get saveAndExit => '保存并退出';
+
+  @override
+  String get discardAndExit => '放弃并退出';
+
+  @override
+  String get cancel => '取消';
 }

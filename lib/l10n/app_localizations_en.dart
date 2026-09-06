@@ -37,4 +37,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String kbRecommended(Object value) {
     return 'Recommended: $value';
   }
+
+  @override
+  String get openFile => 'Open file';
+
+  @override
+  String get fileOpenFailed => 'Failed to open file';
+
+  @override
+  String get fileBadEncoding =>
+      'File contains bytes that cannot be decoded; saving may lose them';
+
+  @override
+  String get restoreDialogTitle => 'Restore from backup';
+
+  @override
+  String get backupEmpty =>
+      'No backups yet. A backup is kept before every save.';
+
+  @override
+  String get quitDialogTitle => 'Unsaved changes';
+
+  @override
+  String get quitDialogBody => 'Save changes before exiting?';
+
+  @override
+  String get saveAndExit => 'Save and exit';
+
+  @override
+  String get discardAndExit => 'Discard and exit';
+
+  @override
+  String get cancel => 'Cancel';
 }

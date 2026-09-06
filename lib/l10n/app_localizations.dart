@@ -151,6 +151,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recommended: {value}'**
   String kbRecommended(Object value);
+
+  /// No description provided for @openFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Open file'**
+  String get openFile;
+
+  /// No description provided for @fileOpenFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to open file'**
+  String get fileOpenFailed;
+
+  /// No description provided for @fileBadEncoding.
+  ///
+  /// In en, this message translates to:
+  /// **'File contains bytes that cannot be decoded; saving may lose them'**
+  String get fileBadEncoding;
+
+  /// No description provided for @restoreDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from backup'**
+  String get restoreDialogTitle;
+
+  /// No description provided for @backupEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No backups yet. A backup is kept before every save.'**
+  String get backupEmpty;
+
+  /// No description provided for @quitDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved changes'**
+  String get quitDialogTitle;
+
+  /// No description provided for @quitDialogBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes before exiting?'**
+  String get quitDialogBody;
+
+  /// No description provided for @saveAndExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Save and exit'**
+  String get saveAndExit;
+
+  /// No description provided for @discardAndExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard and exit'**
+  String get discardAndExit;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
 }
 
 class _AppLocalizationsDelegate
