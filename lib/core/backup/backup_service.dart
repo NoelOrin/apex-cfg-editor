@@ -5,7 +5,10 @@ class BackupService {
   BackupService({required this.baseDir});
 
   String _dirFor(String path) {
-    final name = path.split(Platform.pathSeparator).last;
+    // apex_paths 产出 / 分隔路径，而 Windows 本地路径用 \：统一按两种
+    // 分隔符切，只取文件名做备份目录名（按 Platform.pathSeparator 切在
+    // Windows 上会把整串路径当目录名，备份/保存全挂）。
+    final name = path.split(RegExp(r'[/\\]')).last;
     return '$baseDir/$name';
   }
 

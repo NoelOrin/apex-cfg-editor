@@ -21,6 +21,24 @@ void main() {
     expect(File(files.first).readAsBytesSync(), utf8.encode('v1\n'));
   });
 
+  test('backup dir is file name regardless of path separator style', () {
+    // apex_paths 在 Windows 上产出 / 分隔路径，而 Platform.pathSeparator
+    // 是 \：旧实现按 \ 切会把整串路径当目录名，备份目录构造崩溃。
+    // 备份目录必须只取文件名，与分隔符风格无关（两种写法同一目录）。
+    const forward = 'C:/Users/x/Documents/videoconfig.txt';
+    const backward = 'C:\\Users\\x\\Documents\\videoconfig.txt';
+    final b = BackupService(baseDir: '${tmp.path}/appdata');
+    b.backupBeforeSave(forward, utf8.encode('v\n'));
+    final files = b.listBackups(forward);
+    expect(files, hasLength(1));
+    // 目录名就是文件名（不含盘符/目录段）。
+    expect(File(files.first).parent.path,
+        '${tmp.path}/appdata/videoconfig.txt');
+    expect(File(files.first).readAsBytesSync(), utf8.encode('v\n'));
+    // 同一文件的反斜杠写法解析到同一备份目录。
+    expect(b.listBackups(backward), files);
+  });
+
   test('restore writes selected backup content back', () async {
     final target = File('${tmp.path}/Documents/videoconfig.txt')
       ..createSync(recursive: true)
