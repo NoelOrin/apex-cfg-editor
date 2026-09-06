@@ -51,6 +51,19 @@ void main() {
     expect(r, cfg.path);
   });
 
+  test('corrupt vdf (invalid utf-8) is skipped, probing continues', () {
+    final cfg = File(
+        '${tmp.path}/Steam/steamapps/common/Apex Legends/global/cfg/autoexec.cfg')
+      ..createSync(recursive: true);
+    Directory('${tmp.path}/Steam/steamapps').createSync(recursive: true);
+    // 非法 UTF-8 字节（0xFF 0xFE 0x80）：readAsStringSync 严格解码会抛
+    // FormatException——必须跳过该库继续探测，而不是向上抛。
+    File('${tmp.path}/Steam/steamapps/libraryfolders.vdf')
+        .writeAsBytesSync([0xFF, 0xFE, 0x80, 0x00, 0xC3]);
+    final r = ApexPathFinder(homeDir: tmp.path).findAutoexec();
+    expect(r, cfg.path);
+  });
+
   test('unescapes vdf windows backslash escapes (\\\\) to forward slashes',
       () {
     final cfg = File(

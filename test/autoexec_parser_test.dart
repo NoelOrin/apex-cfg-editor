@@ -69,6 +69,31 @@ void main() {
     expect(doc.lines[1], isA<CommentLine>());
   });
 
+  test('CRLF document: edited cvar line keeps \\r, others byte-identical', () {
+    final doc = p.parse('fps_max 128 // cap\r\nmat_queue_mode 2\r\n');
+    (doc.lines[0] as CvarLine).setNewValue('0');
+    expect(doc.serialize(), 'fps_max 0 // cap\r\nmat_queue_mode 2\r\n');
+  });
+
+  test('empty value edit rebuilds without trailing space (with comment)', () {
+    final doc = p.parse('fps_max 128 // cap\n');
+    (doc.lines[0] as CvarLine).setNewValue('');
+    expect(doc.serialize(), 'fps_max // cap\n');
+  });
+
+  test('empty value edit rebuilds bare key (no comment, no trailing space)', () {
+    final doc = p.parse('fps_max 128\n');
+    (doc.lines[0] as CvarLine).setNewValue('');
+    expect(doc.serialize(), 'fps_max\n');
+  });
+
+  test('single-line fully closed block comment: next line is CvarLine', () {
+    final doc = p.parse('/* c */\nfps_max 128\n');
+    expect(doc.lines[0], isA<CommentLine>());
+    expect(doc.lines[1], isA<CvarLine>());
+    expect(doc.serialize(), '/* c */\nfps_max 128\n');
+  });
+
   test('self-closing mid-line block comment stays on one line', () {
     final doc = p.parse('fps_max 128 /* note */\nmat_queue_mode 2\n');
     final kv = doc.lines[0] as CvarLine;

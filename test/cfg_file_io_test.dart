@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:apex_cfg_editor/core/io/cfg_file_io.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,5 +56,31 @@ void main() {
   test('bad bytes flagged via U+FFFD', () {
     final r = CfgFileIo.readBytes([0x61, 0x20, 0xFF, 0x0A]);
     expect(r.hasBadBytes, isTrue);
+  });
+
+  test('write with bom: true keeps EF BB BF for utf8 content', () {
+    final f = File('${tmp.path}/bom.cfg')
+      ..writeAsBytesSync([0xEF, 0xBB, 0xBF, ...'fps_max 128\n'.codeUnits]);
+    final r = CfgFileIo.read(f.path);
+    expect(r.encoding, CfgEncoding.utf8);
+    CfgFileIo.write(f.path, r.text, r.encoding, bom: true);
+    final bytes = File(f.path).readAsBytesSync();
+    expect(bytes.sublist(0, 3), [0xEF, 0xBB, 0xBF]);
+    expect(utf8.decode(bytes.sublist(3)), r.text);
+  });
+
+  test('write without bom flag produces no BOM', () {
+    final f = File('${tmp.path}/plain.cfg')..writeAsStringSync('a\n');
+    final r = CfgFileIo.read(f.path);
+    CfgFileIo.write(f.path, r.text, r.encoding);
+    expect(File(f.path).readAsBytesSync().first, isNot(0xEF));
+  });
+
+  test('bom flag has no effect for gbk', () {
+    final f = File('${tmp.path}/g.cfg')
+      ..writeAsBytesSync(gbk.encode('// 帧数优化\n'));
+    final r = CfgFileIo.read(f.path);
+    CfgFileIo.write(f.path, r.text, r.encoding, bom: true);
+    expect(File(f.path).readAsBytesSync(), f.readAsBytesSync());
   });
 }

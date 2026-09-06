@@ -42,14 +42,16 @@ String defaultSettingsPath() => '${appDataDir()}/settings.json';
 /// 先把磁盘上的旧内容按字节级复制进备份（readAsStringSync 会因 utf8 严格
 /// 解码对 GBK 文件抛 FileSystemException，必须走字节），再按打开时探测到
 /// 的编码写盘。顺序不可颠倒——写盘完成后旧内容即丢失。
+/// 保存前字节以 BOM 前缀判断是否补写 BOM：带 BOM 的文件编辑保存后仍带 BOM。
 Future<void> backupThenWrite(
   BackupService backups,
   String path,
   String text,
   CfgEncoding enc,
 ) async {
-  backups.backupBeforeSave(path, File(path).readAsBytesSync());
-  CfgFileIo.write(path, text, enc);
+  final current = File(path).readAsBytesSync();
+  backups.backupBeforeSave(path, current);
+  CfgFileIo.write(path, text, enc, bom: CfgFileIo.hasBom(current));
 }
 
 /// Apex 品牌红（seed 色；diff 红绿高亮见 [DiffColors]）。

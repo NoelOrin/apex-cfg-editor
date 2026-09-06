@@ -75,6 +75,19 @@ void main() {
     expect(rows[3].rightNo, 3);
   });
 
+  test('CRLF input: diff row text carries no trailing \\r', () {
+    final rows =
+        d.diff('fps_max 0\r\nr_full 1\r\n', 'fps_max 144\r\nr_full 1\r\n');
+    expect(rows[0].type, RowType.modified);
+    for (final r in rows) {
+      if (r.left != null) expect(r.left!.endsWith('\r'), isFalse);
+      if (r.right != null) expect(r.right!.endsWith('\r'), isFalse);
+    }
+    expect(rows[0].left, 'fps_max 0');
+    expect(rows[0].right, 'fps_max 144');
+    expect(rows[1].left, 'r_full 1');
+  });
+
   test('insert block before delete block keeps numbering', () {
     // dmp 0.4.1 对该输入产出 [INSERT(b), EQUAL(c), EQUAL(a), DELETE(a)]：
     // INSERT 块在 DELETE 块之前（相邻 INSERT+DELETE 经 cleanupMerge 规范化，

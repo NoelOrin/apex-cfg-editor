@@ -62,13 +62,19 @@ class CfgDocument {
   CfgDocument({required this.lines, required this.endsWithNewline});
 
   /// 序列化：编辑过的键值行重建为 `"key" "value"`、编辑过的 cvar 行重建为
-  /// `key value`（含行内注释则追加），其余保持原样。
+  /// `key value`（含行内注释则追加），其余保持原样。重建行按 raw 的行尾
+  /// 风格补回 `\r`（CRLF 文档编辑后不产生混合行尾）；cvar 行 value 为空时
+  /// 只输出 key，不产生 `key ` 尾随空格。
   String serialize() {
     final buf = lines.map((l) {
-      if (l is KeyValueLine && l.isEdited) return '"${l.key}" "${l.value}"';
+      if (l is KeyValueLine && l.isEdited) {
+        return '"${l.key}" "${l.value}"${l.raw.endsWith('\r') ? '\r' : ''}';
+      }
       if (l is CvarLine && l.isEdited) {
-        return '${l.key} ${l.value}'
-            '${l.inlineComment.isEmpty ? '' : ' ${l.inlineComment}'}';
+        final head = l.value.isEmpty ? l.key : '${l.key} ${l.value}';
+        return '$head'
+            '${l.inlineComment.isEmpty ? '' : ' ${l.inlineComment}'}'
+            '${l.raw.endsWith('\r') ? '\r' : ''}';
       }
       return l.raw;
     }).join('\n');

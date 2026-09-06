@@ -16,7 +16,7 @@ void main() {
     b.backupBeforeSave(target.path, utf8.encode('v1\n'));
     final files = b.listBackups(target.path);
     expect(files, hasLength(1));
-    expect(RegExp(r'\d{8}-\d{6}\.cfg$').hasMatch(files.first.split('/').last), isTrue);
+    expect(RegExp(r'\d{8}-\d{9}\.cfg$').hasMatch(files.first.split('/').last), isTrue);
     // 字节级复制（规格 §7）：备份内容与当前文件字节一致。
     expect(File(files.first).readAsBytesSync(), utf8.encode('v1\n'));
   });
@@ -37,6 +37,19 @@ void main() {
     expect(File(files.first).readAsBytesSync(), utf8.encode('v\n'));
     // 同一文件的反斜杠写法解析到同一备份目录。
     expect(b.listBackups(backward), files);
+  });
+
+  test('two backups within the same second produce two distinct files', () {
+    final target = File('${tmp.path}/Documents/videoconfig.txt')
+      ..createSync(recursive: true)..writeAsStringSync('v\n');
+    final b = BackupService(baseDir: '${tmp.path}/appdata');
+    b.backupBeforeSave(target.path, utf8.encode('v1\n'));
+    b.backupBeforeSave(target.path, utf8.encode('v2\n'));
+    final files = b.listBackups(target.path);
+    expect(files, hasLength(2)); // 毫秒时间戳：同秒不再覆盖合并
+    expect(files[0], isNot(files[1]));
+    // 新→旧：第二次备份（v2）排在最前。
+    expect(File(files.first).readAsBytesSync(), utf8.encode('v2\n'));
   });
 
   test('restore writes selected backup content back', () async {

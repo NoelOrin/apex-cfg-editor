@@ -46,7 +46,14 @@ class ApexPathFinder {
     for (final root in roots) {
       final vdf = File('$root/steamapps/libraryfolders.vdf');
       if (!vdf.existsSync()) continue;
-      for (final m in pathRegex.allMatches(vdf.readAsStringSync())) {
+      // 损坏/非法 UTF-8 的 vdf 跳过（不抛异常），继续探测其余库。
+      String content;
+      try {
+        content = vdf.readAsStringSync();
+      } catch (_) {
+        continue;
+      }
+      for (final m in pathRegex.allMatches(content)) {
         add(m.group(1)!.replaceAll('\\\\', '/'));
       }
     }

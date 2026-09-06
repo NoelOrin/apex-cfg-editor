@@ -184,6 +184,46 @@ void main() {
       await edit.close();
     });
 
+    test('BOM file edited save keeps BOM; non-BOM save stays BOM-free',
+        () async {
+      final cfg = File('${tmp.path}/videoconfig.txt')
+        ..writeAsBytesSync([0xEF, 0xBB, 0xBF, ...utf8.encode(_old)]);
+      final backupBase = '${tmp.path}/backups';
+      final (file, edit, diff) = _wire(backupBase);
+
+      file.add(OpenRequested(cfg.path));
+      await _settle();
+      edit.add(LineValueChanged(index: 0, value: '144'));
+      await _settle();
+      file.add(SaveRequested());
+      await _settle();
+
+      // 编辑保存后 BOM 保留，内容为新值。
+      final after = File(cfg.path).readAsBytesSync();
+      expect(after.sublist(0, 3), [0xEF, 0xBB, 0xBF]);
+      expect(utf8.decode(after.sublist(3)), _new);
+      expect(edit.state.dirty, false);
+
+      await file.close();
+      await diff.close();
+      await edit.close();
+
+      // 对照：无 BOM 文件保存后仍无 BOM。
+      final plain = File('${tmp.path}/plain.txt')..writeAsStringSync(_old);
+      final (file2, edit2, diff2) = _wire('${tmp.path}/backups2');
+      file2.add(OpenRequested(plain.path));
+      await _settle();
+      edit2.add(LineValueChanged(index: 0, value: '144'));
+      await _settle();
+      file2.add(SaveRequested());
+      await _settle();
+      expect(File(plain.path).readAsBytesSync().first, isNot(0xEF));
+
+      await file2.close();
+      await diff2.close();
+      await edit2.close();
+    });
+
     test('bad bytes + dirty edits: save blocked, disk untouched, no backup',
         () async {
       final badBytes = <int>[

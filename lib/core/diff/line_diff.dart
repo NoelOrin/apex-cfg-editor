@@ -79,8 +79,19 @@ class LineDiff {
         }
       }
     }
-    return rows;
+    return rows.map(_stripTrailingCr).toList();
   }
+
+  /// 显示层归一化：CRLF 输入的行文本剥掉单个行尾 `\r`（Flutter Text 渲染
+  /// 不可见的显示噪声）。仅作用于 DiffRow 文本，不影响 diff 比较对象。
+  DiffRow _stripTrailingCr(DiffRow r) => DiffRow(r.type,
+      left: r.left == null ? null : _withoutCr(r.left!),
+      right: r.right == null ? null : _withoutCr(r.right!),
+      leftNo: r.leftNo,
+      rightNo: r.rightNo);
+
+  static String _withoutCr(String s) =>
+      s.endsWith('\r') ? s.substring(0, s.length - 1) : s;
 
   List<DiffRow> _allSame(String baseline, String current) {
     final l = baseline.split('\n')..removeLast();
@@ -90,7 +101,7 @@ class LineDiff {
       rows.add(DiffRow(RowType.same,
           left: l[i], right: r[i], leftNo: i, rightNo: i));
     }
-    return rows;
+    return rows.map(_stripTrailingCr).toList();
   }
 
   /// 把文本按行（含行尾 \n）编码为“一行一码元”的字符串。

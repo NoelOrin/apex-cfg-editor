@@ -31,6 +31,14 @@ void main() {
     expect(doc.serialize(), '"setting.fps_max" "144"\n"setting.r_fullscreen" "1"\n');
   });
 
+  test('CRLF document: edited line keeps \\r, untouched lines byte-identical', () {
+    const src = '"setting.fps_max" "0"\r\n"setting.r_fullscreen" "1"\r\n';
+    final doc = p.parse(src);
+    (doc.lines[0] as KeyValueLine).setNewValue('144');
+    expect(
+        doc.serialize(), '"setting.fps_max" "144"\r\n"setting.r_fullscreen" "1"\r\n');
+  });
+
   test('empty value and missing trailing newline', () {
     const src = '"setting.csm_enabled" ""';
     expect(p.parse(src).serialize(), src);
