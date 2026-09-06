@@ -57,6 +57,9 @@ Widget _host(Widget home) => MaterialApp(
       home: home,
     );
 
+/// Windows 上探测路径用 `\` 拼接（文件系统等价），断言前归一化到 `/`。
+String _norm(String? p) => (p ?? '').replaceAll(r'\', '/');
+
 void main() {
   late Directory tmp;
   setUp(() {
@@ -279,7 +282,8 @@ void main() {
       )));
       await t.pumpAndSettle();
 
-      expect(file.state.path, cfg.path);
+      // Windows 上探测路径用 `\` 拼接（文件系统等价），归一化后比较。
+      expect(_norm(file.state.path!), _norm(cfg.path));
       expect(find.text('videoconfig.txt'), findsOneWidget); // AppBar 标题
       expect(find.text('setting.fps_max'), findsOneWidget); // 表格模式渲染内容
     });

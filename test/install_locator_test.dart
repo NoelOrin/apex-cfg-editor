@@ -3,6 +3,12 @@ import 'dart:io';
 import 'package:apex_cfg_editor/core/paths/install_locator.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// Windows 上探测引擎用 `\` 拼接（文件系统等价），断言前归一化到 `/`。
+String _norm(String? p) => (p ?? '').replaceAll(r'\', '/');
+
+Matcher samePath(String? expected) =>
+    predicate<String>((a) => _norm(a) == _norm(expected), 'same path');
+
 /// 假注册表：键为 `view|keyPath|valueName`，子键为 `view|keyPath`。
 class FakeRegistry implements RegistryReader {
   final Map<String, String?> values;
@@ -61,7 +67,7 @@ void main() {
       ).locate();
       expect(r, hasLength(1));
       expect(r.first.videoconfigPath,
-          '$doc/Respawn/Apex/local/videoconfig.txt');
+          samePath('$doc/Respawn/Apex/local/videoconfig.txt'));
       expect(r.first.source, InstallSource.videoconfigDoc);
     });
 
@@ -76,8 +82,8 @@ void main() {
           drives: FakeDrives([]),
           env: {'OneDrive': '${tmp.path}/OneDrive'},
         ).locate();
-        expect(r.map((i) => i.videoconfigPath),
-            contains('$doc/Respawn/Apex/local/videoconfig.txt'));
+        expect(r.map((i) => _norm(i.videoconfigPath)),
+            contains(_norm('$doc/Respawn/Apex/local/videoconfig.txt')));
       }
       for (final varName in ['OneDriveCommercial', 'OneDriveConsumer']) {
         final doc = '${tmp.path}/$varName/Documents';
@@ -88,8 +94,8 @@ void main() {
           drives: FakeDrives([]),
           env: {varName: '${tmp.path}/$varName'},
         ).locate();
-        expect(r.map((i) => i.videoconfigPath),
-            contains('$doc/Respawn/Apex/local/videoconfig.txt'));
+        expect(r.map((i) => _norm(i.videoconfigPath)),
+            contains(_norm('$doc/Respawn/Apex/local/videoconfig.txt')));
       }
     });
 
@@ -128,10 +134,10 @@ void main() {
         env: const {},
       ).locate();
       expect(r, hasLength(1));
-      expect(r.first.installDir, apex);
+      expect(_norm(r.first.installDir), _norm(apex));
       expect(r.first.source, InstallSource.steam);
-      expect(r.first.autoexecDir, '$apex/global/cfg');
-      expect(r.first.autoexecPath, '$apex/global/cfg/autoexec.cfg');
+      expect(r.first.autoexecDir, samePath('$apex/global/cfg'));
+      expect(r.first.autoexecPath, samePath('$apex/global/cfg/autoexec.cfg'));
     });
 
     test('HKLM WOW6432Node InstallPath used when HKCU missing', () {
@@ -150,7 +156,7 @@ void main() {
         env: const {},
       ).locate();
       expect(r, hasLength(1));
-      expect(r.first.installDir, apex);
+      expect(_norm(r.first.installDir), _norm(apex));
       expect(r.first.autoexecPath, isNull);
     });
 
@@ -176,7 +182,7 @@ void main() {
         env: const {},
       ).locate();
       expect(r, hasLength(1));
-      expect(r.first.autoexecDir, '$apex/r2/cfg');
+      expect(r.first.autoexecDir, samePath('$apex/r2/cfg'));
     });
 
     test('corrupt vdf skipped without throwing', () {
@@ -216,7 +222,7 @@ void main() {
       ).locate();
       expect(r, hasLength(1));
       expect(r.first.autoexecDir,
-          '${tmp.path}/Steam5/steamapps/common/Apex Legends/cfg');
+          samePath('${tmp.path}/Steam5/steamapps/common/Apex Legends/cfg'));
       expect(r.first.autoexecPath, isNull);
     });
 
@@ -241,8 +247,8 @@ void main() {
         env: const {},
       ).locate();
       expect(r, hasLength(1));
-      expect(r.first.installDir, apex);
-      expect(r.first.autoexecDir, '$apex/cfg');
+      expect(_norm(r.first.installDir), _norm(apex));
+      expect(r.first.autoexecDir, samePath('$apex/cfg'));
       expect(Directory('$apex/cfg').existsSync(), isFalse); // 尚未创建
     });
   });
@@ -272,9 +278,9 @@ void main() {
         env: const {},
       ).locate();
       expect(r, hasLength(1));
-      expect(r.first.installDir, apex);
+      expect(_norm(r.first.installDir), _norm(apex));
       expect(r.first.source, InstallSource.eaApp);
-      expect(r.first.autoexecDir, '$apex/cfg');
+      expect(r.first.autoexecDir, samePath('$apex/cfg'));
     });
 
     test('non-Apex DisplayName ignored', () {
@@ -325,7 +331,7 @@ void main() {
         env: const {},
       ).installsFromInstallDirs([apex, apex.toUpperCase(), apex.replaceAll('/', '\\')]);
       expect(r, hasLength(1));
-      expect(r.first.autoexecDir, '$apex/global/cfg');
+      expect(r.first.autoexecDir, samePath('$apex/global/cfg'));
     });
 
     test('missing dir filtered out', () {
@@ -350,9 +356,9 @@ void main() {
         env: const {},
       ).locate(customInstallDir: '${tmp.path}/Custom');
       expect(r, hasLength(1));
-      expect(r.first.installDir, apex);
+      expect(_norm(r.first.installDir), _norm(apex));
       expect(r.first.source, InstallSource.custom);
-      expect(r.first.autoexecPath, '$apex/global/cfg/autoexec.cfg');
+      expect(r.first.autoexecPath, samePath('$apex/global/cfg/autoexec.cfg'));
     });
 
     test('custom dir itself used when it is the game root', () {
@@ -364,8 +370,8 @@ void main() {
         env: const {},
       ).locate(customInstallDir: apex);
       expect(r, hasLength(1));
-      expect(r.first.installDir, apex);
-      expect(r.first.autoexecPath, '$apex/cfg/autoexec.cfg');
+      expect(_norm(r.first.installDir), _norm(apex));
+      expect(r.first.autoexecPath, samePath('$apex/cfg/autoexec.cfg'));
     });
 
     test('detection non-empty → custom dir NOT added', () {
@@ -427,24 +433,25 @@ void main() {
       ).locate();
       expect(r.map((i) => i.source).toList(),
           [InstallSource.videoconfigDoc, InstallSource.steam, InstallSource.eaApp]);
-      expect(r[1].installDir, steamApex);
+      expect(_norm(r[1].installDir), _norm(steamApex));
     });
   });
 
   group('apexInstallDirFromOpenedDir (customInstallDir 回写推导)', () {
     test('cfg / global/cfg / r2/cfg 父目录 → 剥到安装根', () {
       const f = apexInstallDirFromOpenedDir;
-      expect(f('${tmp.path}/Apex/cfg'), '${tmp.path}/Apex');
-      expect(f('${tmp.path}/Apex/global/cfg'), '${tmp.path}/Apex');
-      expect(f('${tmp.path}/Apex/r2/cfg'), '${tmp.path}/Apex');
+      expect(_norm(f('${tmp.path}/Apex/cfg')!), _norm('${tmp.path}/Apex'));
+      expect(_norm(f('${tmp.path}/Apex/global/cfg')!),
+          _norm('${tmp.path}/Apex'));
+      expect(_norm(f('${tmp.path}/Apex/r2/cfg')!), _norm('${tmp.path}/Apex'));
     });
 
     test('Steam 安装树内任意文件 → 根为 Apex Legends 目录', () {
       const f = apexInstallDirFromOpenedDir;
       final apex = '${tmp.path}/Lib/steamapps/common/Apex Legends';
-      expect(f('$apex/cfg'), apex);
-      expect(f('$apex/whatever/deep/dir'), apex);
-      expect(f(apex), apex);
+      expect(_norm(f('$apex/cfg')!), _norm(apex));
+      expect(_norm(f('$apex/whatever/deep/dir')!), _norm(apex));
+      expect(_norm(f(apex)!), _norm(apex));
     });
 
     test('videoconfig 文档目录 → null（Documents 根不是安装目录）', () {
