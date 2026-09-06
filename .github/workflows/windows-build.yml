@@ -10,6 +10,9 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      # 非 tag 触发（workflow_dispatch）时版本占位；tag 触发由编译步骤覆盖。
+      APP_VERSION: "0.0.0"
     steps:
       - uses: actions/checkout@v5
 
@@ -27,21 +30,44 @@ jobs:
       - name: Build release
         run: flutter build windows --release
 
-      - name: Zip release bundle
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Compile installer (Inno Setup)
         shell: pwsh
         run: |
-          $zip = "apex-cfg-editor-windows-${{ github.ref_name }}.zip"
-          Compress-Archive -Path "build/windows/x64/runner/Release/*" -DestinationPath $zip -Force
+          # windows-latest 预装 Inno Setup 6；预装缺失时兜底 chocolatey 安装。
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Host "ISCC not at default path, installing via chocolatey"
+            choco install innosetup -y --no-progress
+            if (-not (Test-Path $iscc)) { $iscc = "iscc" } # choco PATH shim
+          }
+          # tag 触发：版本号 = tag 名（如 v1.2.3 → ApexCfgEditorSetup-v1.2.3.exe）。
+          if ($env:GITHUB_REF -like 'refs/tags/*') {
+            $env:APP_VERSION = $env:GITHUB_REF_NAME
+          }
+          Copy-Item build/windows/x64/runner/Release packaging/Release -Recurse -Force
+          & $iscc packaging/apex_cfg_editor.iss
+          Get-ChildItem installer
+
+      - name: Zip portable bundle
+        shell: pwsh
+        run: |
+          Compress-Archive `
+            -Path "build/windows/x64/runner/Release/*" `
+            -DestinationPath "apex-cfg-editor-windows-${{ github.ref_name }}.zip" -Force
 
       - name: Upload artifact
         uses: actions/upload-artifact@v5
         with:
           name: apex-cfg-editor-windows
-          path: build/windows/x64/runner/Release/
+          path: |
+            build/windows/x64/runner/Release/
+            installer/*.exe
+            apex-cfg-editor-windows-*.zip
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
-          files: apex-cfg-editor-windows-*.zip
+          files: |
+            apex-cfg-editor-windows-*.zip
+            installer/ApexCfgEditorSetup-*.exe
