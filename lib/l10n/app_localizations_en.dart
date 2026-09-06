@@ -68,6 +68,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'No backups yet. A backup is kept before every save.';
 
   @override
+  String get restoreDirtyTitle => 'Discard unsaved changes?';
+
+  @override
+  String get restoreDirtyBody =>
+      'Restoring a backup will lose your unsaved changes.';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
   String get quitDialogTitle => 'Unsaved changes';
 
   @override

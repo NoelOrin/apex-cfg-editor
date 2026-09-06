@@ -357,6 +357,62 @@ void main() {
       expect(t.widget<CodeField>(find.byType(CodeField)).controller.text, _old);
     });
 
+    testWidgets('dirty restore asks confirmation; confirm dispatches restore',
+        (t) async {
+      final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
+      final backupBase = '${tmp.path}/backups';
+      Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
+      File('$backupBase/videoconfig.txt/20260101-000000.cfg')
+          .writeAsStringSync(_old);
+      final (file, edit, diff) = _wire(backupBase);
+      addTearDown(() async {
+        await file.close();
+        await diff.close();
+        await edit.close();
+      });
+
+      await t.pumpWidget(_host(EditorScreen(
+        editBloc: edit,
+        diffBloc: diff,
+        fileBloc: file,
+        autoDetect: false,
+      )));
+      file.add(OpenRequested(cfg.path));
+      await t.pumpAndSettle();
+      edit.add(LineValueChanged(index: 0, value: '200')); // dirty
+      await t.pump();
+
+      await t.tap(find.byTooltip('Restore'));
+      await t.pumpAndSettle();
+      // dirty 时点条目：先弹确认框，还原尚未发生。
+      await t.tap(find.text('20260101-000000.cfg'));
+      await t.pumpAndSettle();
+      expect(find.text('Discard unsaved changes?'), findsOneWidget);
+      expect(find.text('Restoring a backup will lose your unsaved changes.'),
+          findsOneWidget);
+      expect(File(cfg.path).readAsStringSync(), _new);
+      expect(edit.state.dirty, true);
+
+      // 取消：只关确认框，留在备份列表，还原未发生。
+      final confirmDialog = find.ancestor(
+          of: find.text('Discard unsaved changes?'),
+          matching: find.byType(AlertDialog));
+      await t.tap(find.descendant(of: confirmDialog, matching: find.text('Cancel')));
+      await t.pumpAndSettle();
+      expect(find.text('Discard unsaved changes?'), findsNothing);
+      expect(find.text('Restore from backup'), findsOneWidget);
+      expect(File(cfg.path).readAsStringSync(), _new);
+
+      // 再次选择并确认：RestoreRequested 派发，磁盘与编辑器回到备份内容。
+      await t.tap(find.text('20260101-000000.cfg'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Confirm'));
+      await t.pumpAndSettle();
+      expect(File(cfg.path).readAsStringSync(), _old);
+      expect(edit.state.doc!.serialize(), _old);
+      expect(edit.state.dirty, false);
+    });
+
     testWidgets('restore refresh timeout falls back to table mode',
         (t) async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);

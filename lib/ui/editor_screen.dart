@@ -254,6 +254,7 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
               onPressed: () => showRestoreDialog(
                 context,
                 fileBloc: widget.fileBloc,
+                editBloc: widget.editBloc,
                 onRestored: _onRestored,
               ),
             ),

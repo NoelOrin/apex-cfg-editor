@@ -65,6 +65,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get backupEmpty => '暂无备份。每次保存前都会自动备份。';
 
   @override
+  String get restoreDirtyTitle => '丢弃未保存的修改？';
+
+  @override
+  String get restoreDirtyBody => '还原备份将丢失未保存的修改。';
+
+  @override
+  String get confirm => '确认';
+
+  @override
   String get quitDialogTitle => '有未保存的修改';
 
   @override

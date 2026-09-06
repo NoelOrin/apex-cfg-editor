@@ -206,6 +206,24 @@ abstract class AppLocalizations {
   /// **'No backups yet. A backup is kept before every save.'**
   String get backupEmpty;
 
+  /// No description provided for @restoreDirtyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard unsaved changes?'**
+  String get restoreDirtyTitle;
+
+  /// No description provided for @restoreDirtyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring a backup will lose your unsaved changes.'**
+  String get restoreDirtyBody;
+
+  /// No description provided for @confirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirm;
+
   /// No description provided for @quitDialogTitle.
   ///
   /// In en, this message translates to:
