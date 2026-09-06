@@ -21,6 +21,7 @@
   "fileBadEncoding": "File contains bytes that cannot be decoded; saving may lose them",
   "fileSaveFailed": "Failed to save file",
   "fileRestoreFailed": "Failed to restore from backup",
+  "fileBadBytesDirty": "File contains bytes that cannot be mapped; saving now would re-encode the whole file and make the damage worse. Restore a backup or fix the file manually first.",
   "restoreDialogTitle": "Restore from backup",
   "backupEmpty": "No backups yet. A backup is kept before every save.",
   "restoreDirtyTitle": "Discard unsaved changes?",

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:apex_cfg_editor/core/diff/line_diff.dart';
@@ -357,6 +358,41 @@ void main() {
       edit.add(LineValueChanged(index: 0, value: '144'));
       await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(edit.state.dirty, true);
+      await bloc.close();
+      await edit.close();
+    });
+
+    test('save with dirty edits on bad-byte file is blocked', () async {
+      // 0xC3 0x28：UTF-8 严格解码失败，GBK 解码残缺 → U+FFFD 坏字节。
+      // 编辑后保存 = 全文重编码，坏字节被固化为 U+FFFD 的 UTF-8 编码
+      // （二次损坏）——必须阻止，保住磁盘原始字节。
+      final badBytes = <int>[
+        0xC3, 0x28, 0x0A,
+        ...utf8.encode('"setting.fps_max" "0"\n'),
+      ];
+      final file = File('${tmp.path}/videoconfig.txt')
+        ..writeAsBytesSync(badBytes);
+      final edit = EditBloc();
+      var saveCalls = 0;
+      final bloc = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) async => saveCalls++,
+        listBackupsImpl: (_) => const [],
+        restoreImpl: (_, _) async {},
+      );
+      bloc.add(OpenRequested(file.path));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(edit.state.doc, isNotNull);
+
+      edit.add(LineValueChanged(index: 1, value: '144'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      bloc.add(SaveRequested());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(bloc.state.warning, 'fileBadBytesDirty');
+      expect(saveCalls, 0); // 不写盘（真实装配下也不备份）
+      expect(file.readAsBytesSync(), badBytes); // 磁盘字节未变
+      expect(edit.state.dirty, true); // 保持脏：处理后可再试
       await bloc.close();
       await edit.close();
     });

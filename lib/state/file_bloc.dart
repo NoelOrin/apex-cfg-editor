@@ -101,7 +101,16 @@ class FileBloc extends Bloc<FileEvent, FileState> {
       em(state.copyWith(warning: () => null));
       try {
         final cur = File(path).readAsBytesSync();
-        await saveImpl(path, doc.serialize(), CfgFileIo.readBytes(cur).encoding);
+        final probed = CfgFileIo.readBytes(cur);
+        // 规格 §7/§9：未编辑行按原始字节写回。含坏字节（U+FFFD）的文件一旦
+        // 被编辑，serialize 是全文重编码——坏字节被固化成 U+FFFD 的编码且
+        // 原始字节无法找回。dirty 时阻止保存（不写盘不备份），磁盘原始
+        // 字节保持可还原/可手工修复；未编辑的保存路径不受影响。
+        if (probed.hasBadBytes) {
+          em(state.copyWith(warning: () => 'fileBadBytesDirty'));
+          return;
+        }
+        await saveImpl(path, doc.serialize(), probed.encoding);
       } catch (_) {
         // 保存失败：不派发 DocumentSaved（dirty 保持 true，重试不被
         // !dirty no-op 吞掉），置告警由 ExitGuard/UI 中止退出或提示。

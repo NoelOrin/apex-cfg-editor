@@ -194,6 +194,12 @@ abstract class AppLocalizations {
   /// **'Failed to restore from backup'**
   String get fileRestoreFailed;
 
+  /// No description provided for @fileBadBytesDirty.
+  ///
+  /// In en, this message translates to:
+  /// **'File contains bytes that cannot be mapped; saving now would re-encode the whole file and make the damage worse. Restore a backup or fix the file manually first.'**
+  String get fileBadBytesDirty;
+
   /// No description provided for @restoreDialogTitle.
   ///
   /// In en, this message translates to:

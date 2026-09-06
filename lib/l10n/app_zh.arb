@@ -16,6 +16,7 @@
   "fileBadEncoding": "文件包含无法解码的字节，保存可能丢失这些内容",
   "fileSaveFailed": "保存文件失败",
   "fileRestoreFailed": "还原备份失败",
+  "fileBadBytesDirty": "文件包含无法映射的坏字节，现在保存会全文重编码、造成二次损坏；请先还原备份或手工处理文件。",
   "restoreDialogTitle": "从备份还原",
   "backupEmpty": "暂无备份。每次保存前都会自动备份。",
   "restoreDirtyTitle": "丢弃未保存的修改？",

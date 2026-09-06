@@ -59,6 +59,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileRestoreFailed => '还原备份失败';
 
   @override
+  String get fileBadBytesDirty =>
+      '文件包含无法映射的坏字节，现在保存会全文重编码、造成二次损坏；请先还原备份或手工处理文件。';
+
+  @override
   String get restoreDialogTitle => '从备份还原';
 
   @override

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:apex_cfg_editor/core/backup/backup_service.dart';
@@ -177,6 +178,38 @@ void main() {
       expect(backups, hasLength(1));
       expect(backups.single.readAsBytesSync(), originalBytes);
       expect(edit.state.dirty, false);
+
+      await file.close();
+      await diff.close();
+      await edit.close();
+    });
+
+    test('bad bytes + dirty edits: save blocked, disk untouched, no backup',
+        () async {
+      final badBytes = <int>[
+        0xC3, 0x28, 0x0A,
+        ...utf8.encode('"setting.fps_max" "0"\n'),
+      ];
+      final cfg = File('${tmp.path}/videoconfig.txt')
+        ..writeAsBytesSync(badBytes);
+      final backupBase = '${tmp.path}/backups';
+      final (file, edit, diff) = _wire(backupBase);
+
+      file.add(OpenRequested(cfg.path));
+      await _settle();
+      expect(file.state.warning, 'fileBadEncoding');
+      edit.add(LineValueChanged(index: 1, value: '144'));
+      await _settle();
+      expect(edit.state.dirty, true);
+
+      file.add(SaveRequested());
+      await _settle();
+
+      // 阻止保存：真实装配下 saveImpl 不执行 → 不写盘、不备份。
+      expect(file.state.warning, 'fileBadBytesDirty');
+      expect(cfg.readAsBytesSync(), badBytes);
+      expect(_backupFiles(backupBase, 'videoconfig.txt'), isEmpty);
+      expect(edit.state.dirty, true);
 
       await file.close();
       await diff.close();

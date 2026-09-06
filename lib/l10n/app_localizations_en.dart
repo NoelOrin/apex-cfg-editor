@@ -61,6 +61,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileRestoreFailed => 'Failed to restore from backup';
 
   @override
+  String get fileBadBytesDirty =>
+      'File contains bytes that cannot be mapped; saving now would re-encode the whole file and make the damage worse. Restore a backup or fix the file manually first.';
+
+  @override
   String get restoreDialogTitle => 'Restore from backup';
 
   @override

@@ -28,6 +28,7 @@ String warningText(BuildContext context, String key) {
     'fileOpenFailed' => l.fileOpenFailed,
     'fileSaveFailed' => l.fileSaveFailed,
     'fileRestoreFailed' => l.fileRestoreFailed,
+    'fileBadBytesDirty' => l.fileBadBytesDirty,
     _ => key,
   };
 }

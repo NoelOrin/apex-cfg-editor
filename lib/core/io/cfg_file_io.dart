@@ -38,17 +38,13 @@ class CfgFileIo {
   static String utf8WithBom(List<int> bytes) =>
       utf8.decode(bytes.sublist(3), allowMalformed: true);
 
-  /// 有坏字节且内容被编辑时由上层拦截告警；未编辑时上层应走 writeOriginalBytes。
+  /// 按打开时探测到的编码全文写回。仅用于无坏字节（hasBadBytes == false）
+  /// 的内容：含坏字节的文件编辑后由 FileBloc 阻止保存（fileBadBytesDirty），
+  /// 避免 U+FFFD 被固化、原始字节丢失。
   static void write(String path, String text, CfgEncoding enc) {
     final data = enc == CfgEncoding.gbk ? gbk.encode(text) : utf8.encode(text);
     final tmp = '$path.tmp';
     File(tmp).writeAsBytesSync(data, flush: true);
     File(tmp).renameSync(path); // 原子替换
-  }
-
-  static void writeOriginalBytes(String path, List<int> originalBytes) {
-    final tmp = '$path.tmp';
-    File(tmp).writeAsBytesSync(originalBytes, flush: true);
-    File(tmp).renameSync(path);
   }
 }
