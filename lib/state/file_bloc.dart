@@ -9,6 +9,14 @@ import 'edit_bloc.dart';
 
 enum CfgKind { videoconfig, autoexec }
 
+/// 路径的父目录（同时接受 / 与 \ 分隔，兼容 Windows 风格输入）。
+String parentDirOf(String path) {
+  final i = path.lastIndexOf(RegExp(r'[/\\]'));
+  if (i < 0) return path;
+  if (i == 0) return path.substring(0, 1); // 根目录 '/x' → '/'
+  return path.substring(0, i);
+}
+
 sealed class FileEvent {}
 
 class OpenRequested extends FileEvent {
@@ -62,11 +70,16 @@ class FileBloc extends Bloc<FileEvent, FileState> {
   final List<String> Function(String path) listBackupsImpl;
   final Future<void> Function(String target, String backup) restoreImpl;
 
+  /// 打开成功（OpenRequested 成终态）后以文件父目录回调（规格 R7：
+  /// 记住上次打开路径，装配层写入 settings.json）。null = 不记录。
+  final void Function(String dir)? onOpenSucceeded;
+
   FileBloc({
     required this.editBloc,
     required this.saveImpl,
     required this.listBackupsImpl,
     required this.restoreImpl,
+    this.onOpenSucceeded,
   }) : super(const FileState()) {
     on<OpenRequested>((e, em) async {
       em(state.copyWith(busy: true, warning: () => null));
@@ -85,6 +98,7 @@ class FileBloc extends Bloc<FileEvent, FileState> {
             busy: false,
             warning: data.hasBadBytes ? 'fileBadEncoding' : null,
             backups: listBackupsImpl(e.path)));
+        onOpenSucceeded?.call(parentDirOf(e.path)); // 规格 R7：记住上次路径
       } catch (_) {
         // 打开失败回到无文件状态：busy 复位 + 告警，避免 UI 死锁。
         em(const FileState(busy: false, warning: 'fileOpenFailed'));

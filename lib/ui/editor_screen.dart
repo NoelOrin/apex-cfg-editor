@@ -9,6 +9,7 @@ import 'package:window_manager/window_manager.dart';
 
 import '../core/io/cfg_file_io.dart';
 import '../core/paths/apex_paths.dart';
+import '../core/settings/settings_store.dart';
 import '../state/diff_bloc.dart';
 import '../state/edit_bloc.dart';
 import '../state/file_bloc.dart';
@@ -55,6 +56,10 @@ class EditorScreen extends StatefulWidget {
   /// 「打开文件」选择器。null → file_picker（.cfg/.txt）；测试注入。
   final Future<String?> Function()? pickFile;
 
+  /// 上次打开路径存储（规格 R7）：选择器以 lastOpenDir 作为
+  /// initialDirectory 打开。null → 不带初始目录。
+  final SettingsStore? settings;
+
   const EditorScreen({
     super.key,
     required this.editBloc,
@@ -63,6 +68,7 @@ class EditorScreen extends StatefulWidget {
     this.autoDetect = true,
     this.homeDirOverride,
     this.pickFile,
+    this.settings,
   });
 
   @override
@@ -139,9 +145,12 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
   }
 
   Future<void> _openFileManually() async {
-    final pick = widget.pickFile ?? _pickWithFilePicker;
+    final pick = widget.pickFile;
     try {
-      final path = await pick();
+      // 规格 R7：失败退回手动选择并记住上次路径——选择器以上次目录打开。
+      final path = pick != null
+          ? await pick()
+          : await _pickWithFilePicker(widget.settings?.readLastOpenDir());
       if (path == null || !mounted) return; // 用户取消
       widget.fileBloc.add(OpenRequested(path));
     } catch (_) {
@@ -149,11 +158,12 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     }
   }
 
-  static Future<String?> _pickWithFilePicker() async {
+  static Future<String?> _pickWithFilePicker(String? initialDirectory) async {
     // file_picker 12.x：单选走静态 FilePicker.pickFile。
     final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: const ['cfg', 'txt'],
+      initialDirectory: initialDirectory,
     );
     return file?.path;
   }

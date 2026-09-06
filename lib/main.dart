@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:apex_cfg_editor/core/backup/backup_service.dart';
 import 'package:apex_cfg_editor/core/io/cfg_file_io.dart';
+import 'package:apex_cfg_editor/core/paths/app_data_dir.dart';
+import 'package:apex_cfg_editor/core/settings/settings_store.dart';
 import 'package:apex_cfg_editor/knowledge/kb_service.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
 import 'package:apex_cfg_editor/state/diff_bloc.dart';
@@ -30,11 +32,11 @@ Future<void> main() async {
 }
 
 /// 生产备份根目录：`%APPDATA%\ApexCfgEditor\backups`；
-/// APPDATA 缺失（macOS 开发期）兜底系统临时目录。
-String defaultBackupBase() {
-  final appData = Platform.environment['APPDATA'];
-  return '${appData ?? Directory.systemTemp.path}/ApexCfgEditor/backups';
-}
+/// APPDATA 缺失（macOS 开发期）兜底系统临时目录（与 settings.json 同源）。
+String defaultBackupBase() => '${appDataDir()}/backups';
+
+/// 生产设置文件：`%APPDATA%\ApexCfgEditor\settings.json`（规格 R7）。
+String defaultSettingsPath() => '${appDataDir()}/settings.json';
 
 /// saveImpl 装配（FileBloc 契约：`Future<void> Function(path, text, enc)`）：
 /// 先把磁盘上的旧内容按字节级复制进备份（readAsStringSync 会因 utf8 严格
@@ -77,6 +79,10 @@ class ApexCfgEditorApp extends StatefulWidget {
   /// 备份根目录。null → [defaultBackupBase]；测试注入临时目录。
   final String? backupBaseDir;
 
+  /// settings.json 路径（规格 R7 记住上次打开路径）。
+  /// null → [defaultSettingsPath]；测试注入临时目录。
+  final String? settingsPath;
+
   /// 是否启动自动探测 Apex 配置路径（EditorScreen 内执行）。
   /// 测试关掉以隔离宿主环境。
   final bool autoDetect;
@@ -85,6 +91,7 @@ class ApexCfgEditorApp extends StatefulWidget {
     super.key,
     required this.kb,
     this.backupBaseDir,
+    this.settingsPath,
     this.autoDetect = true,
   });
 
@@ -96,6 +103,7 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
   late final EditBloc editBloc;
   late final DiffBloc diffBloc;
   late final FileBloc fileBloc;
+  late final SettingsStore settings;
 
   @override
   void initState() {
@@ -108,12 +116,16 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
     diffBloc = DiffBloc(editStream: editBloc.stream);
     final backups =
         BackupService(baseDir: widget.backupBaseDir ?? defaultBackupBase());
+    final settings =
+        SettingsStore(settingsPath: widget.settingsPath ?? defaultSettingsPath());
     fileBloc = FileBloc(
       editBloc: editBloc,
       saveImpl: (path, text, enc) => backupThenWrite(backups, path, text, enc),
       listBackupsImpl: backups.listBackups,
       restoreImpl: backups.restore,
+      onOpenSucceeded: settings.writeLastOpenDir,
     );
+    this.settings = settings;
   }
 
   @override
@@ -139,6 +151,7 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
           editBloc: editBloc,
           diffBloc: diffBloc,
           fileBloc: fileBloc,
+          settings: settings,
           autoDetect: widget.autoDetect,
         ),
       ),
