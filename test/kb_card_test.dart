@@ -1,3 +1,4 @@
+import 'package:apex_cfg_editor/core/parser/autoexec_parser.dart';
 import 'package:apex_cfg_editor/core/parser/videoconfig_parser.dart';
 import 'package:apex_cfg_editor/knowledge/kb_service.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
@@ -176,6 +177,59 @@ void main() {
     expect(find.text('FPS Cap'), findsNothing);
     expect(find.text('Key not documented yet. You can still edit it.'),
         findsNothing);
+  });
+
+  testWidgets('negative selection index hides the card (no RangeError)',
+      (t) async {
+    final edit = _editBloc();
+    addTearDown(edit.close);
+    edit.add(SelectionChanged(-1));
+    await t.pumpWidget(_host(edit));
+    await t.pumpAndSettle();
+
+    expect(find.byType(SingleChildScrollView), findsNothing);
+    expect(find.text('FPS Cap'), findsNothing);
+  });
+
+  testWidgets('selected CvarLine (autoexec bind) shows matching KB entry',
+      (t) async {
+    const src = 'bind "F6" "quit"\nfps_max 128\n';
+    final edit = EditBloc();
+    addTearDown(edit.close);
+    edit.add(DocumentOpened(
+        doc: AutoexecParser().parse(src), baseline: src)); // 行 0 = CvarLine
+    edit.add(SelectionChanged(0));
+
+    const autoexecKb = {
+      'en': {
+        'bind': {
+          'name': 'Bind',
+          'description': 'Binds a key to a command.',
+          'recommended': '',
+          'risk': 'low',
+          'values': [],
+        },
+      },
+    };
+
+    await t.pumpWidget(MaterialApp(
+      theme: _theme(),
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: RepositoryProvider<KbService>.value(
+        value: const KbService(data: autoexecKb),
+        child: BlocProvider<EditBloc>.value(
+          value: edit,
+          child: const Scaffold(body: KbCard()),
+        ),
+      ),
+    ));
+    await t.pumpAndSettle();
+
+    // CvarLine → KbFile.autoexec 域查 KB：bind 条目命中。
+    expect(find.text('Bind'), findsOneWidget);
+    expect(find.text('Binds a key to a command.'), findsOneWidget);
   });
 
   testWidgets('no document open hides the card', (t) async {

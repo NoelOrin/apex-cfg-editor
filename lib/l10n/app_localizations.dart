@@ -176,6 +176,12 @@ abstract class AppLocalizations {
   /// **'Failed to open file'**
   String get fileOpenFailed;
 
+  /// No description provided for @filePickerFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to open the file picker'**
+  String get filePickerFailed;
+
   /// No description provided for @fileBadEncoding.
   ///
   /// In en, this message translates to:

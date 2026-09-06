@@ -99,4 +99,37 @@ void main() {
     verify(() => file.add(any<SaveRequested>(that: isA<SaveRequested>())))
         .called(1);
   });
+
+  testWidgets('file picker failure surfaces a snackbar (filePickerFailed)',
+      (t) async {
+    final edit = MockEditBloc();
+    final diff = MockDiffBloc();
+    final file = MockFileBloc();
+    whenListen(edit, const Stream<EditState>.empty(),
+        initialState: const EditState());
+    whenListen(diff, const Stream<DiffState>.empty(),
+        initialState: const DiffState());
+    whenListen(file, const Stream<FileState>.empty(),
+        initialState: const FileState());
+
+    await t.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: EditorScreen(
+        editBloc: edit,
+        diffBloc: diff,
+        fileBloc: file,
+        autoDetect: false,
+        // 注入抛错的 picker seam：file_picker 层异常不再被静默吞掉。
+        pickFile: () async => throw Exception('picker crashed'),
+      ),
+    ));
+    await t.pumpAndSettle();
+
+    await t.tap(find.byTooltip('Open file'));
+    await t.pumpAndSettle();
+
+    expect(find.text('Failed to open the file picker'), findsOneWidget);
+  });
 }

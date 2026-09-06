@@ -90,6 +90,21 @@ void main() {
       expect(File(p).readAsBytesSync(), aeGbkBytes);
     });
 
+    test('夹具键集 ⊆ 知识库键集（正式核验，任务 17 账本）', () {
+      final kbKeys = kbJson('assets/kb/zh/autoexec.json')
+          .keys
+          .map((k) => k.toLowerCase())
+          .toSet();
+      final fixtureKeys = const AutoexecParser()
+          .parse(aeGbk.text)
+          .lines
+          .whereType<CvarLine>()
+          .map((l) => l.key.toLowerCase())
+          .toSet();
+      expect(kbKeys.containsAll(fixtureKeys), isTrue,
+          reason: 'autoexec 夹具出现知识库未收录键即失败');
+    });
+
     test('行注释/块注释/bind 引号值/行内注释/重复键形态齐全', () {
       final doc = const AutoexecParser().parse(aeGbk.text);
       final comments =

@@ -86,6 +86,10 @@ class KvTableView extends StatelessWidget {
                         // 触发 DropdownButtonFormField 的唯一项断言。
                         entry.values.any((v) => v.v == value)
                     ? DropdownButtonFormField<String>(
+                        // 与下方文本框对称：按行对象做身份 key，文档整体
+                        // 替换（DocumentOpened/restore）后对象更替、字段
+                        // 按新值重建，不依赖 initialValue 同步行为。
+                        key: ValueKey<CfgLine>(line),
                         initialValue: value,
                         items: entry.values
                             .map((v) => DropdownMenuItem(

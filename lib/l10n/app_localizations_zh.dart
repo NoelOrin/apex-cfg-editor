@@ -50,6 +50,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileOpenFailed => '打开文件失败';
 
   @override
+  String get filePickerFailed => '打开文件选择器失败';
+
+  @override
   String get fileBadEncoding => '文件包含无法解码的字节，保存可能丢失这些内容';
 
   @override

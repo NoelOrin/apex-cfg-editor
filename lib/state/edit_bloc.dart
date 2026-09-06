@@ -70,10 +70,14 @@ class EditBloc extends Bloc<EditEvent, EditState> {
       final l = doc.lines[e.index];
       if (l is KeyValueLine) l.setNewValue(e.value);
       if (l is CvarLine) l.setNewValue(e.value);
-      em(state.copyWith(doc: doc, dirty: true));
+      // dirty 语义统一（任务 14 账本）：以「变更后文档 != 基线」为准——
+      // 编辑回原值即不脏；对不可编辑行（Comment/Blank/Raw）的编辑不产生
+      // 字节变化，同样不标脏。
+      em(state.copyWith(doc: doc, dirty: doc.serialize() != state.baseline));
     });
     on<FullTextChanged>(
-        (e, em) => em(state.copyWith(doc: e.doc, dirty: true)));
+        (e, em) => em(state.copyWith(
+            doc: e.doc, dirty: e.doc.serialize() != state.baseline)));
     on<SelectionChanged>(
         (e, em) => em(state.copyWith(selectedIndex: () => e.index)));
     on<DocumentSaved>((e, em) => em(state.copyWith(

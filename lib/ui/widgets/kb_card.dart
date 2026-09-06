@@ -25,7 +25,10 @@ class KbCard extends StatelessWidget {
       builder: (context, s) {
         final doc = s.doc;
         final i = s.selectedIndex;
-        if (doc == null || i == null || i >= doc.lines.length) {
+        if (doc == null ||
+            i == null ||
+            i < 0 ||
+            i >= doc.lines.length) {
           return const SizedBox.shrink();
         }
         // sealed CfgLine 穷举：键值行解出 (key, KB 域)；

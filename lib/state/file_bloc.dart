@@ -144,7 +144,11 @@ class FileBloc extends Bloc<FileEvent, FileState> {
         // 避免把未恢复的文件当成已还原内容重新载入）。告警提示，bloc
         // 保持可用：用户可重试或另选备份。bloc 9.2.1 会把 handler 异常
         // rethrow 成未捕获异常并挂起事件流，这里必须就地消化。
-        em(state.copyWith(warning: () => 'fileRestoreFailed'));
+        // 同时重算备份列表：失效条目（如备份文件已被删除）从还原对话框
+        // 清除，与成功路径的列表刷新保持一致。
+        em(state.copyWith(
+            warning: () => 'fileRestoreFailed',
+            backups: listBackupsImpl(path)));
         return;
       }
       add(OpenRequested(path));

@@ -130,6 +130,37 @@ void main() {
     expect(edit.state.dirty, isTrue);
   });
 
+  testWidgets('dropdown carries ValueKey<CfgLine> (symmetric with text field)',
+      (t) async {
+    const kbSrc = '"setting.fps_max" "1"\n"setting.r_full" "1"\n';
+    final edit = _realEditBloc(src: kbSrc);
+    addTearDown(edit.close);
+    final file = _realFileBloc(edit);
+    addTearDown(file.close);
+    const kb = KbService(data: {
+      'en': {
+        'setting.fps_max': {
+          'name': 'FPS Cap',
+          'description': 'Frame rate limit',
+          'recommended': '0',
+          'risk': 'low',
+          'values': [
+            {'v': '0', 'label': 'Capped'},
+            {'v': '1', 'label': 'Uncapped'},
+          ],
+        },
+      },
+    });
+
+    await t.pumpWidget(
+        _host(KvTableView(editBloc: edit, fileBloc: file), kb: kb));
+    await t.pumpAndSettle();
+
+    final dropdown =
+        t.widget<DropdownButtonFormField<String>>(find.byType(DropdownButtonFormField<String>));
+    expect(dropdown.key, ValueKey<CfgLine>(edit.state.doc!.lines[0]));
+  });
+
   testWidgets('tapping a row dispatches SelectionChanged and highlights it',
       (t) async {
     final edit = _realEditBloc();

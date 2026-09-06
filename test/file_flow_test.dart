@@ -733,6 +733,13 @@ void main() {
         listBackupsImpl: BackupService(baseDir: '${tmp.path}/b2').listBackups,
         restoreImpl: (_, _) async {},
       );
+      // stalled 必须真实打开文件：否则 SaveRequested 落在 path==null 守卫
+      // 直接 return，saveImpl（never.future）不可达，超时就不是由挂起的
+      // 保存触发，用例名不副实。打开会复位 dirty，重新制造脏状态。
+      stalled.add(OpenRequested(cfg.path));
+      await _settle();
+      edit.add(LineValueChanged(index: 0, value: '144'));
+      await _settle();
       var destroyed = 0;
       final guard = ExitGuard(
         editBloc: edit,

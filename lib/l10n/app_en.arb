@@ -18,6 +18,7 @@
   "risk": "Risk",
   "openFile": "Open file",
   "fileOpenFailed": "Failed to open file",
+  "filePickerFailed": "Failed to open the file picker",
   "fileBadEncoding": "File contains bytes that cannot be decoded; saving may lose them",
   "fileSaveFailed": "Failed to save file",
   "fileRestoreFailed": "Failed to restore from backup",

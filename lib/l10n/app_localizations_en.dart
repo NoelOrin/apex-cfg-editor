@@ -51,6 +51,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileOpenFailed => 'Failed to open file';
 
   @override
+  String get filePickerFailed => 'Failed to open the file picker';
+
+  @override
   String get fileBadEncoding =>
       'File contains bytes that cannot be decoded; saving may lose them';
 

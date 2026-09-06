@@ -37,6 +37,38 @@ void main() {
     );
 
     blocTest<EditBloc, EditState>(
+      'edit value then back to original → dirty false (serialize == baseline)',
+      build: () => EditBloc(),
+      act: (b) {
+        b.add(DocumentOpened(doc: _doc(), baseline: _baseline));
+        b.add(LineValueChanged(index: 0, value: '144'));
+        b.add(LineValueChanged(index: 0, value: '0'));
+      },
+      expect: () => [
+        isA<EditState>().having((s) => s.dirty, 'dirty', false),
+        isA<EditState>().having((s) => s.dirty, 'dirty', true),
+        isA<EditState>()
+            .having((s) => s.dirty, 'dirty', false)
+            .having((s) => s.doc!.serialize(), 'text', _baseline),
+      ],
+    );
+
+    blocTest<EditBloc, EditState>(
+      'FullTextChanged equal to baseline → dirty false',
+      build: () => EditBloc(),
+      act: (b) {
+        b.add(DocumentOpened(doc: _doc(), baseline: _baseline));
+        b.add(FullTextChanged(VideoconfigParser().parse(_baseline)));
+      },
+      expect: () => [
+        isA<EditState>().having((s) => s.dirty, 'dirty', false),
+        isA<EditState>()
+            .having((s) => s.dirty, 'dirty', false)
+            .having((s) => s.doc!.serialize(), 'text', _baseline),
+      ],
+    );
+
+    blocTest<EditBloc, EditState>(
       'selection change sets and clears selectedIndex',
       build: () => EditBloc(),
       act: (b) {
@@ -287,6 +319,33 @@ void main() {
       expect(edit.state.baseline, _edited);
       expect(edit.state.doc!.serialize(), _edited);
       expect(edit.state.dirty, false);
+      await bloc.close();
+      await edit.close();
+    });
+
+    test('restore failure refreshes backup list (stale entries cleared)',
+        () async {
+      final file = File('${tmp.path}/videoconfig.txt')
+        ..writeAsStringSync(_baseline);
+      final edit = EditBloc();
+      final store = <String>['${tmp.path}/gone.cfg'];
+      final bloc = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) async {},
+        listBackupsImpl: (_) => List.of(store),
+        restoreImpl: (_, _) async => throw Exception('backup gone'),
+      );
+      bloc.add(OpenRequested(file.path));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(bloc.state.backups, ['${tmp.path}/gone.cfg']);
+
+      // 列表中的备份在还原前失效（被删除）：restoreImpl 抛错。
+      store.clear();
+      bloc.add(RestoreRequested('${tmp.path}/gone.cfg'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // 失败分支同样重算 backups：失效条目从还原对话框消失。
+      expect(bloc.state.warning, 'fileRestoreFailed');
+      expect(bloc.state.backups, isEmpty);
       await bloc.close();
       await edit.close();
     });

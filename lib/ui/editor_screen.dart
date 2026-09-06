@@ -154,7 +154,13 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
       if (path == null || !mounted) return; // 用户取消
       widget.fileBloc.add(OpenRequested(path));
     } catch (_) {
-      // file_picker 在测试 / 无窗口环境不可用：静默（打开失败另有告警路径）。
+      // file_picker 层异常（测试 / 无窗口环境不可用、插件崩溃等）不再
+      // 静默：SnackBar 反馈，用户至少知道点击没有生效，可重试。
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(AppLocalizations.of(context)!.filePickerFailed)),
+      );
     }
   }
 
