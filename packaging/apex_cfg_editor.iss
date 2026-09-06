@@ -54,5 +54,5 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; \
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; \
-    Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '')}}"; \
+    Description: "{cm:LaunchProgram,{#MyAppName}}"; \
     Flags: nowait postinstall skipifsilent
