@@ -218,17 +218,24 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
               tooltip: l.openFile,
               onPressed: _openFileManually,
             ),
+            // 模式切换仅用图标（Tooltip 兼作悬停提示与无障碍语义）：
+            // 顶栏 actions 宽度固定 ~300，配合窗口最小尺寸 960x640，
+            // 窄窗口下不再溢出破版（任务 16 UI 打磨）。
             SegmentedButton<bool>(
               segments: [
                 ButtonSegment(
                   value: false,
-                  icon: const Icon(LucideIcons.table2),
-                  label: Text(l.modeTable),
+                  icon: Tooltip(
+                    message: l.modeTable,
+                    child: const Icon(LucideIcons.table2),
+                  ),
                 ),
                 ButtonSegment(
                   value: true,
-                  icon: const Icon(LucideIcons.code2),
-                  label: Text(l.modeText),
+                  icon: Tooltip(
+                    message: l.modeText,
+                    child: const Icon(LucideIcons.code2),
+                  ),
                 ),
               ],
               selected: {_textMode},

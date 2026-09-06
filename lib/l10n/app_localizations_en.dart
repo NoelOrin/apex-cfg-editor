@@ -39,6 +39,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get riskHigh => 'High risk';
+
+  @override
+  String get risk => 'Risk';
+
+  @override
   String get openFile => 'Open file';
 
   @override

@@ -9,6 +9,8 @@
   "emptyDocHint": "打开一个 cfg 文件开始编辑",
   "noChanges": "无变更",
   "kbRecommended": "推荐：{value}",
+  "riskHigh": "高风险",
+  "risk": "风险",
   "openFile": "打开文件",
   "fileOpenFailed": "打开文件失败",
   "fileBadEncoding": "文件包含无法解码的字节，保存可能丢失这些内容",

@@ -62,7 +62,8 @@ class KbCard extends StatelessWidget {
                   Icon(LucideIcons.alertTriangle,
                       size: 16,
                       color: high ? scheme.error : scheme.onSurfaceVariant,
-                      semanticLabel: high ? 'high risk' : 'risk'),
+                      // 辅助文案（screen reader）同样走 i18n（任务 16 审计收尾）。
+                      semanticLabel: high ? l.riskHigh : l.risk),
                   const SizedBox(width: 6),
                 ],
                 Expanded(

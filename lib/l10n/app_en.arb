@@ -14,6 +14,8 @@
       "value": {}
     }
   },
+  "riskHigh": "High risk",
+  "risk": "Risk",
   "openFile": "Open file",
   "fileOpenFailed": "Failed to open file",
   "fileBadEncoding": "File contains bytes that cannot be decoded; saving may lose them",

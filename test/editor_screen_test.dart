@@ -37,8 +37,9 @@ void main() {
       home: EditorScreen(editBloc: edit, diffBloc: diff, fileBloc: file),
     ));
     expect(find.text('Apex CFG Editor'), findsWidgets);
-    expect(find.text('Table'), findsOneWidget);
-    expect(find.text('Text'), findsOneWidget);
+    // 模式切换为纯图标段（Tooltip 兼作语义标签），断言随 UI 形态调整。
+    expect(find.byTooltip('Table'), findsOneWidget);
+    expect(find.byTooltip('Text'), findsOneWidget);
   });
 
   testWidgets('mode toggle swaps editing area between table and text views',
@@ -63,12 +64,12 @@ void main() {
     expect(find.byType(KvTableView), findsOneWidget);
     expect(find.byType(TextEditorView), findsNothing);
 
-    await t.tap(find.text('Text'));
+    await t.tap(find.byTooltip('Text'));
     await t.pumpAndSettle();
     expect(find.byType(TextEditorView), findsOneWidget);
     expect(find.byType(KvTableView), findsNothing);
 
-    await t.tap(find.text('Table'));
+    await t.tap(find.byTooltip('Table'));
     await t.pumpAndSettle();
     expect(find.byType(KvTableView), findsOneWidget);
     expect(find.byType(TextEditorView), findsNothing);

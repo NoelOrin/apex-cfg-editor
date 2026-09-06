@@ -38,6 +38,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get riskHigh => '高风险';
+
+  @override
+  String get risk => '风险';
+
+  @override
   String get openFile => '打开文件';
 
   @override

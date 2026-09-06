@@ -152,6 +152,18 @@ abstract class AppLocalizations {
   /// **'Recommended: {value}'**
   String kbRecommended(Object value);
 
+  /// No description provided for @riskHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High risk'**
+  String get riskHigh;
+
+  /// No description provided for @risk.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk'**
+  String get risk;
+
   /// No description provided for @openFile.
   ///
   /// In en, this message translates to:

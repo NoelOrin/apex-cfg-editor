@@ -8,6 +8,7 @@ import 'package:apex_cfg_editor/state/diff_bloc.dart';
 import 'package:apex_cfg_editor/state/edit_bloc.dart';
 import 'package:apex_cfg_editor/state/file_bloc.dart';
 import 'package:apex_cfg_editor/ui/editor_screen.dart';
+import 'package:apex_cfg_editor/ui/theme/diff_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:window_manager/window_manager.dart';
@@ -16,8 +17,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // window_manager 初始化容错：macOS 开发期 / 测试环境没有原生窗口通道，
   // 失败时应用照常运行，退出保护退化为 PopScope 守护。
+  // 最小窗口尺寸 960x640：保证顶栏 actions（图标组 + 保存/还原）与
+  // 三区布局（表格 + 220 高底部区）不破版；无窗口通道时同样忽略。
   try {
     await windowManager.ensureInitialized();
+    await windowManager.setMinimumSize(const Size(960, 640));
   } catch (_) {
     // 无窗口通道：忽略。
   }
@@ -45,6 +49,25 @@ Future<void> backupThenWrite(
   backups.backupBeforeSave(path, File(path).readAsBytesSync());
   CfgFileIo.write(path, text, enc);
 }
+
+/// Apex 品牌红（seed 色；diff 红绿高亮见 [DiffColors]）。
+const _apexRed = Color(0xFFE2483D);
+
+/// light/dark 两套主题共用构建：seed 一致、字体回退一致，并各自注册
+/// [DiffColors]（diff 红绿高亮的 ThemeExtension 值）。
+/// 应用固定深色（themeMode: dark），light 值同样注册以备日后切换。
+ThemeData _buildTheme(Brightness brightness) => ThemeData(
+      useMaterial3: true,
+      brightness: brightness,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: _apexRed,
+        brightness: brightness,
+      ),
+      fontFamilyFallback: const ['Menlo', 'Consolas', 'monospace'],
+      extensions: <ThemeExtension<dynamic>>[
+        brightness == Brightness.dark ? DiffColors.dark : DiffColors.light,
+      ],
+    );
 
 /// 应用壳：持有三个 bloc 的生命周期并完成真实装配。
 class ApexCfgEditorApp extends StatefulWidget {
@@ -107,15 +130,9 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
       onGenerateTitle: (c) => AppLocalizations.of(c)!.appTitle,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE2483D), // Apex 红
-          brightness: Brightness.dark,
-        ),
-        fontFamilyFallback: const ['Menlo', 'Consolas', 'monospace'],
-      ),
+      theme: _buildTheme(Brightness.light),
+      darkTheme: _buildTheme(Brightness.dark),
+      themeMode: ThemeMode.dark,
       home: RepositoryProvider<KbService>.value(
         value: widget.kb,
         child: EditorScreen(

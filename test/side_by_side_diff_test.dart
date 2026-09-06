@@ -2,21 +2,38 @@ import 'package:apex_cfg_editor/core/parser/autoexec_parser.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
 import 'package:apex_cfg_editor/state/diff_bloc.dart';
 import 'package:apex_cfg_editor/state/edit_bloc.dart';
+import 'package:apex_cfg_editor/ui/theme/diff_colors.dart';
 import 'package:apex_cfg_editor/ui/widgets/side_by_side_diff.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-// 高亮色与实现共享同一契约：删除红 / 新增绿（任务 16 前允许的唯一硬编码色）。
-const _deleteBg = Color(0x33E2483D);
-const _addBg = Color(0x3322C55E);
+// 高亮色注入测试主题（值与实现注册的 light/dark 值刻意不同）：
+// 断言改从测试主题读回——组件若仍读硬编码常量（而非 Theme）则必然失败，
+// 以此证明「颜色来自 Theme」的选型（任务 16）。
+const _deleteBg = Color(0x66FF0000);
+const _addBg = Color(0x6600FF00);
+
+// 主题未注册 DiffColors 时的组件回退值（与 DiffColors.dark 一致的视觉契约）。
+const _fallbackDeleteBg = Color(0x33E2483D);
+const _fallbackAddBg = Color(0x3322C55E);
 
 // 核心测试用真实 EditBloc + DiffBloc + 真实解析器，不用 mock（避免 mock 漂移）。
-Widget _host(Widget child, {Locale locale = const Locale('en')}) => MaterialApp(
-      locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(body: child),
-    );
+Widget _host(Widget child, {Locale locale = const Locale('en'), bool withDiffColors = true}) {
+  final theme = ThemeData(brightness: Brightness.dark);
+  return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    theme: withDiffColors
+        ? theme.copyWith(
+            extensions: <ThemeExtension<dynamic>>[
+              DiffColors(deleteBg: _deleteBg, addBg: _addBg),
+            ],
+          )
+        : theme,
+    home: Scaffold(body: child),
+  );
+}
 
 EditBloc _editBloc() => EditBloc();
 
@@ -115,6 +132,29 @@ void main() {
     // 行号：same 行左右各 '0'，removed 行只有左栏 '1'。
     expect(find.text('0'), findsNWidgets(2));
     expect(find.text('1'), findsOneWidget);
+  });
+
+  testWidgets('theme without DiffColors extension falls back to dark values',
+      (t) async {
+    final edit = _editBloc();
+    addTearDown(edit.close);
+    final diff = _diffBloc(edit);
+    addTearDown(diff.close);
+
+    edit.add(DocumentOpened(
+        doc: AutoexecParser().parse('fps_max 144\n'),
+        baseline: 'fps_max 0\n'));
+    await t.pumpWidget(
+        _host(SideBySideDiff(diffBloc: diff), withDiffColors: false));
+    await t.pumpAndSettle();
+
+    // modified 行左红右绿，且颜色等于审定回退值。
+    expect(
+        find.byWidgetPredicate((w) => w is Container && w.color == _fallbackDeleteBg),
+        findsOneWidget);
+    expect(
+        find.byWidgetPredicate((w) => w is Container && w.color == _fallbackAddBg),
+        findsOneWidget);
   });
 
   testWidgets('empty rows show centered no-changes hint', (t) async {

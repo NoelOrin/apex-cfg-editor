@@ -4,10 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/diff/line_diff.dart';
 import '../../state/diff_bloc.dart';
-
-// 删除红 / 新增绿：允许的硬编码例外（任务 16 审阅时统一入 Theme）。
-const _deleteBg = Color(0x33E2483D);
-const _addBg = Color(0x3322C55E);
+import '../theme/diff_colors.dart';
 
 const _mono = TextStyle(
   fontFamily: 'monospace',
@@ -27,7 +24,8 @@ const _lineNoWidth = 40.0;
 /// 天然左右对齐（不使用双 ListView，规避滚动错位）。
 /// 长行不软换行（softWrap: false），超出栏宽裁剪，由外层横向
 /// SingleChildScrollView 统一驱动两栏滚动查看。
-/// 红绿高亮色是允许的硬编码例外（任务 16 审阅时统一入 Theme）。
+/// 红绿高亮色经 `ThemeExtension<DiffColors>` 注入（main.dart 注册 light/dark
+/// 值），主题未注册时回退 dark 值。
 class SideBySideDiff extends StatelessWidget {
   final DiffBloc diffBloc;
 
@@ -50,6 +48,8 @@ class SideBySideDiff extends StatelessWidget {
           final half = constraints.maxWidth / 2;
           final columnWidth =
               half < _minColumnWidth ? _minColumnWidth : half;
+          final diffColors =
+              Theme.of(context).extension<DiffColors>() ?? DiffColors.dark;
           return Container(
             color: Theme.of(context).colorScheme.surface,
             child: SingleChildScrollView(
@@ -62,11 +62,11 @@ class SideBySideDiff extends StatelessWidget {
                     final r = state.rows[i];
                     final deleteColor =
                         r.type == RowType.modified || r.type == RowType.removed
-                            ? _deleteBg
+                            ? diffColors.deleteBg
                             : null;
                     final addColor =
                         r.type == RowType.modified || r.type == RowType.added
-                            ? _addBg
+                            ? diffColors.addBg
                             : null;
                     // IntrinsicHeight + stretch：removed 行右栏空、added 行
                     // 左栏空仍与配对行等高，保证双栏行号逐行对齐。

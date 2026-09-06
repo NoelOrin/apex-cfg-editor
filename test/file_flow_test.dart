@@ -271,7 +271,7 @@ void main() {
 
       // 切到文本模式：当前内容是 _new（CodeController 只在 initState
       // 初始化一次，直接断言控制器文本最精确）。
-      await t.tap(find.text('Text'));
+      await t.tap(find.byTooltip('Text'));
       await t.pumpAndSettle();
       expect(find.byType(TextEditorView), findsOneWidget);
       expect(t.widget<CodeField>(find.byType(CodeField)).controller.text, _new);
@@ -335,7 +335,7 @@ void main() {
       )));
       file.add(OpenRequested(cfg.path));
       await t.pumpAndSettle();
-      await t.tap(find.text('Text'));
+      await t.tap(find.byTooltip('Text'));
       await t.pumpAndSettle();
 
       await t.tap(find.byTooltip('Restore'));
@@ -393,7 +393,7 @@ void main() {
       )));
       file.add(OpenRequested(cfg.path));
       await t.pumpAndSettle();
-      await t.tap(find.text('Text'));
+      await t.tap(find.byTooltip('Text'));
       await t.pumpAndSettle();
 
       await t.tap(find.byTooltip('Restore'));
