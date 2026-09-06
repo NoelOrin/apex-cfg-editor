@@ -11,7 +11,8 @@ import 'package:apex_cfg_editor/state/diff_bloc.dart';
 import 'package:apex_cfg_editor/state/edit_bloc.dart';
 import 'package:apex_cfg_editor/state/file_bloc.dart';
 import 'package:apex_cfg_editor/ui/editor_screen.dart';
-import 'package:apex_cfg_editor/ui/theme/diff_colors.dart';
+import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
+import 'package:apex_cfg_editor/ui/theme/theme_mode_scope.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:window_manager/window_manager.dart';
@@ -20,11 +21,18 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // window_manager 初始化容错：macOS 开发期 / 测试环境没有原生窗口通道，
   // 失败时应用照常运行，退出保护退化为 PopScope 守护。
-  // 最小窗口尺寸 960x640：保证顶栏 actions（图标组 + 保存/还原）与
-  // 三区布局（表格 + 220 高底部区）不破版；无窗口通道时同样忽略。
+  // 无边框窗口（酸性风格 v2）：titleBarStyle hidden 兜底 + setAsFrameless，
+  // 自绘标题栏见 ui/widgets/title_bar.dart；最小窗口尺寸 960x640 保持不变。
   try {
+    const options = WindowOptions(
+      titleBarStyle: TitleBarStyle.hidden,
+      minimumSize: Size(960, 640),
+    );
     await windowManager.ensureInitialized();
-    await windowManager.setMinimumSize(const Size(960, 640));
+    await windowManager.waitUntilReadyToShow(options, () async {
+      await windowManager.setAsFrameless();
+      await windowManager.setMinimumSize(const Size(960, 640));
+    });
   } catch (_) {
     // 无窗口通道：忽略。
   }
@@ -55,26 +63,13 @@ Future<void> backupThenWrite(
   CfgFileIo.write(path, text, enc, bom: CfgFileIo.hasBom(current));
 }
 
-/// Apex 品牌红（seed 色；diff 红绿高亮见 [DiffColors]）。
-const _apexRed = Color(0xFFE2483D);
-
-/// light/dark 两套主题共用构建：seed 一致、字体回退一致，并各自注册
-/// [DiffColors]（diff 红绿高亮的 ThemeExtension 值）。
-/// 应用固定深色（themeMode: dark），light 值同样注册以备日后切换。
-ThemeData _buildTheme(Brightness brightness) => ThemeData(
-      useMaterial3: true,
-      brightness: brightness,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: _apexRed,
-        brightness: brightness,
-      ),
-      fontFamilyFallback: const ['Menlo', 'Consolas', 'monospace'],
-      extensions: <ThemeExtension<dynamic>>[
-        brightness == Brightness.dark ? DiffColors.dark : DiffColors.light,
-      ],
-    );
-
-/// 应用壳：持有三个 bloc 的生命周期并完成真实装配。
+/// 应用壳：持有三个 bloc 的生命周期并完成真实装配；同时持有亮/暗
+/// 主题模式（ThemeModeScope 注入标题栏切换按钮，切换即写入
+/// settings.json，启动恢复）。
+///
+/// 主题走 acid_theme.dart 的 buildAcidTheme（酸性风格 v2）：色值集中在
+/// [AcidPalette]，diff 红绿高亮见 [DiffColors]。启动时默认暗色；
+/// settings.json 记忆的 themeMode 优先，测试可经 initialThemeMode 注入。
 class ApexCfgEditorApp extends StatefulWidget {
   /// 知识库。生产由 main() 从 assets 加载；测试注入（空表 / 临时数据）。
   final KbService kb;
@@ -82,7 +77,7 @@ class ApexCfgEditorApp extends StatefulWidget {
   /// 备份根目录。null → [defaultBackupBase]；测试注入临时目录。
   final String? backupBaseDir;
 
-  /// settings.json 路径（规格 R7 记住上次打开路径）。
+  /// settings.json 路径（规格 R7 记住上次打开路径 + themeMode 记忆）。
   /// null → [defaultSettingsPath]；测试注入临时目录。
   final String? settingsPath;
 
@@ -90,12 +85,16 @@ class ApexCfgEditorApp extends StatefulWidget {
   /// 测试关掉以隔离宿主环境。
   final bool autoDetect;
 
+  /// 测试接缝：显式初始主题模式。null → 读 settings.json，仍无则暗色。
+  final ThemeMode? initialThemeMode;
+
   const ApexCfgEditorApp({
     super.key,
     required this.kb,
     this.backupBaseDir,
     this.settingsPath,
     this.autoDetect = true,
+    this.initialThemeMode,
   });
 
   @override
@@ -108,6 +107,9 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
   late final FileBloc fileBloc;
   late final SettingsStore settings;
 
+  /// 当前主题模式（默认暗色；settings.json 记忆值优先，测试注入最高）。
+  late ThemeMode _themeMode;
+
   @override
   void initState() {
     super.initState();
@@ -117,10 +119,12 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
     // 文档状态漏进 diff。EditorScreen 内所有 OpenRequested 都晚于本方法。
     editBloc = EditBloc();
     diffBloc = DiffBloc(editStream: editBloc.stream);
-    final backups =
-        BackupService(baseDir: widget.backupBaseDir ?? defaultBackupBase());
-    final settings =
-        SettingsStore(settingsPath: widget.settingsPath ?? defaultSettingsPath());
+    final backups = BackupService(
+      baseDir: widget.backupBaseDir ?? defaultBackupBase(),
+    );
+    final settings = SettingsStore(
+      settingsPath: widget.settingsPath ?? defaultSettingsPath(),
+    );
     fileBloc = FileBloc(
       editBloc: editBloc,
       saveImpl: (path, text, enc) => backupThenWrite(backups, path, text, enc),
@@ -135,6 +139,10 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
       },
     );
     this.settings = settings;
+    _themeMode =
+        widget.initialThemeMode ??
+        themeModeFromRaw(settings.readThemeModeRaw()) ??
+        ThemeMode.dark;
   }
 
   @override
@@ -145,23 +153,43 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
     super.dispose();
   }
 
+  /// 亮/暗切换入口（标题栏按钮）：更新 MaterialApp 并写入 settings.json，
+  /// 下次启动恢复（IO 失败静默，不影响切换本身）。
+  void _setThemeMode(ThemeMode mode) {
+    setState(() => _themeMode = mode);
+    settings.writeThemeModeRaw(themeModeToRaw(mode));
+  }
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      onGenerateTitle: (c) => AppLocalizations.of(c)!.appTitle,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      theme: _buildTheme(Brightness.light),
-      darkTheme: _buildTheme(Brightness.dark),
-      themeMode: ThemeMode.dark,
-      home: RepositoryProvider<KbService>.value(
-        value: widget.kb,
-        child: EditorScreen(
-          editBloc: editBloc,
-          diffBloc: diffBloc,
-          fileBloc: fileBloc,
-          settings: settings,
-          autoDetect: widget.autoDetect,
+    return ThemeModeScope(
+      mode: _themeMode,
+      onChanged: _setThemeMode,
+      child: MaterialApp(
+        onGenerateTitle: (c) => AppLocalizations.of(c)!.appTitle,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: buildAcidTheme(Brightness.light),
+        darkTheme: buildAcidTheme(Brightness.dark),
+        themeMode: _themeMode,
+        home: Builder(
+          builder: (context) => Container(
+            // 无边框窗口没有系统投影/边框：1px 酸绿描边保证窗口边界
+            // 在桌面上可见（颜色取当前主题色板主色）。
+            decoration: BoxDecoration(
+              border: Border.all(color: AcidPalette.of(context).acid, width: 1),
+            ),
+            child: RepositoryProvider<KbService>.value(
+              value: widget.kb,
+              child: EditorScreen(
+                editBloc: editBloc,
+                diffBloc: diffBloc,
+                fileBloc: fileBloc,
+                settings: settings,
+                autoDetect: widget.autoDetect,
+              ),
+            ),
+          ),
         ),
       ),
     );

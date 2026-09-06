@@ -36,10 +36,37 @@ void main() {
       supportedLocales: AppLocalizations.supportedLocales,
       home: EditorScreen(editBloc: edit, diffBloc: diff, fileBloc: file),
     ));
-    expect(find.text('Apex CFG Editor'), findsWidgets);
+    expect(find.text('APEX CFG EDITOR'), findsWidgets);
     // 模式切换为纯图标段（Tooltip 兼作语义标签），断言随 UI 形态调整。
     expect(find.byTooltip('Table'), findsOneWidget);
     expect(find.byTooltip('Text'), findsOneWidget);
+  });
+
+  testWidgets('title bar close button routes dirty exit through ExitGuard',
+      (t) async {
+    final edit = MockEditBloc();
+    final diff = MockDiffBloc();
+    final file = MockFileBloc();
+    whenListen(edit, const Stream<EditState>.empty(),
+        initialState: const EditState(dirty: true));
+    whenListen(diff, const Stream<DiffState>.empty(),
+        initialState: const DiffState());
+    whenListen(file, const Stream<FileState>.empty(),
+        initialState: const FileState());
+
+    await t.pumpWidget(MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: EditorScreen(editBloc: edit, diffBloc: diff, fileBloc: file),
+    ));
+
+    // 无边框标题栏关闭键：脏文档 → 三选退出对话框（不直接关窗）。
+    await t.tap(find.byKey(const ValueKey('titlebar.close')));
+    await t.pumpAndSettle();
+
+    expect(find.text('Unsaved changes'), findsOneWidget);
+    expect(find.text('Save and exit'), findsOneWidget);
   });
 
   testWidgets('mode toggle swaps editing area between table and text views',

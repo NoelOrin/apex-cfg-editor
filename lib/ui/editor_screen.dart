@@ -22,6 +22,7 @@ import 'widgets/kb_card.dart';
 import 'widgets/kv_table_view.dart';
 import 'widgets/side_by_side_diff.dart';
 import 'widgets/text_editor_view.dart';
+import 'widgets/title_bar.dart';
 
 /// FileState.warning（i18n 键名）→ UI 文案映射。
 String warningText(BuildContext context, String key) {
@@ -450,61 +451,10 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
         await _exitGuard.confirmExit();
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: BlocBuilder<FileBloc, FileState>(
-            bloc: widget.fileBloc,
-            // 无文件时回退到应用标题；有文件时只显示文件名。
-            builder: (_, s) => Text(
-              s.path?.split('/').last.split('\\').last ?? l.appTitle,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(LucideIcons.folderOpen),
-              tooltip: l.openFile,
-              onPressed: _openFileManually,
-            ),
-            // 模式切换仅用图标（Tooltip 兼作悬停提示与无障碍语义）：
-            // 顶栏 actions 宽度固定 ~300，配合窗口最小尺寸 960x640，
-            // 窄窗口下不再溢出破版（任务 16 UI 打磨）。
-            SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(
-                  value: false,
-                  icon: Tooltip(
-                    message: l.modeTable,
-                    child: const Icon(LucideIcons.table2),
-                  ),
-                ),
-                ButtonSegment(
-                  value: true,
-                  icon: Tooltip(
-                    message: l.modeText,
-                    child: const Icon(LucideIcons.code2),
-                  ),
-                ),
-              ],
-              selected: {_textMode},
-              onSelectionChanged: (v) => setState(() => _textMode = v.first),
-            ),
-            // IconButton 的 tooltip 同时充当无障碍语义（semanticLabel 不可传）。
-            IconButton(
-              icon: const Icon(LucideIcons.save),
-              tooltip: l.save,
-              onPressed: () => widget.fileBloc.add(SaveRequested()),
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.history),
-              tooltip: l.restore,
-              onPressed: () => showRestoreDialog(
-                context,
-                fileBloc: widget.fileBloc,
-                editBloc: widget.editBloc,
-                onRestored: _onRestored,
-              ),
-            ),
-          ],
-        ),
+        // 无边框窗口（frameless）：系统标题栏被移除，顶栏为自绘
+        // [TitleBar]（品牌 + 拖拽区 + 业务按钮 + 亮/暗切换 + 窗口控制）。
+        // 关闭按钮直接走 [ExitGuard] 三选流程；原生关窗仍由
+        // setPreventClose → onWindowClose 兜底拦截。
         body: BlocListener<FileBloc, FileState>(
           bloc: widget.fileBloc,
           // warning 常驻状态（如坏字节随文件存续）：仅在出现/变更时提示一次。
@@ -517,6 +467,61 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
           },
           child: Column(
             children: [
+              BlocBuilder<FileBloc, FileState>(
+                bloc: widget.fileBloc,
+                buildWhen: (prev, cur) => prev.path != cur.path,
+                builder: (_, s) => TitleBar(
+                  fileName: s.path?.split('/').last.split('\\').last,
+                  onClose: () => _exitGuard.confirmExit(),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(LucideIcons.folderOpen),
+                      tooltip: l.openFile,
+                      onPressed: _openFileManually,
+                    ),
+                    // 模式切换仅用图标（Tooltip 兼作悬停提示与无障碍语义）：
+                    // 顶栏 actions 宽度固定 ~300，配合窗口最小尺寸 960x640，
+                    // 窄窗口下不再溢出破版（任务 16 UI 打磨）。
+                    SegmentedButton<bool>(
+                      segments: [
+                        ButtonSegment(
+                          value: false,
+                          icon: Tooltip(
+                            message: l.modeTable,
+                            child: const Icon(LucideIcons.table2),
+                          ),
+                        ),
+                        ButtonSegment(
+                          value: true,
+                          icon: Tooltip(
+                            message: l.modeText,
+                            child: const Icon(LucideIcons.code2),
+                          ),
+                        ),
+                      ],
+                      selected: {_textMode},
+                      onSelectionChanged: (v) =>
+                          setState(() => _textMode = v.first),
+                    ),
+                    // IconButton 的 tooltip 同时充当无障碍语义。
+                    IconButton(
+                      icon: const Icon(LucideIcons.save),
+                      tooltip: l.save,
+                      onPressed: () => widget.fileBloc.add(SaveRequested()),
+                    ),
+                    IconButton(
+                      icon: const Icon(LucideIcons.history),
+                      tooltip: l.restore,
+                      onPressed: () => showRestoreDialog(
+                        context,
+                        fileBloc: widget.fileBloc,
+                        editBloc: widget.editBloc,
+                        onRestored: _onRestored,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               // 探测 v2 空态横幅：autoexec 缺失（创建入口）或未找到
               // （指定目录入口）；打开文件成功后自动隐藏。
               _buildDetectBanner(context),
