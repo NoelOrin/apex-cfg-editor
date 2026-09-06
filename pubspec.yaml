@@ -74,6 +74,20 @@ flutter:
     - assets/kb/zh/
     - assets/kb/en/
 
+  # 酸性风格展示字体（SIL OFL 1.1，许可证见 assets/fonts/OFL.txt）：
+  # 标题 / 顶栏 / 大数字用；中文按 fontFamilyFallback 回退系统字体。
+  fonts:
+    - family: ChakraPetch
+      fonts:
+        - asset: assets/fonts/ChakraPetch-Regular.ttf
+        - asset: assets/fonts/ChakraPetch-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/ChakraPetch-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/ChakraPetch-BoldItalic.ttf
+          weight: 700
+          style: italic
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 

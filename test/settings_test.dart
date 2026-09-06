@@ -148,4 +148,47 @@ group('customInstallDir (用户记忆的 Apex 安装目录)', () {
     expect(store.readCustomInstallDir(), isNull);
   });
 });
+
+group('themeModeRaw (亮/暗主题记忆，酸性风格 v2)', () {
+  test('parses themeMode string payload', () {
+    expect(
+      SettingsStore.themeModeRawFromJson('{"themeMode": "light"}'),
+      'light',
+    );
+  });
+
+  test('missing/empty/non-string values and invalid json are null', () {
+    expect(SettingsStore.themeModeRawFromJson('{}'), isNull);
+    expect(SettingsStore.themeModeRawFromJson('{"themeMode": ""}'), isNull);
+    expect(SettingsStore.themeModeRawFromJson('{"themeMode": 42}'), isNull);
+    expect(SettingsStore.themeModeRawFromJson('["a"]'), isNull);
+    expect(SettingsStore.themeModeRawFromJson('not json'), isNull);
+  });
+
+  test('roundtrips via json without clobbering other fields', () {
+    final path = '${tmp.path}/settings.json';
+    final store = SettingsStore(settingsPath: path);
+    expect(store.readThemeModeRaw(), isNull);
+
+    store.writeLastOpenDir('${tmp.path}/docs');
+    store.writeThemeModeRaw('light');
+    expect(store.readThemeModeRaw(), 'light');
+    expect(store.readLastOpenDir(), '${tmp.path}/docs');
+
+    store.writeThemeModeRaw('dark');
+    expect(store.readThemeModeRaw(), 'dark');
+  });
+
+  test('missing file reads as null without throwing', () {
+    final store = SettingsStore(settingsPath: '${tmp.path}/none.json');
+    expect(store.readThemeModeRaw(), isNull);
+  });
+
+  test('unwritable path write fails silently', () {
+    final blocker = File('${tmp.path}/blocker3')..writeAsStringSync('x');
+    final store = SettingsStore(settingsPath: '${blocker.path}/settings.json');
+    expect(() => store.writeThemeModeRaw('light'), returnsNormally);
+    expect(store.readThemeModeRaw(), isNull);
+  });
+});
 }

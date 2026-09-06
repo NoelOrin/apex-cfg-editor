@@ -8,6 +8,9 @@ import 'dart:io';
 /// - `lastOpenDir`（规格 R7）：文件选择器的初始目录。
 /// - `customInstallDir`（探测 v2）：用户手动指定的 Apex 安装目录；
 ///   探测结果为空或用户明确指定时参与候选合并。
+/// - `themeMode`（酸性风格 v2）：亮/暗主题模式，值为小写枚举名
+///   （'system' / 'light' / 'dark'）；原始字符串存取，枚举映射在
+///   UI 层（theme_mode_scope.dart），本类保持纯 Dart 可测。
 class SettingsStore {
   final String settingsPath;
 
@@ -30,6 +33,9 @@ class SettingsStore {
 
   static String? customInstallDirFromJson(String contents) =>
       _stringFieldFromJson(contents, 'customInstallDir');
+
+  static String? themeModeRawFromJson(String contents) =>
+      _stringFieldFromJson(contents, 'themeMode');
 
   String? _readField(String key) {
     try {
@@ -69,4 +75,10 @@ class SettingsStore {
   String? readCustomInstallDir() => _readField('customInstallDir');
 
   void writeCustomInstallDir(String dir) => _writeField('customInstallDir', dir);
+
+  /// 主题模式（酸性风格 v2）：原始字符串（'light' / 'dark' / 'system'），
+  /// 非法值由调用方映射为 null → 回退默认暗色。
+  String? readThemeModeRaw() => _readField('themeMode');
+
+  void writeThemeModeRaw(String value) => _writeField('themeMode', value);
 }

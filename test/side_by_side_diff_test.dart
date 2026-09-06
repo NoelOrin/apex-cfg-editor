@@ -13,9 +13,10 @@ import 'package:flutter_test/flutter_test.dart';
 const _deleteBg = Color(0x66FF0000);
 const _addBg = Color(0x6600FF00);
 
-// 主题未注册 DiffColors 时的组件回退值（与 DiffColors.dark 一致的视觉契约）。
-const _fallbackDeleteBg = Color(0x33E2483D);
-const _fallbackAddBg = Color(0x3322C55E);
+// 主题未注册 DiffColors 时的组件回退值：直接引用 DiffColors.dark，
+// 断言「回退 = 暗色契约」而不绑定具体色值（酸性风格 v2 改色后仍成立）。
+final _fallbackDeleteBg = DiffColors.dark.deleteBg;
+final _fallbackAddBg = DiffColors.dark.addBg;
 
 // 核心测试用真实 EditBloc + DiffBloc + 真实解析器，不用 mock（避免 mock 漂移）。
 Widget _host(Widget child, {Locale locale = const Locale('en'), bool withDiffColors = true}) {

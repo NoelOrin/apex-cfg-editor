@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/diff/line_diff.dart';
 import '../../state/diff_bloc.dart';
+import '../theme/acid_theme.dart';
 import '../theme/diff_colors.dart';
 
 const _mono = TextStyle(
@@ -37,8 +38,8 @@ class SideBySideDiff extends StatelessWidget {
       bloc: diffBloc,
       builder: (context, state) {
         if (state.rows.isEmpty) {
-          return Container(
-            color: Theme.of(context).colorScheme.surface,
+          return _gridTexture(
+            context,
             child: Center(
               child: Text(AppLocalizations.of(context)!.noChanges),
             ),
@@ -50,8 +51,8 @@ class SideBySideDiff extends StatelessWidget {
               half < _minColumnWidth ? _minColumnWidth : half;
           final diffColors =
               Theme.of(context).extension<DiffColors>() ?? DiffColors.dark;
-          return Container(
-            color: Theme.of(context).colorScheme.surface,
+          return _gridTexture(
+            context,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SizedBox(
@@ -100,6 +101,48 @@ class SideBySideDiff extends StatelessWidget {
       },
     );
   }
+}
+
+/// diff 面板底纹：极淡的方格纹理（酸绿 3% 透明度 < 4% 上限，克制）。
+/// [child] 铺在纹理之上。
+Widget _gridTexture(BuildContext context, {required Widget child}) {
+  final acid = AcidPalette.of(context).acid.withValues(alpha: 0.03);
+  return Container(
+    color: Theme.of(context).colorScheme.surface,
+    child: Stack(
+      children: [
+        Positioned.fill(
+          child: CustomPaint(painter: _GridPainter(color: acid)),
+        ),
+        child,
+      ],
+    ),
+  );
+}
+
+/// 方格纹理画笔：24px 网格，1px 线宽，颜色由 [_gridTexture] 给定。
+class _GridPainter extends CustomPainter {
+  final Color color;
+
+  const _GridPainter({required this.color});
+
+  static const _cell = 24.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1;
+    for (double x = 0; x <= size.width; x += _cell) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y <= size.height; y += _cell) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPainter oldDelegate) => oldDelegate.color != color;
 }
 
 class _Cell extends StatelessWidget {

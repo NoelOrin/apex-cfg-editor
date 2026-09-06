@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 /// diff 红绿高亮（删除背景 / 新增背景）。
 ///
-/// 任务 16 起不再硬编码：以 `ThemeExtension<DiffColors>` 形式注入，
-/// SideBySideDiff 只从 `Theme.of(context).extension<DiffColors>()` 读取，
-/// 明暗两套值在 main.dart 的主题里注册（值本身维持审定的 Apex 红 /
-/// 新增绿 20% 透明叠加）；主题未注册时（如部分测试宿主）由组件回退到
-/// [DiffColors.dark]。
+/// 以 `ThemeExtension<DiffColors>` 形式注入，SideBySideDiff 只从
+/// `Theme.of(context).extension<DiffColors>()` 读取，明暗两套值在
+/// acid_theme.dart 的主题里注册；主题未注册时（如部分测试宿主）由
+/// 组件回退到 [DiffColors.dark]。
+///
+/// 酸性语义（v2）：删除行 = 酸性橙红（与警示橙 #FF7A00 同族）、
+/// 新增行 = 酸性绿（#AEEF00 / #BFFF00），删除/新增语义保持分明；
+/// 两者均为 20% 透明叠加（0x33）。
 @immutable
 class DiffColors extends ThemeExtension<DiffColors> {
   /// 删除行背景（左栏，modified / removed）。
@@ -17,23 +20,23 @@ class DiffColors extends ThemeExtension<DiffColors> {
 
   const DiffColors({required this.deleteBg, required this.addBg});
 
-  /// 浅色主题值：与深色相同的半透明叠加，浅色 surface 上同为可读的淡红/淡绿。
+  /// 浅色主题值：纸白 surface 上可读的淡橙 / 淡酸绿。
   static const light = DiffColors(
-    deleteBg: Color(0x33E2483D),
-    addBg: Color(0x3322C55E),
+    deleteBg: Color(0x33FF7A00),
+    addBg: Color(0x33BFFF00),
   );
 
-  /// 深色主题值（应用固定深色主题，生产走这套）。
+  /// 深色主题值（默认主题，生产走这套）：近黑 surface 上的暗橙 / 暗酸绿。
   static const dark = DiffColors(
-    deleteBg: Color(0x33E2483D),
-    addBg: Color(0x3322C55E),
+    deleteBg: Color(0x40FF4D00),
+    addBg: Color(0x40AEEF00),
   );
 
   @override
   DiffColors copyWith({Color? deleteBg, Color? addBg}) => DiffColors(
-        deleteBg: deleteBg ?? this.deleteBg,
-        addBg: addBg ?? this.addBg,
-      );
+    deleteBg: deleteBg ?? this.deleteBg,
+    addBg: addBg ?? this.addBg,
+  );
 
   @override
   DiffColors lerp(covariant DiffColors? other, double t) {

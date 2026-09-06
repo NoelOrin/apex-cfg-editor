@@ -48,5 +48,9 @@
   "chooseInstallTitle": "Multiple Apex installations detected",
   "installSourceSteam": "Steam",
   "installSourceEaApp": "EA App",
-  "installSourceCustom": "Custom directory"
+  "installSourceCustom": "Custom directory",
+  "minimize": "Minimize",
+  "maximize": "Maximize",
+  "restoreWindow": "Restore window",
+  "toggleTheme": "Toggle theme"
 }

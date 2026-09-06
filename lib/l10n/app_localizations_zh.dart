@@ -142,4 +142,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get installSourceCustom => '自定义目录';
+
+  @override
+  String get minimize => '最小化';
+
+  @override
+  String get maximize => '最大化';
+
+  @override
+  String get restoreWindow => '还原窗口';
+
+  @override
+  String get toggleTheme => '切换主题';
 }

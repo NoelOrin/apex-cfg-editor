@@ -149,4 +149,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get installSourceCustom => 'Custom directory';
+
+  @override
+  String get minimize => 'Minimize';
+
+  @override
+  String get maximize => 'Maximize';
+
+  @override
+  String get restoreWindow => 'Restore window';
+
+  @override
+  String get toggleTheme => 'Toggle theme';
 }
