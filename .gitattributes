@@ -1,0 +1,4 @@
+# 夹具断言行尾为 LF，Windows 检出时不得被 autocrlf 转换
+test/fixtures/* text eol=lf
+*.cfg text eol=lf
+*.txt text eol=lf
