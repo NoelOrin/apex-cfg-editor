@@ -42,6 +42,7 @@ dependencies:
   highlight: ^0.7.0
   window_manager: ^0.5.2
   win32: ^6.4.0
+  win32_registry: ^3.0.3
 
 dev_dependencies:
   flutter_test:
