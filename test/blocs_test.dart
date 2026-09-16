@@ -24,15 +24,23 @@ void main() {
       'edit value → dirty and serialize reflects change',
       build: () => EditBloc(),
       act: (b) {
-        b.add(DocumentOpened(doc: _doc(), baseline: '"setting.fps_max" "0"\n"setting.r_full" "1"\n'));
+        b.add(
+          DocumentOpened(
+            doc: _doc(),
+            baseline: '"setting.fps_max" "0"\n"setting.r_full" "1"\n',
+          ),
+        );
         b.add(LineValueChanged(index: 0, value: '144'));
       },
       expect: () => [
         isA<EditState>().having((s) => s.dirty, 'dirty', false),
         isA<EditState>()
             .having((s) => s.dirty, 'dirty', true)
-            .having((s) => s.doc!.serialize(), 'text',
-                '"setting.fps_max" "144"\n"setting.r_full" "1"\n'),
+            .having(
+              (s) => s.doc!.serialize(),
+              'text',
+              '"setting.fps_max" "144"\n"setting.r_full" "1"\n',
+            ),
       ],
     );
 
@@ -137,8 +145,12 @@ void main() {
     test('diff bloc derives rows from edit stream', () async {
       final edit = EditBloc();
       final diff = DiffBloc(editStream: edit.stream);
-      edit.add(DocumentOpened(
-          doc: _doc(), baseline: '"setting.fps_max" "0"\n"setting.r_full" "1"\n'));
+      edit.add(
+        DocumentOpened(
+          doc: _doc(),
+          baseline: '"setting.fps_max" "0"\n"setting.r_full" "1"\n',
+        ),
+      );
       edit.add(LineValueChanged(index: 0, value: '144'));
       await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(diff.state.rows.first.type, RowType.modified);
@@ -152,8 +164,10 @@ void main() {
       edit.add(DocumentOpened(doc: _doc(), baseline: _baseline));
       edit.add(LineValueChanged(index: 0, value: '144'));
       await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(diff.state.rows.map((r) => r.type),
-          [RowType.modified, RowType.same]);
+      expect(diff.state.rows.map((r) => r.type), [
+        RowType.modified,
+        RowType.same,
+      ]);
       edit.add(DocumentSaved(_edited));
       await Future<void>.delayed(const Duration(milliseconds: 50));
       expect(diff.state.rows.map((r) => r.type), everyElement(RowType.same));
@@ -323,32 +337,34 @@ void main() {
       await edit.close();
     });
 
-    test('restore failure refreshes backup list (stale entries cleared)',
-        () async {
-      final file = File('${tmp.path}/videoconfig.txt')
-        ..writeAsStringSync(_baseline);
-      final edit = EditBloc();
-      final store = <String>['${tmp.path}/gone.cfg'];
-      final bloc = FileBloc(
-        editBloc: edit,
-        saveImpl: (_, _, _) async {},
-        listBackupsImpl: (_) => List.of(store),
-        restoreImpl: (_, _) async => throw Exception('backup gone'),
-      );
-      bloc.add(OpenRequested(file.path));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(bloc.state.backups, ['${tmp.path}/gone.cfg']);
+    test(
+      'restore failure refreshes backup list (stale entries cleared)',
+      () async {
+        final file = File('${tmp.path}/videoconfig.txt')
+          ..writeAsStringSync(_baseline);
+        final edit = EditBloc();
+        final store = <String>['${tmp.path}/gone.cfg'];
+        final bloc = FileBloc(
+          editBloc: edit,
+          saveImpl: (_, _, _) async {},
+          listBackupsImpl: (_) => List.of(store),
+          restoreImpl: (_, _) async => throw Exception('backup gone'),
+        );
+        bloc.add(OpenRequested(file.path));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        expect(bloc.state.backups, ['${tmp.path}/gone.cfg']);
 
-      // 列表中的备份在还原前失效（被删除）：restoreImpl 抛错。
-      store.clear();
-      bloc.add(RestoreRequested('${tmp.path}/gone.cfg'));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-      // 失败分支同样重算 backups：失效条目从还原对话框消失。
-      expect(bloc.state.warning, 'fileRestoreFailed');
-      expect(bloc.state.backups, isEmpty);
-      await bloc.close();
-      await edit.close();
-    });
+        // 列表中的备份在还原前失效（被删除）：restoreImpl 抛错。
+        store.clear();
+        bloc.add(RestoreRequested('${tmp.path}/gone.cfg'));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        // 失败分支同样重算 backups：失效条目从还原对话框消失。
+        expect(bloc.state.warning, 'fileRestoreFailed');
+        expect(bloc.state.backups, isEmpty);
+        await bloc.close();
+        await edit.close();
+      },
+    );
 
     test('save after stale baseline is not no-op', () async {
       final file = File('${tmp.path}/videoconfig.txt')
@@ -426,7 +442,9 @@ void main() {
       // 编辑后保存 = 全文重编码，坏字节被固化为 U+FFFD 的 UTF-8 编码
       // （二次损坏）——必须阻止，保住磁盘原始字节。
       final badBytes = <int>[
-        0xC3, 0x28, 0x0A,
+        0xC3,
+        0x28,
+        0x0A,
         ...utf8.encode('"setting.fps_max" "0"\n'),
       ];
       final file = File('${tmp.path}/videoconfig.txt')

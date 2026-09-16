@@ -8,6 +8,7 @@ import 'package:apex_cfg_editor/state/diff_bloc.dart';
 import 'package:apex_cfg_editor/state/edit_bloc.dart';
 import 'package:apex_cfg_editor/state/file_bloc.dart';
 import 'package:apex_cfg_editor/ui/editor_screen.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -36,11 +37,14 @@ class FakeDrives implements DriveLister {
 }
 
 Widget _host(Widget home) => MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: home,
-    );
+  locale: const Locale('en'),
+  localizationsDelegates: [
+    fluent.FluentLocalizations.delegate,
+    ...AppLocalizations.localizationsDelegates,
+  ],
+  supportedLocales: AppLocalizations.supportedLocales,
+  home: home,
+);
 
 (FileBloc, EditBloc, DiffBloc) _wire(String backupBase, SettingsStore store) {
   final backups = BackupService(baseDir: backupBase);
@@ -70,25 +74,23 @@ void main() {
   });
   tearDown(() => tmp.deleteSync(recursive: true));
 
-  InstallLocator locatorWith(Map<String, String?> values) =>
-      InstallLocator(
-        registry: FakeRegistry(values: values),
-        drives: FakeDrives(),
-        env: const {},
-      );
+  InstallLocator locatorWith(Map<String, String?> values) => InstallLocator(
+    registry: FakeRegistry(values: values),
+    drives: FakeDrives(),
+    env: const {},
+  );
 
   testWidgets('steam install with autoexec.cfg auto-opens the file', (t) async {
-    final apex =
-        Directory('${tmp.path}/Lib/steamapps/common/Apex Legends')
-          ..createSync(recursive: true);
-    final autoexec =
-        File('${apex.path}/global/cfg/autoexec.cfg')
-          ..createSync(recursive: true)
-          ..writeAsStringSync('// hi\n');
+    final apex = Directory('${tmp.path}/Lib/steamapps/common/Apex Legends')
+      ..createSync(recursive: true);
+    final autoexec = File('${apex.path}/global/cfg/autoexec.cfg')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('// hi\n');
     final steamRoot = '${tmp.path}/Steam';
     Directory('$steamRoot/steamapps').createSync(recursive: true);
     File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-        '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib" }\n}\n');
+      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib" }\n}\n',
+    );
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -97,15 +99,19 @@ void main() {
       await edit.close();
     });
 
-    await t.pumpWidget(_host(EditorScreen(
-      editBloc: edit,
-      diffBloc: diff,
-      fileBloc: file,
-      settings: store,
-      locator: locatorWith({
-        'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-      }),
-    )));
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          locator: locatorWith({
+            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
+          }),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
 
     expect(_norm(file.state.path!), _norm(autoexec.path));
@@ -113,16 +119,17 @@ void main() {
     expect(_norm(store.readCustomInstallDir()!), _norm(apex.path));
   });
 
-  testWidgets('autoexec missing → create button writes template and opens',
-      (t) async {
-    final apex =
-        Directory('${tmp.path}/Lib2/steamapps/common/Apex Legends')
-          ..createSync(recursive: true);
+  testWidgets('autoexec missing → create button writes template and opens', (
+    t,
+  ) async {
+    final apex = Directory('${tmp.path}/Lib2/steamapps/common/Apex Legends')
+      ..createSync(recursive: true);
     Directory('${apex.path}/cfg').createSync(recursive: true);
     final steamRoot = '${tmp.path}/Steam2';
     Directory('$steamRoot/steamapps').createSync(recursive: true);
     File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-        '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib2" }\n}\n');
+      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib2" }\n}\n',
+    );
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -131,15 +138,19 @@ void main() {
       await edit.close();
     });
 
-    await t.pumpWidget(_host(EditorScreen(
-      editBloc: edit,
-      diffBloc: diff,
-      fileBloc: file,
-      settings: store,
-      locator: locatorWith({
-        'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-      }),
-    )));
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          locator: locatorWith({
+            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
+          }),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
 
     expect(file.state.path, isNull);
@@ -157,15 +168,18 @@ void main() {
     }
   });
 
-  testWidgets('autoexec missing and cfg dir absent → template still created',
-      (t) async {
+  testWidgets('autoexec missing and cfg dir absent → template still created', (
+    t,
+  ) async {
     // 安装目录存在但完全没有 cfg 子目录：用第一个候选位置可创建。
-    Directory('${tmp.path}/Lib3/steamapps/common/Apex Legends')
-        .createSync(recursive: true);
+    Directory(
+      '${tmp.path}/Lib3/steamapps/common/Apex Legends',
+    ).createSync(recursive: true);
     final steamRoot = '${tmp.path}/Steam3';
     Directory('$steamRoot/steamapps').createSync(recursive: true);
     File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-        '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib3" }\n}\n');
+      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib3" }\n}\n',
+    );
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -174,40 +188,47 @@ void main() {
       await edit.close();
     });
 
-    await t.pumpWidget(_host(EditorScreen(
-      editBloc: edit,
-      diffBloc: diff,
-      fileBloc: file,
-      settings: store,
-      locator: locatorWith({
-        'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-      }),
-    )));
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          locator: locatorWith({
+            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
+          }),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
 
     await t.tap(find.text('Create autoexec.cfg'));
     await t.pumpAndSettle();
 
     expect(
-        _norm(file.state.path!),
-        _norm(
-            '${tmp.path}/Lib3/steamapps/common/Apex Legends/cfg/autoexec.cfg'));
+      _norm(file.state.path!),
+      _norm('${tmp.path}/Lib3/steamapps/common/Apex Legends/cfg/autoexec.cfg'),
+    );
   });
 
-  testWidgets('two installs → chooser dialog; picking one opens its autoexec',
-      (t) async {
+  testWidgets('two installs → chooser dialog; picking one opens its autoexec', (
+    t,
+  ) async {
     for (final lib in ['LibA', 'LibB']) {
-      Directory('${tmp.path}/$lib/steamapps/common/Apex Legends/global/cfg')
-          .createSync(recursive: true);
-      File('${tmp.path}/$lib/steamapps/common/Apex Legends/global/cfg/autoexec.cfg')
-          .writeAsStringSync('// $lib\n');
+      Directory(
+        '${tmp.path}/$lib/steamapps/common/Apex Legends/global/cfg',
+      ).createSync(recursive: true);
+      File(
+        '${tmp.path}/$lib/steamapps/common/Apex Legends/global/cfg/autoexec.cfg',
+      ).writeAsStringSync('// $lib\n');
     }
     final steamRoot = '${tmp.path}/Steam4';
     Directory('$steamRoot/steamapps').createSync(recursive: true);
     File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-        '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/LibA" }\n}\n');
-    final eaApex =
-        '${tmp.path}/LibB/steamapps/common/Apex Legends';
+      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/LibA" }\n}\n',
+    );
+    final eaApex = '${tmp.path}/LibB/steamapps/common/Apex Legends';
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -216,22 +237,26 @@ void main() {
       await edit.close();
     });
 
-    await t.pumpWidget(_host(EditorScreen(
-      editBloc: edit,
-      diffBloc: diff,
-      fileBloc: file,
-      settings: store,
-      locator: locatorWith({
-        'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-        // EA App：卸载表 InstallLocation 指向 LibB 的游戏目录。
-        'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA|DisplayName':
-            'Apex Legends',
-        'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA|InstallLocation':
-            eaApex,
-        'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall|<keys>':
-            'EA',
-      }),
-    )));
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          locator: locatorWith({
+            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
+            // EA App：卸载表 InstallLocation 指向 LibB 的游戏目录。
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA|DisplayName':
+                'Apex Legends',
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA|InstallLocation':
+                eaApex,
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall|<keys>':
+                'EA',
+          }),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
 
     expect(find.text('Multiple Apex installations detected'), findsOneWidget);
@@ -259,14 +284,18 @@ void main() {
       await edit.close();
     });
 
-    await t.pumpWidget(_host(EditorScreen(
-      editBloc: edit,
-      diffBloc: diff,
-      fileBloc: file,
-      settings: store,
-      locator: locatorWith(const {}),
-      pickDirectory: () async => apex.path,
-    )));
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          locator: locatorWith(const {}),
+          pickDirectory: () async => apex.path,
+        ),
+      ),
+    );
     await t.pumpAndSettle();
 
     expect(file.state.path, isNull);

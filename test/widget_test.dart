@@ -50,7 +50,9 @@ void main() {
       of: find.byType(EditorScreen),
       matching: find.byWidgetPredicate((w) {
         if (w is! Container) return false;
-        final border = (w.decoration as BoxDecoration?)?.border;
+        final decoration = w.decoration;
+        if (decoration is! BoxDecoration) return false;
+        final border = decoration.border;
         return border is Border &&
             border.top.width == 1 &&
             border.top.color == AcidPalette.dark.acid;

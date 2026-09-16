@@ -13,7 +13,7 @@ import 'package:apex_cfg_editor/state/file_bloc.dart';
 import 'package:apex_cfg_editor/ui/editor_screen.dart';
 import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
 import 'package:apex_cfg_editor/ui/theme/theme_mode_scope.dart';
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -67,8 +67,8 @@ Future<void> backupThenWrite(
 /// 主题模式（ThemeModeScope 注入标题栏切换按钮，切换即写入
 /// settings.json，启动恢复）。
 ///
-/// 主题走 acid_theme.dart 的 buildAcidTheme（酸性风格 v2）：色值集中在
-/// [AcidPalette]，diff 红绿高亮见 [DiffColors]。启动时默认暗色；
+/// 主题走 acid_theme.dart 的 buildFluentTheme（Fluent UI + 酸性风格 v2）：
+/// 色值集中在 [AcidPalette]，diff 红绿高亮见 [DiffColors]。启动时默认暗色；
 /// settings.json 记忆的 themeMode 优先，测试可经 initialThemeMode 注入。
 class ApexCfgEditorApp extends StatefulWidget {
   /// 知识库。生产由 main() 从 assets 加载；测试注入（空表 / 临时数据）。
@@ -165,12 +165,12 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
     return ThemeModeScope(
       mode: _themeMode,
       onChanged: _setThemeMode,
-      child: MaterialApp(
+      child: FluentApp(
         onGenerateTitle: (c) => AppLocalizations.of(c)!.appTitle,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        theme: buildAcidTheme(Brightness.light),
-        darkTheme: buildAcidTheme(Brightness.dark),
+        theme: buildFluentTheme(Brightness.light),
+        darkTheme: buildFluentTheme(Brightness.dark),
         themeMode: _themeMode,
         home: Builder(
           builder: (context) => Container(

@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
+import 'package:flutter/material.dart' as material;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
@@ -12,6 +13,7 @@ import '../../core/parser/videoconfig_parser.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/edit_bloc.dart';
 import '../../state/file_bloc.dart';
+import '../theme/acid_theme.dart';
 
 /// 全文文本编辑视图：monospace、深色底（flutter_code_editor 默认样式
 /// 即 grey.shade900 底 + 浅色字）、cpp 语法近似高亮（cfg 命令形似 C 风格）。
@@ -72,11 +74,13 @@ class _TextEditorViewState extends State<TextEditorView> {
       // provider 存在但 kind 未定时也按 videoconfig 处理。
       final fileBloc = context.read<FileBloc?>();
       final isAutoexec = fileBloc?.state.kind == CfgKind.autoexec;
-      widget.editBloc.add(FullTextChanged(
-        isAutoexec
-            ? const AutoexecParser().parse(_ctrl.text)
-            : const VideoconfigParser().parse(_ctrl.text),
-      ));
+      widget.editBloc.add(
+        FullTextChanged(
+          isAutoexec
+              ? const AutoexecParser().parse(_ctrl.text)
+              : const VideoconfigParser().parse(_ctrl.text),
+        ),
+      );
     });
   }
 
@@ -90,8 +94,10 @@ class _TextEditorViewState extends State<TextEditorView> {
     var idx = text.indexOf(q, from);
     if (idx < 0) idx = text.indexOf(q, 0);
     if (idx < 0) return;
-    _ctrl.selection =
-        TextSelection(baseOffset: idx, extentOffset: idx + q.length);
+    _ctrl.selection = TextSelection(
+      baseOffset: idx,
+      extentOffset: idx + q.length,
+    );
   }
 
   /// 上一个匹配：选区头之前最近的一个，未命中回卷到末尾。
@@ -105,12 +111,16 @@ class _TextEditorViewState extends State<TextEditorView> {
     if (idx < 0) {
       final last = text.lastIndexOf(q);
       if (last < 0) return;
-      _ctrl.selection =
-          TextSelection(baseOffset: last, extentOffset: last + q.length);
+      _ctrl.selection = TextSelection(
+        baseOffset: last,
+        extentOffset: last + q.length,
+      );
       return;
     }
-    _ctrl.selection =
-        TextSelection(baseOffset: idx, extentOffset: idx + q.length);
+    _ctrl.selection = TextSelection(
+      baseOffset: idx,
+      extentOffset: idx + q.length,
+    );
   }
 
   /// 替换当前选区（仅当选区恰好是完整匹配），然后定位下一个匹配。
@@ -150,100 +160,119 @@ class _TextEditorViewState extends State<TextEditorView> {
   /// 查找替换栏：查找框（回车=下一个）+ 上一个/下一个 + 替换框 +
   /// 替换/全部替换 + 关闭。
   Widget _findBar(AppLocalizations l) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Theme.of(context).dividerColor),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      border: Border(
+        bottom: BorderSide(
+          color:
+              (FluentTheme.maybeOf(context) ??
+                      buildFluentTheme(Brightness.dark))
+                  .resources
+                  .dividerStrokeColorDefault,
+        ),
+      ),
+    ),
+    child: Row(
+      children: [
+        Expanded(
+          child: TextBox(
+            key: const ValueKey('findField'),
+            controller: _findCtrl,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+            placeholder: l.find,
+            onSubmitted: (_) => _findNext(),
           ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                key: const ValueKey('findField'),
-                controller: _findCtrl,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: l.find,
-                  isDense: true,
-                  border: const OutlineInputBorder(),
-                ),
-                onSubmitted: (_) => _findNext(),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.arrowUp),
-              tooltip: l.findPrev,
-              onPressed: _findPrev,
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.arrowDown),
-              tooltip: l.findNext,
-              onPressed: _findNext,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                key: const ValueKey('replaceField'),
-                controller: _replaceCtrl,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: l.replace,
-                  isDense: true,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.replace),
-              tooltip: l.replace,
-              onPressed: _replaceOne,
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.replaceAll),
-              tooltip: l.replaceAll,
-              onPressed: _replaceAll,
-            ),
-            IconButton(
-              icon: const Icon(LucideIcons.x),
-              tooltip: l.close,
-              onPressed: () => setState(() => _findOpen = false),
-            ),
-          ],
+        Tooltip(
+          message: l.findPrev,
+          child: IconButton(
+            icon: const Icon(LucideIcons.arrowUp),
+            onPressed: _findPrev,
+          ),
         ),
-      );
+        Tooltip(
+          message: l.findNext,
+          child: IconButton(
+            icon: const Icon(LucideIcons.arrowDown),
+            onPressed: _findNext,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: TextBox(
+            key: const ValueKey('replaceField'),
+            controller: _replaceCtrl,
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+            placeholder: l.replace,
+          ),
+        ),
+        Tooltip(
+          message: l.replace,
+          child: IconButton(
+            icon: const Icon(LucideIcons.replace),
+            onPressed: _replaceOne,
+          ),
+        ),
+        Tooltip(
+          message: l.replaceAll,
+          child: IconButton(
+            icon: const Icon(LucideIcons.replaceAll),
+            onPressed: _replaceAll,
+          ),
+        ),
+        Tooltip(
+          message: l.close,
+          child: IconButton(
+            icon: const Icon(LucideIcons.x),
+            onPressed: () => setState(() => _findOpen = false),
+          ),
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyF, control: true): _openFind,
-        const SingleActivator(LogicalKeyboardKey.keyF, meta: true): _openFind,
-      },
-      child: Column(
-        children: [
-          if (_findOpen)
-            _findBar(l)
-          else
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(LucideIcons.search),
-                  tooltip: l.find,
-                  onPressed: _openFind,
+    return FluentThemeFallback(
+      child: CallbackShortcuts(
+        bindings: {
+          const SingleActivator(LogicalKeyboardKey.keyF, control: true):
+              _openFind,
+          const SingleActivator(LogicalKeyboardKey.keyF, meta: true): _openFind,
+        },
+        child: Column(
+          children: [
+            if (_findOpen)
+              _findBar(l)
+            else
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Tooltip(
+                    message: l.find,
+                    child: IconButton(
+                      icon: const Icon(LucideIcons.search),
+                      onPressed: _openFind,
+                    ),
+                  ),
+                ],
+              ),
+            Expanded(
+              child: material.Material(
+                color: Colors.transparent,
+                child: CodeField(
+                  controller: _ctrl,
+                  onChanged: (_) => _onChanged(),
+                  textStyle: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontSize: 13,
+                  ),
                 ),
-              ],
+              ),
             ),
-          Expanded(
-            child: CodeField(
-              controller: _ctrl,
-              onChanged: (_) => _onChanged(),
-              textStyle: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

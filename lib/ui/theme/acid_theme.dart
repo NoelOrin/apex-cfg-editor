@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
+import 'package:flutter_localizations/flutter_localizations.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'diff_colors.dart';
 
 /// 展示字体（Chakra Petch，SIL OFL 1.1，见 assets/fonts/OFL.txt）。
@@ -94,7 +97,9 @@ class AcidPalette extends ThemeExtension<AcidPalette> {
 
   /// 快捷读取：主题未注册色板时（部分测试宿主）回退暗色值。
   static AcidPalette of(BuildContext context) =>
-      Theme.of(context).extension<AcidPalette>() ?? dark;
+      fluent.FluentTheme.maybeOf(context)?.extension<AcidPalette>() ??
+      Theme.of(context).extension<AcidPalette>() ??
+      dark;
 
   @override
   AcidPalette copyWith({
@@ -147,6 +152,96 @@ class AcidPalette extends ThemeExtension<AcidPalette> {
   @override
   int get hashCode =>
       Object.hash(acid, onAcid, bg, panel, text, textMuted, chrome, danger);
+}
+
+/// Fluent 生产主题：保留酸性绿品牌色，同时使用 Fluent 的控件、焦点、
+/// 对话框和信息条设计令牌。Material 版 [buildAcidTheme] 仅供旧的纯主题
+/// 单测和第三方编辑器依赖使用，应用壳不再使用它。
+fluent.FluentThemeData buildFluentTheme(
+  Brightness brightness, {
+  Iterable<ThemeExtension<dynamic>> extraExtensions = const [],
+}) {
+  final palette = brightness == Brightness.dark
+      ? AcidPalette.dark
+      : AcidPalette.light;
+  final accent = fluent.AccentColor.swatch({
+    'darkest': palette.acid.withValues(alpha: 0.72),
+    'darker': palette.acid.withValues(alpha: 0.82),
+    'dark': palette.acid.withValues(alpha: 0.92),
+    'normal': palette.acid,
+    'light': palette.acid.withValues(alpha: 0.94),
+    'lighter': palette.acid.withValues(alpha: 0.82),
+    'lightest': palette.acid.withValues(alpha: 0.68),
+  });
+  final typography = fluent.Typography.fromBrightness(
+    brightness: brightness,
+    color: palette.text,
+  ).apply(fontFamily: kFontDisplay);
+  final extensions = <ThemeExtension<dynamic>>[
+    palette,
+    brightness == Brightness.dark ? DiffColors.dark : DiffColors.light,
+  ];
+  for (final extension in extraExtensions) {
+    extensions.add(extension as dynamic);
+  }
+  return fluent.FluentThemeData(
+    brightness: brightness,
+    accentColor: accent,
+    typography: typography,
+    scaffoldBackgroundColor: palette.bg,
+    micaBackgroundColor: palette.bg,
+    acrylicBackgroundColor: palette.panel,
+    cardColor: palette.panel,
+    activeColor: palette.text,
+    inactiveColor: palette.textMuted,
+    selectionColor: palette.acid.withValues(alpha: 0.36),
+    extensions: extensions,
+    dividerTheme: fluent.DividerThemeData(
+      decoration: BoxDecoration(color: palette.chrome.withValues(alpha: 0.2)),
+    ),
+    infoBarTheme: fluent.InfoBarThemeData(
+      padding: const EdgeInsetsDirectional.all(12),
+    ),
+  );
+}
+
+/// 让独立 widget 测试和嵌入场景也能使用 Fluent 控件；生产入口由
+/// [FluentApp] 提供主题时不会重复包裹。
+class FluentThemeFallback extends StatelessWidget {
+  final Widget child;
+
+  const FluentThemeFallback({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final themedChild = fluent.FluentTheme.maybeOf(context) != null
+        ? child
+        : fluent.FluentTheme(
+            data: buildFluentTheme(
+              Brightness.dark,
+              extraExtensions:
+                  context
+                      .findAncestorWidgetOfExactType<Theme>()
+                      ?.data
+                      .extensions
+                      .values ??
+                  const [],
+            ),
+            child: child,
+          );
+    return Localizations.override(
+      context: context,
+      locale: Localizations.localeOf(context),
+      delegates: const [
+        AppLocalizations.delegate,
+        fluent.FluentLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      child: themedChild,
+    );
+  }
 }
 
 /// 酸性风格主题构建：light/dark 两套共用结构，色值取自 [AcidPalette]，

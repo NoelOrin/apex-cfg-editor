@@ -52,13 +52,13 @@ class FileState {
     bool? busy,
     String? Function()? warning,
     List<String>? backups,
-  }) =>
-      FileState(
-          path: path ?? this.path,
-          kind: kind ?? this.kind,
-          busy: busy ?? this.busy,
-          warning: warning != null ? warning() : this.warning,
-          backups: backups ?? this.backups);
+  }) => FileState(
+    path: path ?? this.path,
+    kind: kind ?? this.kind,
+    busy: busy ?? this.busy,
+    warning: warning != null ? warning() : this.warning,
+    backups: backups ?? this.backups,
+  );
 }
 
 /// IO 编排：真实读写由任务 8/9 服务注入（saveImpl/listBackupsImpl/restoreImpl
@@ -66,13 +66,17 @@ class FileState {
 class FileBloc extends Bloc<FileEvent, FileState> {
   final EditBloc editBloc;
   final Future<void> Function(String path, String text, CfgEncoding enc)
-      saveImpl;
+  saveImpl;
   final List<String> Function(String path) listBackupsImpl;
   final Future<void> Function(String target, String backup) restoreImpl;
 
   /// 打开成功（OpenRequested 成终态）后以文件父目录回调（规格 R7：
   /// 记住上次打开路径，装配层写入 settings.json）。null = 不记录。
   final void Function(String dir)? onOpenSucceeded;
+
+  /// Open requests can overlap while the filesystem is slow. Only the newest
+  /// request may commit a document or file state.
+  var _openGeneration = 0;
 
   FileBloc({
     required this.editBloc,
@@ -82,26 +86,35 @@ class FileBloc extends Bloc<FileEvent, FileState> {
     this.onOpenSucceeded,
   }) : super(const FileState()) {
     on<OpenRequested>((e, em) async {
+      final generation = ++_openGeneration;
+      final previous = state;
       em(state.copyWith(busy: true, warning: () => null));
       try {
         final data = CfgFileIo.read(e.path);
-        final kind = e.path.endsWith('videoconfig.txt')
+        if (generation != _openGeneration) return;
+        final fileName = e.path.split(RegExp(r'[/\\]')).last.toLowerCase();
+        final kind = fileName == 'videoconfig.txt'
             ? CfgKind.videoconfig
             : CfgKind.autoexec;
         final doc = kind == CfgKind.videoconfig
             ? VideoconfigParser().parse(data.text)
             : AutoexecParser().parse(data.text);
         editBloc.add(DocumentOpened(doc: doc, baseline: data.text));
-        em(FileState(
+        em(
+          FileState(
             path: e.path,
             kind: kind,
             busy: false,
             warning: data.hasBadBytes ? 'fileBadEncoding' : null,
-            backups: listBackupsImpl(e.path)));
+            backups: listBackupsImpl(e.path),
+          ),
+        );
         onOpenSucceeded?.call(parentDirOf(e.path)); // 规格 R7：记住上次路径
       } catch (_) {
-        // 打开失败回到无文件状态：busy 复位 + 告警，避免 UI 死锁。
-        em(const FileState(busy: false, warning: 'fileOpenFailed'));
+        if (generation != _openGeneration) return;
+        // A failed replacement open must leave the current document usable.
+        // Only clear the busy flag and surface the warning.
+        em(previous.copyWith(busy: false, warning: () => 'fileOpenFailed'));
       }
     });
     on<SaveRequested>((e, em) async {
@@ -146,9 +159,12 @@ class FileBloc extends Bloc<FileEvent, FileState> {
         // rethrow 成未捕获异常并挂起事件流，这里必须就地消化。
         // 同时重算备份列表：失效条目（如备份文件已被删除）从还原对话框
         // 清除，与成功路径的列表刷新保持一致。
-        em(state.copyWith(
+        em(
+          state.copyWith(
             warning: () => 'fileRestoreFailed',
-            backups: listBackupsImpl(path)));
+            backups: listBackupsImpl(path),
+          ),
+        );
         return;
       }
       add(OpenRequested(path));

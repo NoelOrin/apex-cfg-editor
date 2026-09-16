@@ -4,6 +4,8 @@ import 'package:apex_cfg_editor/knowledge/kb_service.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
 import 'package:apex_cfg_editor/state/edit_bloc.dart';
 import 'package:apex_cfg_editor/ui/widgets/kb_card.dart';
+import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,7 +14,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 // 核心测试用真实 EditBloc + 真实解析器 + 注入 KbService 数据（不用 mock）。
 // 行索引：0 fps_max(low)、1 r_full(high)、2 mat_antialias(medium)、
 // 3 注释行、4 未收录键。
-const _src = '"setting.fps_max" "0"\n'
+const _src =
+    '"setting.fps_max" "0"\n'
     '"setting.r_full" "1"\n'
     '"setting.mat_antialias" "2"\n'
     '// framerate cap\n'
@@ -47,15 +50,19 @@ const _kbData = {
 EditBloc _editBloc() {
   final bloc = EditBloc();
   bloc.add(
-      DocumentOpened(doc: VideoconfigParser().parse(_src), baseline: _src));
+    DocumentOpened(doc: VideoconfigParser().parse(_src), baseline: _src),
+  );
   return bloc;
 }
 
 // 显式 seed 主题：测试里可重建同一 ColorScheme 断言图标颜色（红=error）。
 ThemeData _theme() => ThemeData(colorSchemeSeed: Colors.blue);
 
-Widget _host(EditBloc edit,
-    {bool kb = true, Locale locale = const Locale('en')}) {
+Widget _host(
+  EditBloc edit, {
+  bool kb = true,
+  Locale locale = const Locale('en'),
+}) {
   Widget card = const KbCard();
   if (kb) {
     card = RepositoryProvider<KbService>.value(
@@ -66,7 +73,10 @@ Widget _host(EditBloc edit,
   return MaterialApp(
     theme: _theme(),
     locale: locale,
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    localizationsDelegates: [
+      fluent.FluentLocalizations.delegate,
+      ...AppLocalizations.localizationsDelegates,
+    ],
     supportedLocales: AppLocalizations.supportedLocales,
     home: BlocProvider<EditBloc>.value(
       value: edit,
@@ -77,25 +87,27 @@ Widget _host(EditBloc edit,
 
 void main() {
   testWidgets(
-      'kb hit shows name, description and recommended line (low risk: no icon)',
-      (t) async {
-    final edit = _editBloc();
-    addTearDown(edit.close);
-    edit.add(SelectionChanged(0));
-    await t.pumpWidget(_host(edit));
-    await t.pumpAndSettle();
+    'kb hit shows name, description and recommended line (low risk: no icon)',
+    (t) async {
+      final edit = _editBloc();
+      addTearDown(edit.close);
+      edit.add(SelectionChanged(0));
+      await t.pumpWidget(_host(edit));
+      await t.pumpAndSettle();
 
-    expect(find.text('FPS Cap'), findsOneWidget);
-    expect(find.text('Limits the frame rate.'), findsOneWidget);
-    expect(find.text('Recommended: 0'), findsOneWidget);
-    // low → 不额外标注：无警示图标。
-    expect(find.byIcon(LucideIcons.alertTriangle), findsNothing);
-    // 底部 280 宽区域：文案多行可滚动。
-    expect(find.byType(SingleChildScrollView), findsOneWidget);
-  });
+      expect(find.text('FPS Cap'), findsOneWidget);
+      expect(find.text('Limits the frame rate.'), findsOneWidget);
+      expect(find.text('Recommended: 0'), findsOneWidget);
+      // low → 不额外标注：无警示图标。
+      expect(find.byIcon(LucideIcons.alertTriangle), findsNothing);
+      // 底部 280 宽区域：文案多行可滚动。
+      expect(find.byType(SingleChildScrollView), findsOneWidget);
+    },
+  );
 
-  testWidgets('undocumented key shows kbNotDocumented fallback (en)',
-      (t) async {
+  testWidgets('undocumented key shows kbNotDocumented fallback (en)', (
+    t,
+  ) async {
     final edit = _editBloc();
     addTearDown(edit.close);
     edit.add(SelectionChanged(4));
@@ -103,29 +115,32 @@ void main() {
     await t.pumpAndSettle();
 
     expect(
-        find.text('Key not documented yet. You can still edit it.'),
-        findsOneWidget);
+      find.text('Key not documented yet. You can still edit it.'),
+      findsOneWidget,
+    );
     expect(find.byType(SingleChildScrollView), findsOneWidget);
   });
 
   testWidgets(
-      'high risk entry shows alertTriangle icon in theme error color with semantic label',
-      (t) async {
-    final edit = _editBloc();
-    addTearDown(edit.close);
-    edit.add(SelectionChanged(1));
-    await t.pumpWidget(_host(edit));
-    await t.pumpAndSettle();
+    'high risk entry shows alertTriangle icon in theme error color with semantic label',
+    (t) async {
+      final edit = _editBloc();
+      addTearDown(edit.close);
+      edit.add(SelectionChanged(1));
+      await t.pumpWidget(_host(edit));
+      await t.pumpAndSettle();
 
-    final icon = t.widget<Icon>(find.byIcon(LucideIcons.alertTriangle));
-    expect(icon.semanticLabel, isNotNull);
-    expect(icon.color, _theme().colorScheme.error);
-    // recommended 为空 → 不显示推荐值行。
-    expect(find.textContaining('Recommended'), findsNothing);
-  });
+      final icon = t.widget<Icon>(find.byIcon(LucideIcons.alertTriangle));
+      expect(icon.semanticLabel, isNotNull);
+      expect(icon.color, AcidPalette.dark.danger);
+      // recommended 为空 → 不显示推荐值行。
+      expect(find.textContaining('Recommended'), findsNothing);
+    },
+  );
 
-  testWidgets('medium risk entry shows neutral (non-red) alert icon',
-      (t) async {
+  testWidgets('medium risk entry shows neutral (non-red) alert icon', (
+    t,
+  ) async {
     final edit = _editBloc();
     addTearDown(edit.close);
     edit.add(SelectionChanged(2));
@@ -145,14 +160,17 @@ void main() {
     await t.pumpAndSettle();
 
     expect(find.text('FPS Cap'), findsNothing);
-    expect(find.text('Key not documented yet. You can still edit it.'),
-        findsNothing);
+    expect(
+      find.text('Key not documented yet. You can still edit it.'),
+      findsNothing,
+    );
     expect(find.byIcon(LucideIcons.alertTriangle), findsNothing);
     expect(find.byType(SingleChildScrollView), findsNothing);
   });
 
-  testWidgets('zh locale shows Chinese fallback text and recommended prefix',
-      (t) async {
+  testWidgets('zh locale shows Chinese fallback text and recommended prefix', (
+    t,
+  ) async {
     final edit = _editBloc();
     addTearDown(edit.close);
     edit.add(SelectionChanged(4));
@@ -175,12 +193,15 @@ void main() {
     await t.pumpAndSettle();
 
     expect(find.text('FPS Cap'), findsNothing);
-    expect(find.text('Key not documented yet. You can still edit it.'),
-        findsNothing);
+    expect(
+      find.text('Key not documented yet. You can still edit it.'),
+      findsNothing,
+    );
   });
 
-  testWidgets('negative selection index hides the card (no RangeError)',
-      (t) async {
+  testWidgets('negative selection index hides the card (no RangeError)', (
+    t,
+  ) async {
     final edit = _editBloc();
     addTearDown(edit.close);
     edit.add(SelectionChanged(-1));
@@ -191,13 +212,15 @@ void main() {
     expect(find.text('FPS Cap'), findsNothing);
   });
 
-  testWidgets('selected CvarLine (autoexec bind) shows matching KB entry',
-      (t) async {
+  testWidgets('selected CvarLine (autoexec bind) shows matching KB entry', (
+    t,
+  ) async {
     const src = 'bind "F6" "quit"\nfps_max 128\n';
     final edit = EditBloc();
     addTearDown(edit.close);
-    edit.add(DocumentOpened(
-        doc: AutoexecParser().parse(src), baseline: src)); // 行 0 = CvarLine
+    edit.add(
+      DocumentOpened(doc: AutoexecParser().parse(src), baseline: src),
+    ); // 行 0 = CvarLine
     edit.add(SelectionChanged(0));
 
     const autoexecKb = {
@@ -212,19 +235,24 @@ void main() {
       },
     };
 
-    await t.pumpWidget(MaterialApp(
-      theme: _theme(),
-      locale: const Locale('en'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: RepositoryProvider<KbService>.value(
-        value: const KbService(data: autoexecKb),
-        child: BlocProvider<EditBloc>.value(
-          value: edit,
-          child: const Scaffold(body: KbCard()),
+    await t.pumpWidget(
+      MaterialApp(
+        theme: _theme(),
+        locale: const Locale('en'),
+        localizationsDelegates: [
+          fluent.FluentLocalizations.delegate,
+          ...AppLocalizations.localizationsDelegates,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: RepositoryProvider<KbService>.value(
+          value: const KbService(data: autoexecKb),
+          child: BlocProvider<EditBloc>.value(
+            value: edit,
+            child: const Scaffold(body: KbCard()),
+          ),
         ),
       ),
-    ));
+    );
     await t.pumpAndSettle();
 
     // CvarLine → KbFile.autoexec 域查 KB：bind 条目命中。

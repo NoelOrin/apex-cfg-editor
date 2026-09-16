@@ -2,6 +2,7 @@ import 'package:apex_cfg_editor/l10n/app_localizations.dart';
 import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
 import 'package:apex_cfg_editor/ui/theme/theme_mode_scope.dart';
 import 'package:apex_cfg_editor/ui/widgets/title_bar.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -15,7 +16,10 @@ const _themeToggleKey = ValueKey('titlebar.themeToggle');
 
 Widget _host(Widget child) => MaterialApp(
   locale: const Locale('en'),
-  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  localizationsDelegates: [
+    fluent.FluentLocalizations.delegate,
+    ...AppLocalizations.localizationsDelegates,
+  ],
   supportedLocales: AppLocalizations.supportedLocales,
   theme: buildAcidTheme(Brightness.dark),
   home: Scaffold(body: child),
@@ -28,6 +32,7 @@ void main() {
 
     await t.tap(find.byKey(_minimizeKey));
     await t.pump();
+    await t.pump(const Duration(milliseconds: 120));
 
     expect(minimized, 1);
   });
@@ -43,6 +48,7 @@ void main() {
 
     await t.tap(find.byKey(_maximizeKey));
     await t.pump();
+    await t.pump(const Duration(milliseconds: 120));
 
     expect(toggled, 1);
     // 乐观更新：最大化后图标切换为还原形态。
@@ -74,6 +80,7 @@ void main() {
 
     await t.tap(find.byKey(_closeKey));
     await t.pump();
+    await t.pump(const Duration(milliseconds: 120));
 
     expect(closed, 1);
   });
@@ -108,6 +115,7 @@ void main() {
 
     await t.tap(find.byKey(_themeToggleKey));
     await t.pump();
+    await t.pump(const Duration(milliseconds: 120));
 
     expect(requested, ThemeMode.light);
   });

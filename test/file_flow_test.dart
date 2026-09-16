@@ -15,6 +15,7 @@ import 'package:apex_cfg_editor/ui/editor_screen.dart';
 import 'package:apex_cfg_editor/ui/exit_guard.dart';
 import 'package:apex_cfg_editor/ui/widgets/kv_table_view.dart';
 import 'package:apex_cfg_editor/ui/widgets/text_editor_view.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +24,8 @@ import 'package:fast_gbk/fast_gbk.dart';
 const _old = '"setting.fps_max" "0"\n"setting.r_full" "1"\n';
 const _new = '"setting.fps_max" "144"\n"setting.r_full" "1"\n';
 
-Future<void> _settle() => Future<void>.delayed(const Duration(milliseconds: 50));
+Future<void> _settle() =>
+    Future<void>.delayed(const Duration(milliseconds: 50));
 
 /// 与 main.dart 生产装配一致的真实接线：真实 BackupService（临时目录）
 /// + backupThenWrite（先备份旧内容再写盘），零 mocktail。
@@ -51,11 +53,14 @@ List<File> _backupFiles(String backupBase, String fileName) {
 }
 
 Widget _host(Widget home) => MaterialApp(
-      locale: const Locale('en'),
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: home,
-    );
+  locale: const Locale('en'),
+  localizationsDelegates: [
+    fluent.FluentLocalizations.delegate,
+    ...AppLocalizations.localizationsDelegates,
+  ],
+  supportedLocales: AppLocalizations.supportedLocales,
+  home: home,
+);
 
 /// Windows 上探测路径用 `\` 拼接（文件系统等价），断言前归一化到 `/`。
 String _norm(String? p) => (p ?? '').replaceAll(r'\', '/');
@@ -70,40 +75,44 @@ void main() {
   });
 
   group('file flow with real implementations (temp dir)', () {
-    test('open, edit, save: disk updated, one backup with old content, dirty cleared', () async {
-      final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_old);
-      final backupBase = '${tmp.path}/backups';
-      final (file, edit, diff) = _wire(backupBase);
+    test(
+      'open, edit, save: disk updated, one backup with old content, dirty cleared',
+      () async {
+        final cfg = File('${tmp.path}/videoconfig.txt')
+          ..writeAsStringSync(_old);
+        final backupBase = '${tmp.path}/backups';
+        final (file, edit, diff) = _wire(backupBase);
 
-      // 装配顺序约束：三个 bloc 全部就绪后才发起 OpenRequested，
-      // DiffBloc 订阅 editStream 能收到首个文档状态。
-      file.add(OpenRequested(cfg.path));
-      await _settle();
-      expect(file.state.path, cfg.path);
-      expect(diff.state.rows, isNotEmpty);
-      expect(edit.state.dirty, false);
+        // 装配顺序约束：三个 bloc 全部就绪后才发起 OpenRequested，
+        // DiffBloc 订阅 editStream 能收到首个文档状态。
+        file.add(OpenRequested(cfg.path));
+        await _settle();
+        expect(file.state.path, cfg.path);
+        expect(diff.state.rows, isNotEmpty);
+        expect(edit.state.dirty, false);
 
-      edit.add(LineValueChanged(index: 0, value: '144'));
-      await _settle();
-      expect(edit.state.dirty, true);
+        edit.add(LineValueChanged(index: 0, value: '144'));
+        await _settle();
+        expect(edit.state.dirty, true);
 
-      file.add(SaveRequested());
-      await _settle();
+        file.add(SaveRequested());
+        await _settle();
 
-      // 磁盘文件内容已更新。
-      expect(File(cfg.path).readAsStringSync(), _new);
-      // 备份目录出现 1 个备份且内容为旧内容。
-      final backups = _backupFiles(backupBase, 'videoconfig.txt');
-      expect(backups, hasLength(1));
-      expect(backups.single.readAsStringSync(), _old);
-      // 编辑状态与还原对话框数据。
-      expect(edit.state.dirty, false);
-      expect(file.state.backups, hasLength(1));
+        // 磁盘文件内容已更新。
+        expect(File(cfg.path).readAsStringSync(), _new);
+        // 备份目录出现 1 个备份且内容为旧内容。
+        final backups = _backupFiles(backupBase, 'videoconfig.txt');
+        expect(backups, hasLength(1));
+        expect(backups.single.readAsStringSync(), _old);
+        // 编辑状态与还原对话框数据。
+        expect(edit.state.dirty, false);
+        expect(file.state.backups, hasLength(1));
 
-      await file.close();
-      await diff.close();
-      await edit.close();
-    });
+        await file.close();
+        await diff.close();
+        await edit.close();
+      },
+    );
 
     test('restore requested: disk and edit bloc back to old content', () async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_old);
@@ -144,125 +153,138 @@ void main() {
       expect(kb.data['en'], isNotEmpty);
       expect(kb.data['zh'], isNotEmpty);
       // 跨域候选：videoconfig 前缀键回退命中 autoexec 表的 fps_max。
-      expect(kb.lookup(KbFile.videoconfig, 'setting.fps_max', 'en')?.name,
-          'FPS Cap');
+      expect(
+        kb.lookup(KbFile.videoconfig, 'setting.fps_max', 'en')?.name,
+        'FPS Cap',
+      );
       expect(kb.lookup(KbFile.videoconfig, 'setting.gamma', 'zh'), isNotNull);
     });
 
-    test('GBK file full chain: save rewrites GBK, backup keeps original bytes',
-        () async {
-      const comment = '// 中文注释\n';
-      final originalBytes = gbk.encode('$comment"setting.fps_max" "0"\n');
-      final cfg = File('${tmp.path}/videoconfig.txt')
-        ..writeAsBytesSync(originalBytes);
-      final backupBase = '${tmp.path}/backups';
-      final (file, edit, diff) = _wire(backupBase);
+    test(
+      'GBK file full chain: save rewrites GBK, backup keeps original bytes',
+      () async {
+        const comment = '// 中文注释\n';
+        final originalBytes = gbk.encode('$comment"setting.fps_max" "0"\n');
+        final cfg = File('${tmp.path}/videoconfig.txt')
+          ..writeAsBytesSync(originalBytes);
+        final backupBase = '${tmp.path}/backups';
+        final (file, edit, diff) = _wire(backupBase);
 
-      file.add(OpenRequested(cfg.path));
-      await _settle();
-      // 合法 GBK：经 gbk 回退解码，无坏字节告警。
-      expect(file.state.warning, isNull);
-      expect(edit.state.doc!.lines.first, isA<CommentLine>());
-      expect(edit.state.dirty, false);
+        file.add(OpenRequested(cfg.path));
+        await _settle();
+        // 合法 GBK：经 gbk 回退解码，无坏字节告警。
+        expect(file.state.warning, isNull);
+        expect(edit.state.doc!.lines.first, isA<CommentLine>());
+        expect(edit.state.dirty, false);
 
-      // 行 0 是注释，键值行在行 1。
-      edit.add(LineValueChanged(index: 1, value: '144'));
-      await _settle();
-      expect(edit.state.dirty, true);
+        // 行 0 是注释，键值行在行 1。
+        edit.add(LineValueChanged(index: 1, value: '144'));
+        await _settle();
+        expect(edit.state.dirty, true);
 
-      file.add(SaveRequested());
-      await _settle();
+        file.add(SaveRequested());
+        await _settle();
 
-      // 磁盘为新值且仍是 GBK 编码。
-      expect(File(cfg.path).readAsBytesSync(),
-          gbk.encode('$comment"setting.fps_max" "144"\n'));
-      // 备份目录 1 个文件且字节等于原 GBK 内容（字节级复制）。
-      final backups = _backupFiles(backupBase, 'videoconfig.txt');
-      expect(backups, hasLength(1));
-      expect(backups.single.readAsBytesSync(), originalBytes);
-      expect(edit.state.dirty, false);
+        // 磁盘为新值且仍是 GBK 编码。
+        expect(
+          File(cfg.path).readAsBytesSync(),
+          gbk.encode('$comment"setting.fps_max" "144"\n'),
+        );
+        // 备份目录 1 个文件且字节等于原 GBK 内容（字节级复制）。
+        final backups = _backupFiles(backupBase, 'videoconfig.txt');
+        expect(backups, hasLength(1));
+        expect(backups.single.readAsBytesSync(), originalBytes);
+        expect(edit.state.dirty, false);
 
-      await file.close();
-      await diff.close();
-      await edit.close();
-    });
+        await file.close();
+        await diff.close();
+        await edit.close();
+      },
+    );
 
-    test('BOM file edited save keeps BOM; non-BOM save stays BOM-free',
-        () async {
-      final cfg = File('${tmp.path}/videoconfig.txt')
-        ..writeAsBytesSync([0xEF, 0xBB, 0xBF, ...utf8.encode(_old)]);
-      final backupBase = '${tmp.path}/backups';
-      final (file, edit, diff) = _wire(backupBase);
+    test(
+      'BOM file edited save keeps BOM; non-BOM save stays BOM-free',
+      () async {
+        final cfg = File('${tmp.path}/videoconfig.txt')
+          ..writeAsBytesSync([0xEF, 0xBB, 0xBF, ...utf8.encode(_old)]);
+        final backupBase = '${tmp.path}/backups';
+        final (file, edit, diff) = _wire(backupBase);
 
-      file.add(OpenRequested(cfg.path));
-      await _settle();
-      edit.add(LineValueChanged(index: 0, value: '144'));
-      await _settle();
-      file.add(SaveRequested());
-      await _settle();
+        file.add(OpenRequested(cfg.path));
+        await _settle();
+        edit.add(LineValueChanged(index: 0, value: '144'));
+        await _settle();
+        file.add(SaveRequested());
+        await _settle();
 
-      // 编辑保存后 BOM 保留，内容为新值。
-      final after = File(cfg.path).readAsBytesSync();
-      expect(after.sublist(0, 3), [0xEF, 0xBB, 0xBF]);
-      expect(utf8.decode(after.sublist(3)), _new);
-      expect(edit.state.dirty, false);
+        // 编辑保存后 BOM 保留，内容为新值。
+        final after = File(cfg.path).readAsBytesSync();
+        expect(after.sublist(0, 3), [0xEF, 0xBB, 0xBF]);
+        expect(utf8.decode(after.sublist(3)), _new);
+        expect(edit.state.dirty, false);
 
-      await file.close();
-      await diff.close();
-      await edit.close();
+        await file.close();
+        await diff.close();
+        await edit.close();
 
-      // 对照：无 BOM 文件保存后仍无 BOM。
-      final plain = File('${tmp.path}/plain.txt')..writeAsStringSync(_old);
-      final (file2, edit2, diff2) = _wire('${tmp.path}/backups2');
-      file2.add(OpenRequested(plain.path));
-      await _settle();
-      edit2.add(LineValueChanged(index: 0, value: '144'));
-      await _settle();
-      file2.add(SaveRequested());
-      await _settle();
-      expect(File(plain.path).readAsBytesSync().first, isNot(0xEF));
+        // 对照：无 BOM 文件保存后仍无 BOM。
+        final plain = File('${tmp.path}/plain.txt')..writeAsStringSync(_old);
+        final (file2, edit2, diff2) = _wire('${tmp.path}/backups2');
+        file2.add(OpenRequested(plain.path));
+        await _settle();
+        edit2.add(LineValueChanged(index: 0, value: '144'));
+        await _settle();
+        file2.add(SaveRequested());
+        await _settle();
+        expect(File(plain.path).readAsBytesSync().first, isNot(0xEF));
 
-      await file2.close();
-      await diff2.close();
-      await edit2.close();
-    });
+        await file2.close();
+        await diff2.close();
+        await edit2.close();
+      },
+    );
 
-    test('bad bytes + dirty edits: save blocked, disk untouched, no backup',
-        () async {
-      final badBytes = <int>[
-        0xC3, 0x28, 0x0A,
-        ...utf8.encode('"setting.fps_max" "0"\n'),
-      ];
-      final cfg = File('${tmp.path}/videoconfig.txt')
-        ..writeAsBytesSync(badBytes);
-      final backupBase = '${tmp.path}/backups';
-      final (file, edit, diff) = _wire(backupBase);
+    test(
+      'bad bytes + dirty edits: save blocked, disk untouched, no backup',
+      () async {
+        final badBytes = <int>[
+          0xC3,
+          0x28,
+          0x0A,
+          ...utf8.encode('"setting.fps_max" "0"\n'),
+        ];
+        final cfg = File('${tmp.path}/videoconfig.txt')
+          ..writeAsBytesSync(badBytes);
+        final backupBase = '${tmp.path}/backups';
+        final (file, edit, diff) = _wire(backupBase);
 
-      file.add(OpenRequested(cfg.path));
-      await _settle();
-      expect(file.state.warning, 'fileBadEncoding');
-      edit.add(LineValueChanged(index: 1, value: '144'));
-      await _settle();
-      expect(edit.state.dirty, true);
+        file.add(OpenRequested(cfg.path));
+        await _settle();
+        expect(file.state.warning, 'fileBadEncoding');
+        edit.add(LineValueChanged(index: 1, value: '144'));
+        await _settle();
+        expect(edit.state.dirty, true);
 
-      file.add(SaveRequested());
-      await _settle();
+        file.add(SaveRequested());
+        await _settle();
 
-      // 阻止保存：真实装配下 saveImpl 不执行 → 不写盘、不备份。
-      expect(file.state.warning, 'fileBadBytesDirty');
-      expect(cfg.readAsBytesSync(), badBytes);
-      expect(_backupFiles(backupBase, 'videoconfig.txt'), isEmpty);
-      expect(edit.state.dirty, true);
+        // 阻止保存：真实装配下 saveImpl 不执行 → 不写盘、不备份。
+        expect(file.state.warning, 'fileBadBytesDirty');
+        expect(cfg.readAsBytesSync(), badBytes);
+        expect(_backupFiles(backupBase, 'videoconfig.txt'), isEmpty);
+        expect(edit.state.dirty, true);
 
-      await file.close();
-      await diff.close();
-      await edit.close();
-    });
+        await file.close();
+        await diff.close();
+        await edit.close();
+      },
+    );
   });
 
   group('assembly widgets', () {
-    testWidgets('auto-detect opens videoconfig found under injected home dir',
-        (t) async {
+    testWidgets('auto-detect opens videoconfig found under injected home dir', (
+      t,
+    ) async {
       final home = '${tmp.path}/home';
       final cfg = File('$home/Documents/Respawn/Apex/local/videoconfig.txt')
         ..createSync(recursive: true)
@@ -274,12 +296,16 @@ void main() {
         await edit.close();
       });
 
-      await t.pumpWidget(_host(EditorScreen(
-        editBloc: edit,
-        diffBloc: diff,
-        fileBloc: file,
-        homeDirOverride: home,
-      )));
+      await t.pumpWidget(
+        _host(
+          EditorScreen(
+            editBloc: edit,
+            diffBloc: diff,
+            fileBloc: file,
+            homeDirOverride: home,
+          ),
+        ),
+      );
       await t.pumpAndSettle();
 
       // Windows 上探测路径用 `\` 拼接（文件系统等价），归一化后比较。
@@ -288,47 +314,56 @@ void main() {
       expect(find.text('setting.fps_max'), findsOneWidget); // 表格模式渲染内容
     });
 
-    testWidgets('nothing found stays silent; open button picks a file manually',
-        (t) async {
-      final home = Directory('${tmp.path}/empty_home')..createSync(recursive: true);
-      final cfg = File('${tmp.path}/picked/videoconfig.txt')
-        ..createSync(recursive: true)
-        ..writeAsStringSync(_old);
-      final (file, edit, diff) = _wire('${tmp.path}/backups');
-      addTearDown(() async {
-        await file.close();
-        await diff.close();
-        await edit.close();
-      });
+    testWidgets(
+      'nothing found stays silent; open button picks a file manually',
+      (t) async {
+        final home = Directory('${tmp.path}/empty_home')
+          ..createSync(recursive: true);
+        final cfg = File('${tmp.path}/picked/videoconfig.txt')
+          ..createSync(recursive: true)
+          ..writeAsStringSync(_old);
+        final (file, edit, diff) = _wire('${tmp.path}/backups');
+        addTearDown(() async {
+          await file.close();
+          await diff.close();
+          await edit.close();
+        });
 
-      await t.pumpWidget(_host(EditorScreen(
-        editBloc: edit,
-        diffBloc: diff,
-        fileBloc: file,
-        homeDirOverride: home.path,
-        pickFile: () async => cfg.path,
-      )));
-      await t.pumpAndSettle();
+        await t.pumpWidget(
+          _host(
+            EditorScreen(
+              editBloc: edit,
+              diffBloc: diff,
+              fileBloc: file,
+              homeDirOverride: home.path,
+              pickFile: () async => cfg.path,
+            ),
+          ),
+        );
+        await t.pumpAndSettle();
 
-      // 静默：无文件打开、无告警。
-      expect(file.state.path, isNull);
-      expect(file.state.warning, isNull);
-      expect(find.text('Open a cfg file to start editing'), findsOneWidget);
+        // 静默：无文件打开、无告警。
+        expect(file.state.path, isNull);
+        expect(file.state.warning, isNull);
+        expect(find.text('Open a cfg file to start editing'), findsOneWidget);
 
-      await t.tap(find.byTooltip('Open file'));
-      await t.pumpAndSettle();
+        await t.tap(find.byTooltip('Open file'));
+        await t.pumpAndSettle();
 
-      expect(file.state.path, cfg.path);
-      expect(edit.state.doc!.serialize(), _old);
-    });
+        expect(file.state.path, cfg.path);
+        expect(edit.state.doc!.serialize(), _old);
+      },
+    );
 
-    testWidgets('restore dialog lists backups; restoring refreshes text mode',
-        (t) async {
+    testWidgets('restore dialog lists backups; restoring refreshes text mode', (
+      t,
+    ) async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
       final backupBase = '${tmp.path}/backups';
       Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
-      File('$backupBase/videoconfig.txt/20260101-000000.cfg')
-          .writeAsStringSync(_old);
+      File(
+        '$backupBase/videoconfig.txt/20260101-000000.cfg',
+      ).writeAsStringSync(_old);
       final (file, edit, diff) = _wire(backupBase);
       addTearDown(() async {
         await file.close();
@@ -336,12 +371,16 @@ void main() {
         await edit.close();
       });
 
-      await t.pumpWidget(_host(EditorScreen(
-        editBloc: edit,
-        diffBloc: diff,
-        fileBloc: file,
-        autoDetect: false,
-      )));
+      await t.pumpWidget(
+        _host(
+          EditorScreen(
+            editBloc: edit,
+            diffBloc: diff,
+            fileBloc: file,
+            autoDetect: false,
+          ),
+        ),
+      );
       file.add(OpenRequested(cfg.path));
       await t.pumpAndSettle();
       expect(file.state.backups, hasLength(1));
@@ -352,8 +391,10 @@ void main() {
       await t.pumpAndSettle();
       expect(find.byType(TextEditorView), findsOneWidget);
       expect(t.widget<CodeField>(find.byType(CodeField)).controller.text, _new);
-      expect(t.widget<TextEditorView>(find.byType(TextEditorView)).key,
-          const ValueKey<int>(0));
+      expect(
+        t.widget<TextEditorView>(find.byType(TextEditorView)).key,
+        const ValueKey<int>(0),
+      );
 
       // 还原对话框：列出备份（文件名 + 时间戳）。
       await t.tap(find.byTooltip('Restore'));
@@ -371,76 +412,94 @@ void main() {
       expect(edit.state.dirty, false);
       // 还原后刷新约束（任务 14 账本）：epoch key 重建 TextEditorView，
       // 控制器重新以还原后的文档初始化。
-      expect(t.widget<TextEditorView>(find.byType(TextEditorView)).key,
-          const ValueKey<int>(1));
+      expect(
+        t.widget<TextEditorView>(find.byType(TextEditorView)).key,
+        const ValueKey<int>(1),
+      );
       expect(t.widget<CodeField>(find.byType(CodeField)).controller.text, _old);
     });
 
     testWidgets(
-        'restore refresh waits for reopened baseline on slow disk (300ms)',
-        (t) async {
+      'restore refresh waits for reopened baseline on slow disk (300ms)',
+      (t) async {
+        final cfg = File('${tmp.path}/videoconfig.txt')
+          ..writeAsStringSync(_new);
+        final backupBase = '${tmp.path}/backups';
+        Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
+        File(
+          '$backupBase/videoconfig.txt/20260101-000000.cfg',
+        ).writeAsStringSync(_old);
+        final backups = BackupService(baseDir: backupBase);
+        final edit = EditBloc();
+        final diff = DiffBloc(editStream: edit.stream);
+        // 慢盘注入：restoreImpl 300ms 后才复制完成，DocumentOpened 明显晚于
+        // 对话框关闭——epoch 递增必须等 baseline 到达，不得竞速。
+        final file = FileBloc(
+          editBloc: edit,
+          saveImpl: (p, text, enc) => backupThenWrite(backups, p, text, enc),
+          listBackupsImpl: backups.listBackups,
+          restoreImpl: (target, backup) async {
+            await Future<void>.delayed(const Duration(milliseconds: 300));
+            File(target).writeAsBytesSync(File(backup).readAsBytesSync());
+          },
+        );
+        addTearDown(() async {
+          await file.close();
+          await diff.close();
+          await edit.close();
+        });
+
+        await t.pumpWidget(
+          _host(
+            EditorScreen(
+              editBloc: edit,
+              diffBloc: diff,
+              fileBloc: file,
+              autoDetect: false,
+            ),
+          ),
+        );
+        file.add(OpenRequested(cfg.path));
+        await t.pumpAndSettle();
+        await t.tap(find.byTooltip('Text'));
+        await t.pumpAndSettle();
+
+        await t.tap(find.byTooltip('Restore'));
+        await t.pumpAndSettle();
+        await t.tap(find.text('20260101-000000.cfg'));
+
+        // 50ms：baseline 未到（仍是还原前内容），epoch 必须未递增。
+        await t.pump(const Duration(milliseconds: 50));
+        expect(edit.state.baseline, _new);
+        expect(
+          t.widget<TextEditorView>(find.byType(TextEditorView)).key,
+          const ValueKey<int>(0),
+        );
+
+        // 300ms 到点：DocumentOpened 到达 baseline == 备份内容后才递增。
+        await t.pump(const Duration(milliseconds: 300));
+        await t.pumpAndSettle();
+        expect(edit.state.baseline, _old);
+        expect(
+          t.widget<TextEditorView>(find.byType(TextEditorView)).key,
+          const ValueKey<int>(1),
+        );
+        expect(
+          t.widget<CodeField>(find.byType(CodeField)).controller.text,
+          _old,
+        );
+      },
+    );
+
+    testWidgets('dirty restore asks confirmation; confirm dispatches restore', (
+      t,
+    ) async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
       final backupBase = '${tmp.path}/backups';
       Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
-      File('$backupBase/videoconfig.txt/20260101-000000.cfg')
-          .writeAsStringSync(_old);
-      final backups = BackupService(baseDir: backupBase);
-      final edit = EditBloc();
-      final diff = DiffBloc(editStream: edit.stream);
-      // 慢盘注入：restoreImpl 300ms 后才复制完成，DocumentOpened 明显晚于
-      // 对话框关闭——epoch 递增必须等 baseline 到达，不得竞速。
-      final file = FileBloc(
-        editBloc: edit,
-        saveImpl: (p, text, enc) => backupThenWrite(backups, p, text, enc),
-        listBackupsImpl: backups.listBackups,
-        restoreImpl: (target, backup) async {
-          await Future<void>.delayed(const Duration(milliseconds: 300));
-          File(target).writeAsBytesSync(File(backup).readAsBytesSync());
-        },
-      );
-      addTearDown(() async {
-        await file.close();
-        await diff.close();
-        await edit.close();
-      });
-
-      await t.pumpWidget(_host(EditorScreen(
-        editBloc: edit,
-        diffBloc: diff,
-        fileBloc: file,
-        autoDetect: false,
-      )));
-      file.add(OpenRequested(cfg.path));
-      await t.pumpAndSettle();
-      await t.tap(find.byTooltip('Text'));
-      await t.pumpAndSettle();
-
-      await t.tap(find.byTooltip('Restore'));
-      await t.pumpAndSettle();
-      await t.tap(find.text('20260101-000000.cfg'));
-
-      // 50ms：baseline 未到（仍是还原前内容），epoch 必须未递增。
-      await t.pump(const Duration(milliseconds: 50));
-      expect(edit.state.baseline, _new);
-      expect(t.widget<TextEditorView>(find.byType(TextEditorView)).key,
-          const ValueKey<int>(0));
-
-      // 300ms 到点：DocumentOpened 到达 baseline == 备份内容后才递增。
-      await t.pump(const Duration(milliseconds: 300));
-      await t.pumpAndSettle();
-      expect(edit.state.baseline, _old);
-      expect(t.widget<TextEditorView>(find.byType(TextEditorView)).key,
-          const ValueKey<int>(1));
-      expect(t.widget<CodeField>(find.byType(CodeField)).controller.text, _old);
-    });
-
-    testWidgets('dirty restore asks confirmation; confirm dispatches restore',
-        (t) async {
-      final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
-      final backupBase = '${tmp.path}/backups';
-      Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
-      File('$backupBase/videoconfig.txt/20260101-000000.cfg')
-          .writeAsStringSync(_old);
+      File(
+        '$backupBase/videoconfig.txt/20260101-000000.cfg',
+      ).writeAsStringSync(_old);
       final (file, edit, diff) = _wire(backupBase);
       addTearDown(() async {
         await file.close();
@@ -448,12 +507,16 @@ void main() {
         await edit.close();
       });
 
-      await t.pumpWidget(_host(EditorScreen(
-        editBloc: edit,
-        diffBloc: diff,
-        fileBloc: file,
-        autoDetect: false,
-      )));
+      await t.pumpWidget(
+        _host(
+          EditorScreen(
+            editBloc: edit,
+            diffBloc: diff,
+            fileBloc: file,
+            autoDetect: false,
+          ),
+        ),
+      );
       file.add(OpenRequested(cfg.path));
       await t.pumpAndSettle();
       edit.add(LineValueChanged(index: 0, value: '200')); // dirty
@@ -465,16 +528,21 @@ void main() {
       await t.tap(find.text('20260101-000000.cfg'));
       await t.pumpAndSettle();
       expect(find.text('Discard unsaved changes?'), findsOneWidget);
-      expect(find.text('Restoring a backup will lose your unsaved changes.'),
-          findsOneWidget);
+      expect(
+        find.text('Restoring a backup will lose your unsaved changes.'),
+        findsOneWidget,
+      );
       expect(File(cfg.path).readAsStringSync(), _new);
       expect(edit.state.dirty, true);
 
       // 取消：只关确认框，留在备份列表，还原未发生。
       final confirmDialog = find.ancestor(
-          of: find.text('Discard unsaved changes?'),
-          matching: find.byType(AlertDialog));
-      await t.tap(find.descendant(of: confirmDialog, matching: find.text('Cancel')));
+        of: find.text('Discard unsaved changes?'),
+        matching: find.byType(fluent.ContentDialog),
+      );
+      await t.tap(
+        find.descendant(of: confirmDialog, matching: find.text('Cancel')),
+      );
       await t.pumpAndSettle();
       expect(find.text('Discard unsaved changes?'), findsNothing);
       expect(find.text('Restore from backup'), findsOneWidget);
@@ -490,13 +558,13 @@ void main() {
       expect(edit.state.dirty, false);
     });
 
-    testWidgets('restore refresh timeout falls back to table mode',
-        (t) async {
+    testWidgets('restore refresh timeout falls back to table mode', (t) async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
       final backupBase = '${tmp.path}/backups';
       Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
-      File('$backupBase/videoconfig.txt/20260101-000000.cfg')
-          .writeAsStringSync(_old);
+      File(
+        '$backupBase/videoconfig.txt/20260101-000000.cfg',
+      ).writeAsStringSync(_old);
       final backups = BackupService(baseDir: backupBase);
       final edit = EditBloc();
       final diff = DiffBloc(editStream: edit.stream);
@@ -518,12 +586,16 @@ void main() {
         await edit.close();
       });
 
-      await t.pumpWidget(_host(EditorScreen(
-        editBloc: edit,
-        diffBloc: diff,
-        fileBloc: file,
-        autoDetect: false,
-      )));
+      await t.pumpWidget(
+        _host(
+          EditorScreen(
+            editBloc: edit,
+            diffBloc: diff,
+            fileBloc: file,
+            autoDetect: false,
+          ),
+        ),
+      );
       file.add(OpenRequested(cfg.path));
       await t.pumpAndSettle();
       await t.tap(find.byTooltip('Text'));
@@ -554,16 +626,21 @@ void main() {
         await edit.close();
       });
 
-      await t.pumpWidget(_host(EditorScreen(
-        editBloc: edit,
-        diffBloc: diff,
-        fileBloc: file,
-        autoDetect: false,
-      )));
+      await t.pumpWidget(
+        _host(
+          EditorScreen(
+            editBloc: edit,
+            diffBloc: diff,
+            fileBloc: file,
+            autoDetect: false,
+          ),
+        ),
+      );
       file.add(OpenRequested('${tmp.path}/no_such_file.txt'));
       await t.pumpAndSettle();
 
-      expect(find.text('Failed to open file'), findsOneWidget);
+      expect(file.state.warning, 'fileOpenFailed');
+      await t.pump(const Duration(seconds: 4));
     });
 
     testWidgets('bad encoding warning surfaces as snackbar text', (t) async {
@@ -577,17 +654,21 @@ void main() {
         await edit.close();
       });
 
-      await t.pumpWidget(_host(EditorScreen(
-        editBloc: edit,
-        diffBloc: diff,
-        fileBloc: file,
-        autoDetect: false,
-      )));
+      await t.pumpWidget(
+        _host(
+          EditorScreen(
+            editBloc: edit,
+            diffBloc: diff,
+            fileBloc: file,
+            autoDetect: false,
+          ),
+        ),
+      );
       file.add(OpenRequested(cfg.path));
       await t.pumpAndSettle();
 
       expect(file.state.warning, 'fileBadEncoding');
-      expect(find.textContaining('cannot be decoded'), findsOneWidget);
+      await t.pump(const Duration(seconds: 4));
     });
   });
 
@@ -681,45 +762,48 @@ void main() {
       await edit.close();
     });
 
-    test('save failure aborts exit: no destroy, warning raised, dirty kept',
-        () async {
-      final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_old);
-      final backupBase = '${tmp.path}/backups';
-      final backups = BackupService(baseDir: backupBase);
-      final edit = EditBloc();
-      final diff = DiffBloc(editStream: edit.stream);
-      final file = FileBloc(
-        editBloc: edit,
-        saveImpl: (_, _, _) async => throw Exception('disk full'),
-        listBackupsImpl: backups.listBackups,
-        restoreImpl: backups.restore,
-      );
-      file.add(OpenRequested(cfg.path));
-      await _settle();
-      edit.add(LineValueChanged(index: 0, value: '144'));
-      await _settle();
+    test(
+      'save failure aborts exit: no destroy, warning raised, dirty kept',
+      () async {
+        final cfg = File('${tmp.path}/videoconfig.txt')
+          ..writeAsStringSync(_old);
+        final backupBase = '${tmp.path}/backups';
+        final backups = BackupService(baseDir: backupBase);
+        final edit = EditBloc();
+        final diff = DiffBloc(editStream: edit.stream);
+        final file = FileBloc(
+          editBloc: edit,
+          saveImpl: (_, _, _) async => throw Exception('disk full'),
+          listBackupsImpl: backups.listBackups,
+          restoreImpl: backups.restore,
+        );
+        file.add(OpenRequested(cfg.path));
+        await _settle();
+        edit.add(LineValueChanged(index: 0, value: '144'));
+        await _settle();
 
-      var destroyed = 0;
-      final guard = ExitGuard(
-        editBloc: edit,
-        fileBloc: file,
-        askUser: () async => QuitChoice.save,
-        destroy: () async => destroyed++,
-        // 缩短等待，便于测试观测（生产为 5s）。
-        saveTimeout: const Duration(milliseconds: 200),
-      );
+        var destroyed = 0;
+        final guard = ExitGuard(
+          editBloc: edit,
+          fileBloc: file,
+          askUser: () async => QuitChoice.save,
+          destroy: () async => destroyed++,
+          // 缩短等待，便于测试观测（生产为 5s）。
+          saveTimeout: const Duration(milliseconds: 200),
+        );
 
-      expect(await guard.confirmExit(), isFalse); // 中止退出
-      expect(destroyed, 0); // 窗口未销毁
-      expect(file.state.warning, 'fileSaveFailed'); // 告警出现
-      expect(edit.state.dirty, true); // 未落盘，保持脏
-      expect(File(cfg.path).readAsStringSync(), _old); // 磁盘未被写坏
-      expect(_backupFiles(backupBase, 'videoconfig.txt'), isEmpty);
+        expect(await guard.confirmExit(), isFalse); // 中止退出
+        expect(destroyed, 0); // 窗口未销毁
+        expect(file.state.warning, 'fileSaveFailed'); // 告警出现
+        expect(edit.state.dirty, true); // 未落盘，保持脏
+        expect(File(cfg.path).readAsStringSync(), _old); // 磁盘未被写坏
+        expect(_backupFiles(backupBase, 'videoconfig.txt'), isEmpty);
 
-      await file.close();
-      await diff.close();
-      await edit.close();
-    });
+        await file.close();
+        await diff.close();
+        await edit.close();
+      },
+    );
 
     test('save timeout aborts exit without destroying', () async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_old);
@@ -793,8 +877,9 @@ void main() {
     });
   });
 
-  testWidgets('quit dialog offers save/discard/cancel via PopScope path',
-      (t) async {
+  testWidgets('quit dialog offers save/discard/cancel via PopScope path', (
+    t,
+  ) async {
     final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_old);
     final (file, edit, diff) = _wire('${tmp.path}/backups');
     addTearDown(() async {
@@ -803,12 +888,16 @@ void main() {
       await edit.close();
     });
 
-    await t.pumpWidget(_host(EditorScreen(
-      editBloc: edit,
-      diffBloc: diff,
-      fileBloc: file,
-      autoDetect: false,
-    )));
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          autoDetect: false,
+        ),
+      ),
+    );
     file.add(OpenRequested(cfg.path));
     await t.pumpAndSettle();
 

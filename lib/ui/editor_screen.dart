@@ -1,9 +1,10 @@
 import 'dart:io';
 
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
+import 'package:fluent_ui/fluent_ui.dart' hide TitleBar;
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -23,6 +24,7 @@ import 'widgets/kv_table_view.dart';
 import 'widgets/side_by_side_diff.dart';
 import 'widgets/text_editor_view.dart';
 import 'widgets/title_bar.dart';
+import 'theme/acid_theme.dart';
 
 /// FileState.warning（i18n 键名）→ UI 文案映射。
 String warningText(BuildContext context, String key) {
@@ -35,6 +37,30 @@ String warningText(BuildContext context, String key) {
     'fileBadBytesDirty' => l.fileBadBytesDirty,
     _ => key,
   };
+}
+
+void _showErrorInfoBar(BuildContext context, String message) {
+  final theme =
+      FluentTheme.maybeOf(context) ?? buildFluentTheme(Brightness.dark);
+  final locale = Localizations.localeOf(context);
+  displayInfoBar(
+    context,
+    builder: (overlayContext, close) => Localizations.override(
+      context: context,
+      locale: locale,
+      delegates: const [
+        AppLocalizations.delegate,
+        FluentLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ],
+      child: FluentTheme(
+        data: theme,
+        child: InfoBar.error(title: Text(message), onClose: close),
+      ),
+    ),
+  );
 }
 
 /// 探测后的界面状态（决定空态横幅内容；打开文件成功后横幅自动隐藏）。
@@ -104,6 +130,7 @@ class EditorScreen extends StatefulWidget {
 }
 
 class _EditorScreenState extends State<EditorScreen> with WindowListener {
+  BuildContext? _fluentContext;
   bool _textMode = false;
 
   _DetectPhase _phase = _DetectPhase.idle;
@@ -150,11 +177,11 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
   }
 
   ExitGuard get _exitGuard => ExitGuard(
-        editBloc: widget.editBloc,
-        fileBloc: widget.fileBloc,
-        askUser: () => showQuitDialog(context),
-        destroy: _destroyWindow,
-      );
+    editBloc: widget.editBloc,
+    fileBloc: widget.fileBloc,
+    askUser: () => showQuitDialog(_fluentContext ?? context),
+    destroy: _destroyWindow,
+  );
 
   @override
   void onWindowClose() async {
@@ -187,16 +214,15 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
 
   List<ApexInstall> _runLocator({String? customInstallDir}) =>
       _buildLocator().locate(
-        customInstallDir: customInstallDir ??
-            widget.settings?.readCustomInstallDir(),
+        customInstallDir:
+            customInstallDir ?? widget.settings?.readCustomInstallDir(),
       );
 
   /// 探测结果落地：文档根（videoconfig）优先自动打开；安装候选多于一个
   /// 时弹选择对话框；所选安装有 autoexec.cfg 就打开，只有目录就进入
   /// 「创建 autoexec.cfg」横幅；全空进入「未找到」横幅。
   Future<void> _applyResults(List<ApexInstall> results) async {
-    final docResults =
-        results.where((r) => r.videoconfigPath != null).toList();
+    final docResults = results.where((r) => r.videoconfigPath != null).toList();
     final installs = results.where((r) => r.videoconfigPath == null).toList();
 
     ApexInstall? chosen;
@@ -222,8 +248,8 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
       _phase = openPath != null
           ? _DetectPhase.idle
           : chosen != null
-              ? _DetectPhase.autoexecMissing
-              : _DetectPhase.notFound;
+          ? _DetectPhase.autoexecMissing
+          : _DetectPhase.notFound;
     });
   }
 
@@ -231,41 +257,42 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
   Future<ApexInstall?> _showInstallChooser(List<ApexInstall> installs) {
     final l = AppLocalizations.of(context)!;
     String sourceLabel(InstallSource s) => switch (s) {
-          InstallSource.steam => l.installSourceSteam,
-          InstallSource.eaApp => l.installSourceEaApp,
-          _ => l.installSourceCustom,
-        };
+      InstallSource.steam => l.installSourceSteam,
+      InstallSource.eaApp => l.installSourceEaApp,
+      _ => l.installSourceCustom,
+    };
     IconData sourceIcon(InstallSource s) => switch (s) {
-          InstallSource.steam => LucideIcons.gamepad2,
-          InstallSource.eaApp => LucideIcons.appWindow,
-          _ => LucideIcons.folder,
-        };
+      InstallSource.steam => LucideIcons.gamepad2,
+      InstallSource.eaApp => LucideIcons.appWindow,
+      _ => LucideIcons.folder,
+    };
     return showDialog<ApexInstall>(
-      context: context,
-      builder: (dialogContext) => SimpleDialog(
+      context: _fluentContext ?? context,
+      builder: (dialogContext) => ContentDialog(
         title: Text(l.chooseInstallTitle),
-        children: [
-          for (final install in installs)
-            SimpleDialogOption(
-              onPressed: () => Navigator.of(dialogContext).pop(install),
-              child: ListTile(
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                leading: Icon(sourceIcon(install.source)),
-                title: Text(sourceLabel(install.source)),
-                subtitle: Text(install.installDir, maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text(l.cancel),
-              ),
-            ),
+        content: SizedBox(
+          width: 520,
+          height: 220,
+          child: ListView(
+            children: [
+              for (final install in installs)
+                ListTile(
+                  leading: Icon(sourceIcon(install.source)),
+                  title: Text(sourceLabel(install.source)),
+                  subtitle: Text(
+                    install.installDir,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  onPressed: () => Navigator.of(dialogContext).pop(install),
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l.cancel),
           ),
         ],
       ),
@@ -281,10 +308,16 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     try {
       if (!file.existsSync()) {
         file.parent.createSync(recursive: true);
-        file.writeAsStringSync(autoexecTemplate);
+        CfgFileIo.write(file.path, autoexecTemplate, CfgEncoding.utf8);
       }
     } catch (_) {
-      // 建档失败（权限等）：交由 OpenRequested 的失败告警反馈。
+      if (mounted) {
+        _showErrorInfoBar(
+          _fluentContext ?? context,
+          AppLocalizations.of(context)!.fileSaveFailed,
+        );
+      }
+      return;
     }
     if (!mounted) return;
     setState(() => _phase = _DetectPhase.idle);
@@ -307,9 +340,7 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
             );
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l.filePickerFailed)),
-        );
+        _showErrorInfoBar(_fluentContext ?? context, l.filePickerFailed);
       }
       return;
     }
@@ -326,16 +357,42 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
           ? await pick()
           : await _pickWithFilePicker(widget.settings?.readLastOpenDir());
       if (path == null || !mounted) return; // 用户取消
+      if (widget.editBloc.state.dirty) {
+        final proceed = await _confirmOpenOverDirty(path);
+        if (!proceed || !mounted) return;
+      }
       widget.fileBloc.add(OpenRequested(path));
     } catch (_) {
       // file_picker 层异常（测试 / 无窗口环境不可用、插件崩溃等）不再
       // 静默：SnackBar 反馈，用户至少知道点击没有生效，可重试。
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(AppLocalizations.of(context)!.filePickerFailed)),
+      _showErrorInfoBar(
+        _fluentContext ?? context,
+        AppLocalizations.of(context)!.filePickerFailed,
       );
     }
+  }
+
+  Future<bool> _confirmOpenOverDirty(String path) async {
+    final l = AppLocalizations.of(context)!;
+    final result = await showDialog<bool>(
+      context: _fluentContext ?? context,
+      builder: (dialogContext) => ContentDialog(
+        title: Text(l.restoreDirtyTitle),
+        content: Text(l.restoreDirtyBody),
+        actions: [
+          Button(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l.confirm),
+          ),
+        ],
+      ),
+    );
+    return result == true;
   }
 
   static Future<String?> _pickWithFilePicker(String? initialDirectory) async {
@@ -373,8 +430,10 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
         .firstWhere((s) => s.doc != null && s.baseline == expected)
         .then<EditState?>((s) => s)
         .catchError((Object _) => null);
-    final openedState =
-        await opened.timeout(_restoreWaitTimeout, onTimeout: () => null);
+    final openedState = await opened.timeout(
+      _restoreWaitTimeout,
+      onTimeout: () => null,
+    );
     if (!mounted) return;
     if (openedState == null) {
       setState(() => _textMode = false); // 超时：强制表格模式
@@ -397,40 +456,25 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
         final missing = _phase == _DetectPhase.autoexecMissing;
         final title = missing ? l.autoexecMissingTitle : l.apexNotFoundTitle;
         final hint = missing ? l.autoexecMissingHint : l.apexNotFoundHint;
-        return Card(
-          margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-          child: Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                Icon(missing ? LucideIcons.filePlus2 : LucideIcons.searchX,
-                    size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(title,
-                          style: Theme.of(context).textTheme.titleSmall),
-                      const SizedBox(height: 2),
-                      Text(hint,
-                          style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                missing
-                    ? FilledButton.tonal(
-                        onPressed: _createAutoexec,
-                        child: Text(l.createAutoexec),
-                      )
-                    : TextButton(
-                        onPressed: _pickApexDir,
-                        child: Text(l.specifyApexDir),
-                      ),
-              ],
+        return Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 12, 0),
+          child: LayoutBuilder(
+            builder: (context, constraints) => InfoBar(
+              isLong: constraints.maxWidth < 720,
+              title: Text(title),
+              content: Text(hint),
+              severity: missing
+                  ? InfoBarSeverity.warning
+                  : InfoBarSeverity.info,
+              action: missing
+                  ? Button(
+                      onPressed: _createAutoexec,
+                      child: Text(l.createAutoexec),
+                    )
+                  : HyperlinkButton(
+                      onPressed: _pickApexDir,
+                      child: Text(l.specifyApexDir),
+                    ),
             ),
           ),
         );
@@ -441,118 +485,136 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    return PopScope(
-      // 桌面端没有系统返回栈：批准退出 = 销毁窗口（原生关闭已被
-      // window_manager 拦截），因此 canPop 恒 false，统一走 ExitGuard
-      //（confirmExit 内部完成三选决策与 destroy）。
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
-        await _exitGuard.confirmExit();
-      },
-      child: Scaffold(
-        // 无边框窗口（frameless）：系统标题栏被移除，顶栏为自绘
-        // [TitleBar]（品牌 + 拖拽区 + 业务按钮 + 亮/暗切换 + 窗口控制）。
-        // 关闭按钮直接走 [ExitGuard] 三选流程；原生关窗仍由
-        // setPreventClose → onWindowClose 兜底拦截。
-        body: BlocListener<FileBloc, FileState>(
-          bloc: widget.fileBloc,
-          // warning 常驻状态（如坏字节随文件存续）：仅在出现/变更时提示一次。
-          listenWhen: (prev, cur) =>
-              cur.warning != null && prev.warning != cur.warning,
-          listener: (context, s) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(warningText(context, s.warning!))),
-            );
-          },
-          child: Column(
-            children: [
-              BlocBuilder<FileBloc, FileState>(
+    final theme =
+        FluentTheme.maybeOf(context) ?? buildFluentTheme(Brightness.dark);
+    return FluentThemeFallback(
+      child: Builder(
+        builder: (fluentContext) {
+          _fluentContext = fluentContext;
+          return PopScope(
+            // 桌面端没有系统返回栈：批准退出 = 销毁窗口（原生关闭已被
+            // window_manager 拦截），因此 canPop 恒 false，统一走 ExitGuard
+            //（confirmExit 内部完成三选决策与 destroy）。
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) async {
+              if (didPop) return;
+              await _exitGuard.confirmExit();
+            },
+            child: Container(
+              color: theme.scaffoldBackgroundColor,
+              // 无边框窗口（frameless）：系统标题栏被移除，顶栏为自绘
+              // [TitleBar]（品牌 + 拖拽区 + 业务按钮 + 亮/暗切换 + 窗口控制）。
+              // 关闭按钮直接走 [ExitGuard] 三选流程；原生关窗仍由
+              // setPreventClose → onWindowClose 兜底拦截。
+              child: BlocListener<FileBloc, FileState>(
                 bloc: widget.fileBloc,
-                buildWhen: (prev, cur) => prev.path != cur.path,
-                builder: (_, s) => TitleBar(
-                  fileName: s.path?.split('/').last.split('\\').last,
-                  onClose: () => _exitGuard.confirmExit(),
-                  actions: [
-                    IconButton(
-                      icon: const Icon(LucideIcons.folderOpen),
-                      tooltip: l.openFile,
-                      onPressed: _openFileManually,
-                    ),
-                    // 模式切换仅用图标（Tooltip 兼作悬停提示与无障碍语义）：
-                    // 顶栏 actions 宽度固定 ~300，配合窗口最小尺寸 960x640，
-                    // 窄窗口下不再溢出破版（任务 16 UI 打磨）。
-                    SegmentedButton<bool>(
-                      segments: [
-                        ButtonSegment(
-                          value: false,
-                          icon: Tooltip(
-                            message: l.modeTable,
-                            child: const Icon(LucideIcons.table2),
-                          ),
-                        ),
-                        ButtonSegment(
-                          value: true,
-                          icon: Tooltip(
-                            message: l.modeText,
-                            child: const Icon(LucideIcons.code2),
-                          ),
-                        ),
-                      ],
-                      selected: {_textMode},
-                      onSelectionChanged: (v) =>
-                          setState(() => _textMode = v.first),
-                    ),
-                    // IconButton 的 tooltip 同时充当无障碍语义。
-                    IconButton(
-                      icon: const Icon(LucideIcons.save),
-                      tooltip: l.save,
-                      onPressed: () => widget.fileBloc.add(SaveRequested()),
-                    ),
-                    IconButton(
-                      icon: const Icon(LucideIcons.history),
-                      tooltip: l.restore,
-                      onPressed: () => showRestoreDialog(
-                        context,
-                        fileBloc: widget.fileBloc,
-                        editBloc: widget.editBloc,
-                        onRestored: _onRestored,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 探测 v2 空态横幅：autoexec 缺失（创建入口）或未找到
-              // （指定目录入口）；打开文件成功后自动隐藏。
-              _buildDetectBanner(context),
-              Expanded(
-                flex: 6,
-                child: _textMode
-                    ? TextEditorView(
-                        key: ValueKey<int>(_textEpoch),
-                        editBloc: widget.editBloc,
-                      )
-                    : KvTableView(
-                        editBloc: widget.editBloc,
-                        fileBloc: widget.fileBloc,
-                      ),
-              ),
-              const Divider(height: 1),
-              SizedBox(
-                height: 220,
-                child: Row(
+                // warning 常驻状态（如坏字节随文件存续）：仅在出现/变更时提示一次。
+                listenWhen: (prev, cur) =>
+                    cur.warning != null && prev.warning != cur.warning,
+                listener: (context, s) {
+                  _showErrorInfoBar(
+                    _fluentContext ?? context,
+                    warningText(context, s.warning!),
+                  );
+                },
+                child: Column(
                   children: [
-                    const SizedBox(width: 280, child: KbCard()),
-                    const VerticalDivider(width: 1),
+                    BlocBuilder<FileBloc, FileState>(
+                      bloc: widget.fileBloc,
+                      buildWhen: (prev, cur) => prev.path != cur.path,
+                      builder: (_, s) => TitleBar(
+                        fileName: s.path?.split('/').last.split('\\').last,
+                        onClose: () => _exitGuard.confirmExit(),
+                        actions: [
+                          Tooltip(
+                            message: l.openFile,
+                            child: IconButton(
+                              icon: const Icon(LucideIcons.folderOpen),
+                              onPressed: _openFileManually,
+                            ),
+                          ),
+                          // 模式切换仅用图标（Tooltip 兼作悬停提示与无障碍语义）：
+                          // 顶栏 actions 宽度固定 ~300，配合窗口最小尺寸 960x640，
+                          // 窄窗口下不再溢出破版（任务 16 UI 打磨）。
+                          Tooltip(
+                            message: l.modeTable,
+                            child: ToggleButton(
+                              checked: !_textMode,
+                              onChanged: (_) =>
+                                  setState(() => _textMode = false),
+                              child: const Icon(LucideIcons.table2),
+                            ),
+                          ),
+                          Tooltip(
+                            message: l.modeText,
+                            child: ToggleButton(
+                              checked: _textMode,
+                              onChanged: (_) =>
+                                  setState(() => _textMode = true),
+                              child: const Icon(LucideIcons.code2),
+                            ),
+                          ),
+                          // IconButton 的 tooltip 同时充当无障碍语义。
+                          Tooltip(
+                            message: l.save,
+                            child: IconButton(
+                              icon: const Icon(LucideIcons.save),
+                              onPressed: () =>
+                                  widget.fileBloc.add(SaveRequested()),
+                            ),
+                          ),
+                          Tooltip(
+                            message: l.restore,
+                            child: IconButton(
+                              icon: const Icon(LucideIcons.history),
+                              onPressed: () => showRestoreDialog(
+                                _fluentContext ?? context,
+                                fileBloc: widget.fileBloc,
+                                editBloc: widget.editBloc,
+                                onRestored: _onRestored,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // 探测 v2 空态横幅：autoexec 缺失（创建入口）或未找到
+                    // （指定目录入口）；打开文件成功后自动隐藏。
+                    _buildDetectBanner(context),
                     Expanded(
-                      child: SideBySideDiff(diffBloc: widget.diffBloc),
+                      flex: 6,
+                      child: _textMode
+                          ? TextEditorView(
+                              key: ValueKey<int>(_textEpoch),
+                              editBloc: widget.editBloc,
+                            )
+                          : KvTableView(
+                              editBloc: widget.editBloc,
+                              fileBloc: widget.fileBloc,
+                            ),
+                    ),
+                    const Divider(),
+                    SizedBox(
+                      height: 220,
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 280, child: KbCard()),
+                          Container(
+                            width: 1,
+                            color: theme.resources.dividerStrokeColorDefault,
+                          ),
+                          Expanded(
+                            child: SideBySideDiff(diffBloc: widget.diffBloc),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

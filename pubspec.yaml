@@ -32,6 +32,7 @@ dependencies:
     sdk: flutter
 
   flutter_bloc: ^9.1.1
+  fluent_ui: ^4.13.0
   diff_match_patch: ^0.4.1
   flutter_code_editor: ^0.3.5
   fast_gbk: ^1.0.0

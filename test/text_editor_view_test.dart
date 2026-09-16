@@ -6,6 +6,7 @@ import 'package:apex_cfg_editor/l10n/app_localizations.dart';
 import 'package:apex_cfg_editor/state/edit_bloc.dart';
 import 'package:apex_cfg_editor/state/file_bloc.dart';
 import 'package:apex_cfg_editor/ui/widgets/text_editor_view.dart';
+import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
@@ -18,33 +19,34 @@ const _src = '"setting.fps_max" "0"\n"setting.r_full" "1"\n';
 
 EditBloc _realEditBloc({String src = _src}) {
   final bloc = EditBloc();
-  bloc.add(DocumentOpened(
-      doc: VideoconfigParser().parse(src), baseline: src));
+  bloc.add(DocumentOpened(doc: VideoconfigParser().parse(src), baseline: src));
   return bloc;
 }
 
 FileBloc _realFileBloc(EditBloc edit) => FileBloc(
-      editBloc: edit,
-      saveImpl: (_, _, _) async {},
-      listBackupsImpl: (_) => const [],
-      restoreImpl: (_, _) async {},
-    );
+  editBloc: edit,
+  saveImpl: (_, _, _) async {},
+  listBackupsImpl: (_) => const [],
+  restoreImpl: (_, _) async {},
+);
 
 Widget _host(Widget child, {FileBloc? fileBloc}) => MaterialApp(
-      // 查找替换栏的文案走 AppLocalizations：host 需要挂 delegates。
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: fileBloc == null
-          ? Scaffold(body: child)
-          : BlocProvider<FileBloc>.value(
-              value: fileBloc,
-              child: Scaffold(body: child),
-            ),
-    );
+  // 查找替换栏的文案走 AppLocalizations：host 需要挂 delegates。
+  localizationsDelegates: [
+    fluent.FluentLocalizations.delegate,
+    ...AppLocalizations.localizationsDelegates,
+  ],
+  supportedLocales: AppLocalizations.supportedLocales,
+  home: fileBloc == null
+      ? Scaffold(body: child)
+      : BlocProvider<FileBloc>.value(
+          value: fileBloc,
+          child: Scaffold(body: child),
+        ),
+);
 
 void main() {
-  testWidgets(
-      'typing reparses full text into bloc after 300ms debounce '
+  testWidgets('typing reparses full text into bloc after 300ms debounce '
       '(videoconfig default when no FileBloc provider)', (t) async {
     final edit = _realEditBloc();
     addTearDown(edit.close);
@@ -54,8 +56,7 @@ void main() {
     await t.pumpAndSettle();
 
     // 初始文本来自 Bloc 当前内容；enterText 追加一行。
-    await t.enterText(
-        find.byType(CodeField), '${_src}fps_max 256\n');
+    await t.enterText(find.byType(CodeField), '${_src}fps_max 256\n');
     await t.pump(const Duration(milliseconds: 400)); // 越过 300ms 防抖
     await t.pump(); // 冲刷事件处理微任务
 
@@ -70,16 +71,16 @@ void main() {
     await t.pumpWidget(_host(TextEditorView(editBloc: edit)));
     await t.pumpAndSettle();
 
-    await t.enterText(
-        find.byType(CodeField), '${_src}fps_max 256\n');
+    await t.enterText(find.byType(CodeField), '${_src}fps_max 256\n');
     await t.pump(const Duration(milliseconds: 100)); // 未到 300ms
 
     expect(edit.state.dirty, isFalse);
     expect(edit.state.doc!.serialize(), _src);
   });
 
-  testWidgets('no document open: editor shows empty; typing creates doc',
-      (t) async {
+  testWidgets('no document open: editor shows empty; typing creates doc', (
+    t,
+  ) async {
     final edit = EditBloc();
     addTearDown(edit.close);
 
@@ -95,8 +96,9 @@ void main() {
     expect(edit.state.dirty, isTrue);
   });
 
-  testWidgets('FileBloc kind=autoexec parses bind as CvarLine(key=bind)',
-      (t) async {
+  testWidgets('FileBloc kind=autoexec parses bind as CvarLine(key=bind)', (
+    t,
+  ) async {
     final edit = EditBloc();
     addTearDown(edit.close);
     final file = _realFileBloc(edit);
@@ -110,23 +112,21 @@ void main() {
     file.add(OpenRequested(path));
     await t.pump(); // 冲刷微任务：DocumentOpened 就绪后再进入文本模式
 
-    await t.pumpWidget(
-        _host(TextEditorView(editBloc: edit), fileBloc: file));
+    await t.pumpWidget(_host(TextEditorView(editBloc: edit), fileBloc: file));
     await t.pumpAndSettle();
 
     // 追加一行 bind。
-    await t.enterText(find.byType(CodeField),
-        '// my autoexec\nbind "F6" "quit"\n');
+    await t.enterText(
+      find.byType(CodeField),
+      '// my autoexec\nbind "F6" "quit"\n',
+    );
     await t.pump(const Duration(milliseconds: 400));
     await t.pump();
 
     final doc = edit.state.doc!;
     final bind = doc.lines.whereType<CvarLine>().toList();
     expect(bind.map((l) => l.key), contains('bind'));
-    expect(
-      bind.firstWhere((l) => l.key == 'bind').value,
-      '"F6" "quit"',
-    );
+    expect(bind.firstWhere((l) => l.key == 'bind').value, '"F6" "quit"');
     expect(edit.state.dirty, isTrue);
   });
 
@@ -156,8 +156,7 @@ void main() {
     });
 
     testWidgets('find prev goes back; next wraps around at end', (t) async {
-      final edit = _realEditBloc(
-          src: '"setting.fps_max" "0"\nfps_max 256\n');
+      final edit = _realEditBloc(src: '"setting.fps_max" "0"\nfps_max 256\n');
       addTearDown(edit.close);
 
       await t.pumpWidget(_host(TextEditorView(editBloc: edit)));
@@ -185,8 +184,9 @@ void main() {
       expect(ctrl.selection.baseOffset, 22); // 向前 = 回卷到末尾
     });
 
-    testWidgets('replace all rewrites text, serialize updates, stays dirty',
-        (t) async {
+    testWidgets('replace all rewrites text, serialize updates, stays dirty', (
+      t,
+    ) async {
       final edit = _realEditBloc();
       addTearDown(edit.close);
 
@@ -199,8 +199,7 @@ void main() {
       await t.tap(find.byTooltip('Find'));
       await t.pumpAndSettle();
       await t.enterText(find.byKey(const ValueKey('findField')), 'fps_max');
-      await t.enterText(
-          find.byKey(const ValueKey('replaceField')), 'r_gamma');
+      await t.enterText(find.byKey(const ValueKey('replaceField')), 'r_gamma');
       await t.tap(find.byTooltip('Replace all'));
       await t.pump(const Duration(milliseconds: 400)); // 越过防抖
       await t.pump();

@@ -1,36 +1,20 @@
-import 'package:apex_cfg_editor/l10n/app_localizations.dart';
-import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
-import 'package:apex_cfg_editor/ui/theme/theme_mode_scope.dart';
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:window_manager/window_manager.dart';
 
-/// 无边框窗口自绘标题栏（酸性风格 v2）。
+import '../../l10n/app_localizations.dart';
+import '../theme/acid_theme.dart';
+import '../theme/theme_mode_scope.dart';
+
+/// 无边框窗口的 Fluent 标题栏。
 ///
-/// 结构（高 44）：左侧斜切酸绿 Logo 块 + 全大写展示字体品牌名；
-/// 中部拖拽区（onPanStart 拖动窗口，双击最大化/还原）承载当前文件名；
-/// 右侧依次为业务 actions（注入）、亮/暗主题切换、窗口控制
-/// （最小化 / 最大化还原 / 关闭）。
-///
-/// 窗口控制三回调为测试接缝：null 时走 windowManager 默认实现
-/// （全部 try/catch，无窗口通道的测试 / macOS 开发期静默忽略）。
-/// 关闭按钮由 EditorScreen 注入 ExitGuard 流程；默认实现走
-/// `windowManager.close()`——在 setPreventClose(true) 下同样触发
-/// onWindowClose 拦截，两条路径都经退出保护。
+/// 业务操作仍由 [actions] 注入，窗口控制继续经 window_manager 接缝调用；
+/// 视觉控件统一使用 Fluent 的 IconButton、Tooltip 和焦点状态。
 class TitleBar extends StatefulWidget {
-  /// 当前打开文件名（含扩展名）；null / 空时拖拽区只留品牌名。
   final String? fileName;
-
-  /// 业务动作按钮（打开 / 模式切换 / 保存 / 还原），由 EditorScreen 注入。
   final List<Widget> actions;
-
-  /// 最小化。null → windowManager.minimize()。
   final Future<void> Function()? onMinimize;
-
-  /// 最大化 / 还原切换。null → isMaximized ? restore : maximize。
   final Future<void> Function()? onMaximizeOrRestore;
-
-  /// 关闭。null → windowManager.close()。
   final Future<void> Function()? onClose;
 
   const TitleBar({
@@ -47,8 +31,6 @@ class TitleBar extends StatefulWidget {
 }
 
 class _TitleBarState extends State<TitleBar> with WindowListener {
-  /// 最大化状态（乐观更新 + onWindowMaximize/Unmaximize 事件校准），
-  /// 驱动最大化按钮图标在 square / copy 间切换。
   bool _maximized = false;
 
   @override
@@ -66,11 +48,9 @@ class _TitleBarState extends State<TitleBar> with WindowListener {
 
   Future<void> _readMaximized() async {
     try {
-      final m = await windowManager.isMaximized();
-      if (mounted) setState(() => _maximized = m);
-    } catch (_) {
-      // 无窗口通道（测试 / 未初始化平台）：保持默认 false。
-    }
+      final value = await windowManager.isMaximized();
+      if (mounted) setState(() => _maximized = value);
+    } catch (_) {}
   }
 
   @override
@@ -110,56 +90,59 @@ class _TitleBarState extends State<TitleBar> with WindowListener {
     if (mounted) setState(() => _maximized = !_maximized);
   }
 
+  Widget _windowButton({
+    required Key key,
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+    required Color color,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: IconButton(
+        key: key,
+        iconButtonMode: IconButtonMode.small,
+        icon: Icon(icon, size: 16, color: color),
+        onPressed: onPressed,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
+    final theme =
+        FluentTheme.maybeOf(context) ?? buildFluentTheme(Brightness.dark);
     final palette = AcidPalette.of(context);
-    final divider =
-        Theme.of(context).dividerTheme.color ??
-        palette.chrome.withValues(alpha: 0.2);
-    final themeScope = ThemeModeScope.maybeOf(context);
+    final scope = ThemeModeScope.maybeOf(context);
+    final effectiveDark = theme.brightness == Brightness.dark;
 
-    Widget windowButton({
-      required Key key,
-      required IconData icon,
-      required String tooltip,
-      required VoidCallback onPressed,
-      Color? iconColor,
-    }) => IconButton(
-      key: key,
-      visualDensity: VisualDensity.compact,
-      icon: Icon(icon, size: 16, color: iconColor ?? palette.textMuted),
-      tooltip: tooltip,
-      onPressed: onPressed,
-    );
-
-    return Material(
-      color: palette.panel,
+    return FluentThemeFallback(
       child: Container(
+        height: 46,
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: divider)),
+          color: theme.micaBackgroundColor,
+          border: Border(
+            bottom: BorderSide(color: palette.chrome.withValues(alpha: 0.22)),
+          ),
         ),
-        height: 44,
         child: Row(
           children: [
             const SizedBox(width: 12),
             const _SlantLogo(),
             const SizedBox(width: 10),
-            // 品牌名：展示字体 + 全大写 + 紧字距 + 斜体（酸性风格 v2）。
-            const Text(
+            Text(
               'APEX CFG EDITOR',
               style: TextStyle(
                 fontFamily: kFontDisplay,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 fontStyle: FontStyle.italic,
-                letterSpacing: 1.0,
+                letterSpacing: 1,
+                color: palette.text,
               ),
             ),
             const SizedBox(width: 14),
-            // 拖拽区：onPanStart 拖动窗口 + 双击最大化/还原。
-            // 不用 DragToMoveArea：其内置 onDoubleTap 直接调 windowManager，
-            // 不可注入也不经退出守卫语义，自实现以获得一致的测试接缝。
             Expanded(
               child: GestureDetector(
                 key: const ValueKey('titlebar.dragArea'),
@@ -186,39 +169,49 @@ class _TitleBarState extends State<TitleBar> with WindowListener {
               ),
             ),
             ...widget.actions,
-            if (themeScope != null)
-              windowButton(
+            if (scope != null)
+              _windowButton(
                 key: const ValueKey('titlebar.themeToggle'),
-                icon: themeScope.mode == ThemeMode.dark
-                    ? LucideIcons.sun
-                    : LucideIcons.moon,
+                icon: effectiveDark ? LucideIcons.sun : LucideIcons.moon,
                 tooltip: l.toggleTheme,
-                onPressed: () => themeScope.onChanged(
-                  themeScope.mode == ThemeMode.dark
+                color: palette.textMuted,
+                onPressed: () {
+                  final next =
+                      scope.mode == ThemeMode.dark ||
+                          (scope.mode == ThemeMode.system && effectiveDark)
                       ? ThemeMode.light
-                      : ThemeMode.dark,
-                ),
+                      : ThemeMode.dark;
+                  scope.onChanged(next);
+                },
               ),
-            if (widget.actions.isNotEmpty || themeScope != null)
-              VerticalDivider(width: 1, thickness: 1, color: divider),
-            windowButton(
+            if (widget.actions.isNotEmpty || scope != null)
+              Container(
+                width: 1,
+                height: 22,
+                color: palette.chrome.withValues(alpha: 0.24),
+              ),
+            _windowButton(
               key: const ValueKey('titlebar.minimize'),
               icon: LucideIcons.minus,
               tooltip: l.minimize,
+              color: palette.textMuted,
               onPressed: () => (widget.onMinimize ?? _defaultMinimize)(),
             ),
-            windowButton(
+            _windowButton(
               key: const ValueKey('titlebar.maximize'),
               icon: _maximized ? LucideIcons.copy : LucideIcons.square,
               tooltip: _maximized ? l.restoreWindow : l.maximize,
+              color: palette.textMuted,
               onPressed: _handleMaximizeOrRestore,
             ),
-            windowButton(
+            _windowButton(
               key: const ValueKey('titlebar.close'),
               icon: LucideIcons.x,
               tooltip: l.close,
+              color: palette.danger,
               onPressed: () => (widget.onClose ?? _defaultClose)(),
             ),
+            const SizedBox(width: 6),
           ],
         ),
       ),
@@ -226,16 +219,14 @@ class _TitleBarState extends State<TitleBar> with WindowListener {
   }
 }
 
-/// 斜切酸绿 Logo 块：单个平行四边形（斜切方向与品牌斜体一致），克制不发光。
 class _SlantLogo extends StatelessWidget {
   const _SlantLogo();
 
   @override
   Widget build(BuildContext context) {
-    final palette = AcidPalette.of(context);
     return CustomPaint(
       size: const Size(26, 18),
-      painter: _SlantLogoPainter(color: palette.acid),
+      painter: _SlantLogoPainter(color: AcidPalette.of(context).acid),
     );
   }
 }

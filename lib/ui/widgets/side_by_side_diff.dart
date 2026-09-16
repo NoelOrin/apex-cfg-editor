@@ -1,5 +1,5 @@
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
-import 'package:flutter/material.dart';
+import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../core/diff/line_diff.dart';
@@ -7,11 +7,7 @@ import '../../state/diff_bloc.dart';
 import '../theme/acid_theme.dart';
 import '../theme/diff_colors.dart';
 
-const _mono = TextStyle(
-  fontFamily: 'monospace',
-  fontSize: 12,
-  height: 1.3,
-);
+const _mono = TextStyle(fontFamily: 'monospace', fontSize: 12, height: 1.3);
 
 /// 栏最小宽度：窗口过窄时不再压缩，改为横向滚动。
 const _minColumnWidth = 320.0;
@@ -34,71 +30,79 @@ class SideBySideDiff extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<DiffBloc, DiffState>(
-      bloc: diffBloc,
-      builder: (context, state) {
-        if (state.rows.isEmpty) {
-          return _gridTexture(
-            context,
-            child: Center(
-              child: Text(AppLocalizations.of(context)!.noChanges),
-            ),
-          );
-        }
-        return LayoutBuilder(builder: (context, constraints) {
-          final half = constraints.maxWidth / 2;
-          final columnWidth =
-              half < _minColumnWidth ? _minColumnWidth : half;
-          final diffColors =
-              Theme.of(context).extension<DiffColors>() ?? DiffColors.dark;
-          return _gridTexture(
-            context,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: columnWidth * 2,
-                child: ListView.builder(
-                  itemCount: state.rows.length,
-                  itemBuilder: (context, i) {
-                    final r = state.rows[i];
-                    final deleteColor =
-                        r.type == RowType.modified || r.type == RowType.removed
+    return FluentThemeFallback(
+      child: BlocBuilder<DiffBloc, DiffState>(
+        bloc: diffBloc,
+        builder: (context, state) {
+          if (state.rows.isEmpty) {
+            return _gridTexture(
+              context,
+              child: Center(
+                child: Text(AppLocalizations.of(context)!.noChanges),
+              ),
+            );
+          }
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final half = constraints.maxWidth / 2;
+              final columnWidth = half < _minColumnWidth
+                  ? _minColumnWidth
+                  : half;
+              final diffColors =
+                  FluentTheme.of(context).extension<DiffColors>() ??
+                  DiffColors.dark;
+              return _gridTexture(
+                context,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: columnWidth * 2,
+                    child: ListView.builder(
+                      itemCount: state.rows.length,
+                      itemBuilder: (context, i) {
+                        final r = state.rows[i];
+                        final deleteColor =
+                            r.type == RowType.modified ||
+                                r.type == RowType.removed
                             ? diffColors.deleteBg
                             : null;
-                    final addColor =
-                        r.type == RowType.modified || r.type == RowType.added
+                        final addColor =
+                            r.type == RowType.modified ||
+                                r.type == RowType.added
                             ? diffColors.addBg
                             : null;
-                    // IntrinsicHeight + stretch：removed 行右栏空、added 行
-                    // 左栏空仍与配对行等高，保证双栏行号逐行对齐。
-                    return IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: _Cell(
-                              text: r.left ?? '',
-                              lineNo: r.leftNo,
-                              background: deleteColor,
-                            ),
+                        // IntrinsicHeight + stretch：removed 行右栏空、added 行
+                        // 左栏空仍与配对行等高，保证双栏行号逐行对齐。
+                        return IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: _Cell(
+                                  text: r.left ?? '',
+                                  lineNo: r.leftNo,
+                                  background: deleteColor,
+                                ),
+                              ),
+                              Expanded(
+                                child: _Cell(
+                                  text: r.right ?? '',
+                                  lineNo: r.rightNo,
+                                  background: addColor,
+                                ),
+                              ),
+                            ],
                           ),
-                          Expanded(
-                            child: _Cell(
-                              text: r.right ?? '',
-                              lineNo: r.rightNo,
-                              background: addColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           );
-        });
-      },
+        },
+      ),
     );
   }
 }
@@ -108,7 +112,7 @@ class SideBySideDiff extends StatelessWidget {
 Widget _gridTexture(BuildContext context, {required Widget child}) {
   final acid = AcidPalette.of(context).acid.withValues(alpha: 0.03);
   return Container(
-    color: Theme.of(context).colorScheme.surface,
+    color: FluentTheme.of(context).scaffoldBackgroundColor,
     child: Stack(
       children: [
         Positioned.fill(
@@ -159,7 +163,7 @@ class _Cell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final numberStyle = _mono.copyWith(
-      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      color: FluentTheme.of(context).resources.textFillColorSecondary,
     );
     return Container(
       color: background,
