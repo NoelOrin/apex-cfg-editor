@@ -106,21 +106,29 @@ flutter build windows --release
 
 ### GitHub Actions 自动打包
 
-`.github/workflows/windows-build.yml` 在**推送 `v*` tag** 时触发（也可在
-Actions 页面手动 `workflow_dispatch`），流程：windows-latest 上启用
-Windows 桌面 → `flutter test` → `flutter build windows --release` →
-Inno Setup 编译单文件安装器（runner 预装 ISCC，缺失时 `choco install
-innosetup` 兜底）→ Release 目录压缩为便携 zip → setup exe 与 zip 一起
-上传为 artifact `apex-cfg-editor-windows`。发布即：
+`.github/workflows/windows-build.yml` 支持两种发版方式：
+
+1. **Actions 页面手动发版**：打开 `windows-release` workflow，点击
+   `Run workflow`，填写版本号（如 `1.2.0` 或 `v1.2.0`），可选填写 Release
+   标题并选择是否预发布。workflow 会在 `windows-latest` 上执行分析和测试、
+   构建 Windows Release、编译 Inno Setup 安装器、生成便携 ZIP，并自动创建
+   对应 GitHub Release。
+2. **推送 `v*` tag 发版**：沿用 tag 作为版本号和 Release 名称。
+
+两种方式共用同一流程：启用 Windows 桌面 → `flutter analyze` → `flutter test`
+→ `flutter build windows --release` → Inno Setup 编译单文件安装器（runner
+预装 ISCC，缺失时 `choco install innosetup` 兜底）→ Release 目录压缩为便携
+ZIP → 上传 artifact `apex-cfg-editor-windows-v*` → 创建或更新 GitHub
+Release，并附加 setup exe 与便携 ZIP。
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-构建完成后到该次 run 的 Artifacts 里下载，tag 触发的构建会把
-`ApexCfgEditorSetup-v*.exe` 与 `apex-cfg-editor-windows-v*.zip` 挂到
-GitHub Release。
+手动运行或 tag 运行完成后，也可以在该次 run 的 Artifacts 里下载构建产物；
+GitHub Release 会自动挂载 `ApexCfgEditorSetup-v*.exe` 与
+`apex-cfg-editor-windows-v*.zip`。
 
 - 界面语言跟随系统 locale（zh / en），窗口最小尺寸 960x640。
 - 生产环境自动探测 Apex 配置路径（见上节）；未找到时用顶栏「打开文件」
