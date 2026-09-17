@@ -12,7 +12,7 @@ void main() {
     final store = SettingsStore(settingsPath: '${tmp.path}/settings.json');
 
     expect(store.readAutoDetectOnStartup(), isTrue);
-    expect(store.readPreferredOpenKind(), 'videoconfig');
+    expect(store.readPreferredOpenKind(), 'settings');
     expect(store.readReopenLastFile(), isFalse);
     expect(store.readAutoCreateMissingTemplate(), isFalse);
     expect(store.readBackupEnabled(), isTrue);

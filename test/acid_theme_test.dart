@@ -39,6 +39,15 @@ void main() {
       expect(body.fontFamilyFallback, contains('Microsoft YaHei'));
     });
 
+    test('Windows UI font stays in one CJK-complete family', () {
+      final body = theme.textTheme.bodyMedium!;
+      expect(kFontUi, 'Microsoft YaHei UI');
+      expect(body.fontFamily, 'Microsoft YaHei UI');
+      expect(body.fontFamilyFallback!.first, 'Microsoft YaHei UI');
+      expect(body.fontFamilyFallback, contains('Microsoft YaHei'));
+      expect(body.fontFamilyFallback, contains('PingFang SC'));
+    });
+
     test('Fluent body uses UI font while headings keep display font', () {
       final fluentTheme = buildFluentTheme(Brightness.dark);
       expect(fluentTheme.typography.body!.fontFamily, kFontUi);

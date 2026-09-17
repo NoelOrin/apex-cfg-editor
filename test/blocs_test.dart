@@ -232,6 +232,24 @@ void main() {
       await edit.close();
     });
 
+    test('open detects settings.cfg as the settings kind', () async {
+      final file = File('${tmp.path}/settings.cfg')
+        ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
+      final edit = EditBloc();
+      final bloc = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) async {},
+        listBackupsImpl: (_) => const [],
+        restoreImpl: (_, _) async {},
+      );
+      bloc.add(OpenRequested(file.path));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(bloc.state.kind, CfgKind.settings);
+      expect(edit.state.doc!.lines.single, isA<KeyValueLine>());
+      await bloc.close();
+      await edit.close();
+    });
+
     test('save without edits is a no-op without new backups', () async {
       final file = File('${tmp.path}/videoconfig.txt')
         ..writeAsStringSync(_baseline);

@@ -279,10 +279,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get preferredOpenKind => '优先打开文件';
 
   @override
-  String get preferredVideoconfig => 'videoconfig.txt';
+  String get preferredSettings => 'settings.cfg（操作设置）';
 
   @override
-  String get preferredAutoexec => 'autoexec.cfg';
+  String get preferredVideoconfig => 'videoconfig.txt（游戏画质）';
+
+  @override
+  String get preferredAutoexec => 'autoexec.cfg（启动命令）';
+
+  @override
+  String get filePurposeVideoconfig => '游戏画质';
+
+  @override
+  String get filePurposeSettings => '操作设置';
+
+  @override
+  String get filePurposeAutoexec => '启动命令';
 
   @override
   String get reopenLastFile => '重新打开上次文件';

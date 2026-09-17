@@ -301,8 +301,12 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
   /// 时弹选择对话框；所选安装有 autoexec.cfg 就打开，只有目录就进入
   /// 「创建 autoexec.cfg」横幅；全空进入「未找到」横幅。
   Future<void> _applyResults(List<ApexInstall> results) async {
-    final docResults = results.where((r) => r.videoconfigPath != null).toList();
-    final installs = results.where((r) => r.videoconfigPath == null).toList();
+    final configResults = results
+        .where((r) => r.videoconfigPath != null || r.settingsPath != null)
+        .toList();
+    final installs = results
+        .where((r) => r.videoconfigPath == null && r.settingsPath == null)
+        .toList();
 
     ApexInstall? chosen;
     if (installs.length > 1) {
@@ -315,7 +319,7 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
       chosen = installs.first;
     }
 
-    final preferred = widget.settings?.readPreferredOpenKind() ?? 'videoconfig';
+    final preferred = widget.settings?.readPreferredOpenKind() ?? 'settings';
     if (preferred == 'autoexec' &&
         chosen != null &&
         chosen.autoexecPath == null &&
@@ -328,9 +332,15 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
       await _createAutoexec();
       return;
     }
-    final openPath = preferred == 'autoexec'
-        ? (chosen?.autoexecPath ?? docResults.firstOrNull?.videoconfigPath)
-        : (docResults.firstOrNull?.videoconfigPath ?? chosen?.autoexecPath);
+    final config = configResults.firstOrNull;
+    final openPath = switch (preferred) {
+      'autoexec' =>
+        chosen?.autoexecPath ?? config?.settingsPath ?? config?.videoconfigPath,
+      'videoconfig' =>
+        config?.videoconfigPath ?? chosen?.autoexecPath ?? config?.settingsPath,
+      _ =>
+        config?.settingsPath ?? chosen?.autoexecPath ?? config?.videoconfigPath,
+    };
     if (openPath == null &&
         chosen != null &&
         widget.settings?.readAutoCreateMissingTemplate() == true) {
@@ -745,10 +755,8 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                                         children: [
                                           _WorkbenchHeader(
                                             editBloc: widget.editBloc,
+                                            fileBloc: widget.fileBloc,
                                             textMode: _textMode,
-                                            hasFile:
-                                                widget.fileBloc.state.path !=
-                                                null,
                                             onReselectFile: _openFileManually,
                                             onModeChanged: (next) => setState(
                                               () => _textMode = next,
@@ -844,15 +852,15 @@ class _ToolbarDivider extends StatelessWidget {
 
 class _WorkbenchHeader extends StatelessWidget {
   final EditBloc editBloc;
+  final FileBloc fileBloc;
   final bool textMode;
-  final bool hasFile;
   final VoidCallback onReselectFile;
   final ValueChanged<bool> onModeChanged;
 
   const _WorkbenchHeader({
     required this.editBloc,
+    required this.fileBloc,
     required this.textMode,
-    required this.hasFile,
     required this.onReselectFile,
     required this.onModeChanged,
   });
@@ -861,112 +869,133 @@ class _WorkbenchHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     final palette = AcidPalette.of(context);
-    return SizedBox(
-      height: 42,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            Container(width: 3, height: 18, color: palette.acid),
-            const SizedBox(width: 9),
-            Icon(
-              textMode ? LucideIcons.code2 : LucideIcons.table2,
-              size: 15,
-              color: palette.textMuted,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                textMode ? l.modeText : l.modeTable,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: kFontUi,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: palette.text,
+    return BlocBuilder<FileBloc, FileState>(
+      bloc: fileBloc,
+      buildWhen: (prev, cur) => prev.path != cur.path || prev.kind != cur.kind,
+      builder: (context, fileState) {
+        final purpose = switch (fileState.kind) {
+          CfgKind.videoconfig => l.filePurposeVideoconfig,
+          CfgKind.settings => l.filePurposeSettings,
+          CfgKind.autoexec => l.filePurposeAutoexec,
+          null => null,
+        };
+        final mode = textMode ? l.modeText : l.modeTable;
+        final hasFile = fileState.path != null;
+        return SizedBox(
+          height: 42,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              children: [
+                Container(width: 3, height: 18, color: palette.acid),
+                const SizedBox(width: 9),
+                Icon(
+                  textMode ? LucideIcons.code2 : LucideIcons.table2,
+                  size: 15,
+                  color: palette.textMuted,
                 ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Tooltip(
-              message: hasFile ? l.reselectFile : l.openFile,
-              child: Button(
-                key: const ValueKey('workspace.reselectFile'),
-                onPressed: onReselectFile,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      hasFile ? LucideIcons.fileInput : LucideIcons.folderOpen,
-                      size: 15,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    purpose == null ? mode : '$mode · $purpose',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: kFontUi,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: palette.text,
                     ),
-                    const SizedBox(width: 6),
-                    Text(hasFile ? l.reselectFile : l.openFile),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            BlocBuilder<EditBloc, EditState>(
-              bloc: editBloc,
-              buildWhen: (prev, cur) => prev.dirty != cur.dirty,
-              builder: (context, state) => AnimatedSwitcher(
-                duration: const Duration(milliseconds: 140),
-                child: state.dirty
-                    ? Container(
-                        key: const ValueKey('workspace.dirty'),
-                        margin: const EdgeInsets.only(left: 10),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 3,
+                const SizedBox(width: 10),
+                Tooltip(
+                  message: hasFile ? l.reselectFile : l.openFile,
+                  child: Button(
+                    key: const ValueKey('workspace.reselectFile'),
+                    onPressed: onReselectFile,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          hasFile
+                              ? LucideIcons.fileInput
+                              : LucideIcons.folderOpen,
+                          size: 15,
                         ),
-                        decoration: BoxDecoration(
-                          color: palette.danger.withValues(alpha: 0.12),
-                          border: Border.all(
-                            color: palette.danger.withValues(alpha: 0.42),
+                        const SizedBox(width: 6),
+                        Text(hasFile ? l.reselectFile : l.openFile),
+                      ],
+                    ),
+                  ),
+                ),
+                BlocBuilder<EditBloc, EditState>(
+                  bloc: editBloc,
+                  buildWhen: (prev, cur) => prev.dirty != cur.dirty,
+                  builder: (context, state) => AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 140),
+                    child: state.dirty
+                        ? Container(
+                            key: const ValueKey('workspace.dirty'),
+                            margin: const EdgeInsets.only(left: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.danger.withValues(alpha: 0.12),
+                              border: Border.all(
+                                color: palette.danger.withValues(alpha: 0.42),
+                              ),
+                            ),
+                            child: Text(
+                              l.unsavedBadge,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: palette.danger,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(
+                            key: ValueKey('workspace.clean'),
                           ),
-                        ),
-                        child: Text(
-                          l.unsavedBadge,
-                          style: TextStyle(fontSize: 11, color: palette.danger),
-                        ),
-                      )
-                    : const SizedBox.shrink(key: ValueKey('workspace.clean')),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              decoration: BoxDecoration(
-                color: palette.bg.withValues(alpha: 0.5),
-                border: Border.all(
-                  color: palette.chrome.withValues(alpha: 0.28),
+                  ),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Tooltip(
-                    message: l.modeTable,
-                    child: ToggleButton(
-                      checked: !textMode,
-                      onChanged: (_) => onModeChanged(false),
-                      child: const Icon(LucideIcons.table2),
+                const SizedBox(width: 10),
+                Container(
+                  decoration: BoxDecoration(
+                    color: palette.bg.withValues(alpha: 0.5),
+                    border: Border.all(
+                      color: palette.chrome.withValues(alpha: 0.28),
                     ),
                   ),
-                  Tooltip(
-                    message: l.modeText,
-                    child: ToggleButton(
-                      checked: textMode,
-                      onChanged: (_) => onModeChanged(true),
-                      child: const Icon(LucideIcons.code2),
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Tooltip(
+                        message: l.modeTable,
+                        child: ToggleButton(
+                          checked: !textMode,
+                          onChanged: (_) => onModeChanged(false),
+                          child: const Icon(LucideIcons.table2),
+                        ),
+                      ),
+                      Tooltip(
+                        message: l.modeText,
+                        child: ToggleButton(
+                          checked: textMode,
+                          onChanged: (_) => onModeChanged(true),
+                          child: const Icon(LucideIcons.code2),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1008,7 +1037,7 @@ class _DockPanel extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: kFontDisplay,
+                        fontFamily: kFontUi,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,

@@ -131,7 +131,7 @@ class SettingsStore {
 
   String readPreferredOpenKind() {
     final value = _readField('preferredOpenKind');
-    return value == 'autoexec' ? 'autoexec' : 'videoconfig';
+    return value == 'autoexec' || value == 'videoconfig' ? value! : 'settings';
   }
 
   void writePreferredOpenKind(String value) =>

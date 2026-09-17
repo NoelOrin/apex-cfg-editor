@@ -10,21 +10,20 @@ import 'diff_colors.dart';
 /// 不影响中文正文渲染。
 const String kFontDisplay = 'ChakraPetch';
 
-/// UI 字体：Windows 原生 Segoe UI Variable。小字号不再强制使用展示字体，
-/// 避免 Chakra Petch 在 11-13px 下笔画发虚；中文经回退链使用微软雅黑。
-const String kFontUi = 'Segoe UI Variable Text';
+/// UI 字体：微软雅黑 UI 同时覆盖中英文。小字号不再强制使用展示
+/// 字体，避免中西文混排反复切换字体以及 Chakra Petch 低字号发虚。
+const String kFontUi = 'Microsoft YaHei UI';
 
 /// cfg 内容区维持 monospace（表格 / diff / 文本编辑器已按需指定）。
 const String kFontMono = 'Consolas';
 
-/// 通用字体回退链：拉丁优先 Segoe UI Variable，中文落到微软雅黑 /
-/// 苹方 / Noto Sans SC，避免缺字时由渲染器选择不可预测的字体。
+/// 通用字体回退链：优先同族微软雅黑 UI / 微软雅黑，再回退
+/// Segoe UI / 苹方 / Noto Sans SC，避免缺字时由渲染器随意选择字体。
 const List<String> kFontFallbacks = [
-  'Segoe UI Variable Text',
-  'Segoe UI',
-  'PingFang SC',
   'Microsoft YaHei UI',
   'Microsoft YaHei',
+  'Segoe UI',
+  'PingFang SC',
   'Noto Sans SC',
   'sans-serif',
 ];

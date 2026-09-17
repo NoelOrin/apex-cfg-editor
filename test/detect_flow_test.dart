@@ -25,7 +25,7 @@ class FakeRegistry implements RegistryReader {
 
   @override
   List<String> subKeys(RegistryView view, String keyPath) {
-    // 卸载表扫描：带 "keys:" 前缀的单值简化（本文件只造 Steam 场景）。
+    // 卸载表扫描：带 "keys:" 前缀的单值简化（本文件用 EA 场景）。
     return values['${view.name}|$keyPath|<keys>']?.split('|').toList() ??
         const [];
   }
@@ -65,6 +65,14 @@ Widget _host(Widget home) => MaterialApp(
   return (file, edit, diff);
 }
 
+Map<String, String?> _eaRegistry(String id, String installDir) => {
+  'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall|<keys>': id,
+  'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$id|DisplayName':
+      'Apex Legends',
+  'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$id|InstallLocation':
+      installDir,
+};
+
 void main() {
   late Directory tmp;
   late SettingsStore store;
@@ -80,17 +88,11 @@ void main() {
     env: const {},
   );
 
-  testWidgets('steam install with autoexec.cfg auto-opens the file', (t) async {
-    final apex = Directory('${tmp.path}/Lib/steamapps/common/Apex Legends')
-      ..createSync(recursive: true);
+  testWidgets('EA install with autoexec.cfg auto-opens the file', (t) async {
+    final apex = Directory('${tmp.path}/EAApex')..createSync(recursive: true);
     final autoexec = File('${apex.path}/global/cfg/autoexec.cfg')
       ..createSync(recursive: true)
       ..writeAsStringSync('// hi\n');
-    final steamRoot = '${tmp.path}/Steam';
-    Directory('$steamRoot/steamapps').createSync(recursive: true);
-    File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib" }\n}\n',
-    );
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -106,9 +108,7 @@ void main() {
           diffBloc: diff,
           fileBloc: file,
           settings: store,
-          locator: locatorWith({
-            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-          }),
+          locator: locatorWith(_eaRegistry('EA1', apex.path)),
         ),
       ),
     );
@@ -122,14 +122,8 @@ void main() {
   testWidgets('autoexec missing → create button writes template and opens', (
     t,
   ) async {
-    final apex = Directory('${tmp.path}/Lib2/steamapps/common/Apex Legends')
-      ..createSync(recursive: true);
+    final apex = Directory('${tmp.path}/EAApex2')..createSync(recursive: true);
     Directory('${apex.path}/cfg').createSync(recursive: true);
-    final steamRoot = '${tmp.path}/Steam2';
-    Directory('$steamRoot/steamapps').createSync(recursive: true);
-    File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib2" }\n}\n',
-    );
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -145,9 +139,7 @@ void main() {
           diffBloc: diff,
           fileBloc: file,
           settings: store,
-          locator: locatorWith({
-            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-          }),
+          locator: locatorWith(_eaRegistry('EA2', apex.path)),
         ),
       ),
     );
@@ -172,14 +164,7 @@ void main() {
     t,
   ) async {
     // 安装目录存在但完全没有 cfg 子目录：用第一个候选位置可创建。
-    Directory(
-      '${tmp.path}/Lib3/steamapps/common/Apex Legends',
-    ).createSync(recursive: true);
-    final steamRoot = '${tmp.path}/Steam3';
-    Directory('$steamRoot/steamapps').createSync(recursive: true);
-    File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib3" }\n}\n',
-    );
+    final apex = Directory('${tmp.path}/EAApex3')..createSync(recursive: true);
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -195,9 +180,7 @@ void main() {
           diffBloc: diff,
           fileBloc: file,
           settings: store,
-          locator: locatorWith({
-            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-          }),
+          locator: locatorWith(_eaRegistry('EA3', apex.path)),
         ),
       ),
     );
@@ -206,29 +189,18 @@ void main() {
     await t.tap(find.text('Create autoexec.cfg'));
     await t.pumpAndSettle();
 
-    expect(
-      _norm(file.state.path!),
-      _norm('${tmp.path}/Lib3/steamapps/common/Apex Legends/cfg/autoexec.cfg'),
-    );
+    expect(_norm(file.state.path!), _norm('${apex.path}/cfg/autoexec.cfg'));
   });
 
   testWidgets('two installs → chooser dialog; picking one opens its autoexec', (
     t,
   ) async {
-    for (final lib in ['LibA', 'LibB']) {
-      Directory(
-        '${tmp.path}/$lib/steamapps/common/Apex Legends/global/cfg',
-      ).createSync(recursive: true);
-      File(
-        '${tmp.path}/$lib/steamapps/common/Apex Legends/global/cfg/autoexec.cfg',
-      ).writeAsStringSync('// $lib\n');
+    final eaApexA = '${tmp.path}/EAApexA';
+    final eaApexB = '${tmp.path}/EAApexB';
+    for (final apex in [eaApexA, eaApexB]) {
+      Directory('$apex/global/cfg').createSync(recursive: true);
+      File('$apex/global/cfg/autoexec.cfg').writeAsStringSync('// $apex\n');
     }
-    final steamRoot = '${tmp.path}/Steam4';
-    Directory('$steamRoot/steamapps').createSync(recursive: true);
-    File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/LibA" }\n}\n',
-    );
-    final eaApex = '${tmp.path}/LibB/steamapps/common/Apex Legends';
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -245,14 +217,16 @@ void main() {
           fileBloc: file,
           settings: store,
           locator: locatorWith({
-            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-            // EA App：卸载表 InstallLocation 指向 LibB 的游戏目录。
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA|DisplayName':
-                'Apex Legends',
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA|InstallLocation':
-                eaApex,
             'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall|<keys>':
-                'EA',
+                'EA1|EA2',
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA1|DisplayName':
+                'Apex Legends',
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA1|InstallLocation':
+                eaApexA,
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA2|DisplayName':
+                'Apex Legends',
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA2|InstallLocation':
+                eaApexB,
           }),
         ),
       ),
@@ -260,13 +234,12 @@ void main() {
     await t.pumpAndSettle();
 
     expect(find.text('Multiple Apex installations detected'), findsOneWidget);
-    expect(find.text('Steam'), findsOneWidget);
-    expect(find.text('EA App'), findsOneWidget);
+    expect(find.text('EA App'), findsNWidgets(2));
 
-    await t.tap(find.text('EA App'));
+    await t.tap(find.text(eaApexB));
     await t.pumpAndSettle();
 
-    expect(_norm(file.state.path!), _norm('$eaApex/global/cfg/autoexec.cfg'));
+    expect(_norm(file.state.path!), _norm('$eaApexB/global/cfg/autoexec.cfg'));
   });
 
   testWidgets('nothing found → empty-state hint; specify dir re-probes and '
@@ -341,28 +314,65 @@ void main() {
     expect(_norm(file.state.path!), _norm(last.path));
   });
 
-  testWidgets('prefers autoexec over videoconfig when configured', (t) async {
-    final home = Directory('${tmp.path}/home')..createSync();
-    final videoconfig =
-        File('${home.path}/Documents/Respawn/Apex/local/videoconfig.txt')
+  testWidgets('default preference opens settings.cfg from Saved Games', (
+    t,
+  ) async {
+    final home = Directory('${tmp.path}/settings-home')..createSync();
+    final settingsFile =
+        File('${home.path}/Saved Games/Respawn/Apex/local/settings.cfg')
           ..createSync(recursive: true)
-          ..writeAsStringSync('"setting.fps_max" "144"\n');
-    final apex = Directory('${tmp.path}/Lib/steamapps/common/Apex Legends')
+          ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
+    File(
+      '${home.path}/Saved Games/Respawn/Apex/local/videoconfig.txt',
+    ).writeAsStringSync('"setting.fps_max" "144"\n');
+
+    final locator = InstallLocator(
+      registry: FakeRegistry(),
+      drives: FakeDrives(),
+      env: {'USERPROFILE': home.path},
+    );
+    final (file, edit, diff) = _wire('${tmp.path}/backups', store);
+    addTearDown(() async {
+      await file.close();
+      await diff.close();
+      await edit.close();
+    });
+
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          locator: locator,
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(file.state.kind, CfgKind.settings);
+    expect(_norm(file.state.path!), _norm(settingsFile.path));
+  });
+
+  testWidgets('prefers EA autoexec over Saved Games configs when configured', (
+    t,
+  ) async {
+    final home = Directory('${tmp.path}/home')..createSync();
+    final local = Directory('${home.path}/Saved Games/Respawn/Apex/local')
       ..createSync(recursive: true);
+    final settings = File('${local.path}/settings.cfg')
+      ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
+    final videoconfig = File('${local.path}/videoconfig.txt')
+      ..writeAsStringSync('"setting.fps_max" "144"\n');
+    final apex = Directory('${tmp.path}/EAApex5')..createSync(recursive: true);
     final autoexec = File('${apex.path}/global/cfg/autoexec.cfg')
       ..createSync(recursive: true)
       ..writeAsStringSync('// auto\n');
-    final steamRoot = '${tmp.path}/Steam';
-    Directory('$steamRoot/steamapps').createSync(recursive: true);
-    File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib" }\n}\n',
-    );
     store.writePreferredOpenKind('autoexec');
 
     final locator = InstallLocator(
-      registry: FakeRegistry(
-        values: {'user|Software\\Valve\\Steam|SteamPath': steamRoot},
-      ),
+      registry: FakeRegistry(values: _eaRegistry('EA5', apex.path)),
       drives: FakeDrives(),
       env: {'USERPROFILE': home.path},
     );
@@ -387,17 +397,13 @@ void main() {
     await t.pumpAndSettle();
 
     expect(videoconfig.existsSync(), isTrue);
+    expect(settings.existsSync(), isTrue);
     expect(_norm(file.state.path!), _norm(autoexec.path));
   });
 
   testWidgets('auto-creates missing template when configured', (t) async {
-    final apex = Directory('${tmp.path}/LibAuto/steamapps/common/Apex Legends')
+    final apex = Directory('${tmp.path}/EAApexAuto')
       ..createSync(recursive: true);
-    final steamRoot = '${tmp.path}/SteamAuto';
-    Directory('$steamRoot/steamapps').createSync(recursive: true);
-    File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/LibAuto" }\n}\n',
-    );
     store.writeAutoCreateMissingTemplate(true);
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
@@ -414,9 +420,7 @@ void main() {
           diffBloc: diff,
           fileBloc: file,
           settings: store,
-          locator: locatorWith({
-            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-          }),
+          locator: locatorWith(_eaRegistry('EA6', apex.path)),
         ),
       ),
     );

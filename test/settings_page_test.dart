@@ -150,6 +150,10 @@ void main() {
     expect(find.text('恢复'), findsOneWidget);
     expect(find.text('当前版本'), findsOneWidget);
     expect(find.text('构建号'), findsOneWidget);
+    final settingsChoice = find.text('settings.cfg（操作设置）');
+    await _scrollIntoView(tester, settingsChoice);
+    expect(settingsChoice, findsOneWidget);
+    expect(find.text('videoconfig.txt（游戏画质）'), findsOneWidget);
   });
 
   testWidgets('backup setting writes to SettingsStore', (tester) async {

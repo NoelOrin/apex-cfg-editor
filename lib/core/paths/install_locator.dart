@@ -1,8 +1,7 @@
 import 'dart:io';
 
-// 探测引擎 v2：统一产出 ApexInstall 列表（取代 v1 homeDir 相对推导的
-// ApexPathFinder，覆盖 EA App / OneDrive / 自定义 Steam 库等 v1 扫不到
-// 的场景）。
+// 探测引擎 v2：统一产出 ApexInstall 列表。配置文件只从 Saved Games
+// 读取，游戏目录只保留 EA App 与用户手动记忆目录。
 //
 // 平台专有访问（注册表、盘符枚举）经由 RegistryReader / DriveLister
 // 抽象注入：生产传 win32 实现（windows_registry.dart），测试注入假实现，
@@ -29,18 +28,21 @@ abstract class DriveLister {
   List<String> driveLetters();
 }
 
-/// 一个 Apex 安装（或 videoconfig 文档根候选）。
+/// 一个 Apex 安装（或 Saved Games 配置根候选）。
 class ApexInstall {
   /// 安装目录（游戏根）；videoconfig 文档候选时为文档根。
   final String installDir;
 
   final InstallSource source;
 
-  /// videoconfig.txt 完整路径，仅文档根候选携带。
+  /// videoconfig.txt 完整路径，仅 Saved Games 配置根候选携带。
   final String? videoconfigPath;
 
+  /// settings.cfg 完整路径，仅 Saved Games 配置根候选携带。
+  final String? settingsPath;
+
   /// autoexec 候选目录。存在即算（文件可缺失）；候选目录都不存在时
-  /// 为第一个候选（`cfg`）——「可创建」位置。文档根候选为 null。
+  /// 为第一个候选（`cfg`）——「可创建」位置。配置根候选为 null。
   final String? autoexecDir;
 
   /// autoexec.cfg 完整路径，文件存在时才有值。
@@ -50,6 +52,7 @@ class ApexInstall {
     required this.installDir,
     required this.source,
     this.videoconfigPath,
+    this.settingsPath,
     this.autoexecDir,
     this.autoexecPath,
   });
@@ -61,7 +64,7 @@ class InstallLocator {
   final RegistryReader registry;
   final DriveLister drives;
 
-  /// 平台环境变量（USERPROFILE / OneDrive*）。测试注入合成环境；
+  /// 平台环境变量（USERPROFILE）。测试注入合成环境；
   /// 生产传 [Platform.environment]。
   final Map<String, String?> env;
 
@@ -73,14 +76,13 @@ class InstallLocator {
 
   static const _autoexecDirCandidates = ['cfg', 'global/cfg', 'r2/cfg'];
   static const _videoconfigRelative = 'Respawn/Apex/local/videoconfig.txt';
+  static const _settingsRelative = 'Respawn/Apex/local/settings.cfg';
   static const _apexGameRelative = 'steamapps/common/Apex Legends';
-  static final _vdfPathRegex = RegExp(r'"path"\s+"([^"]+)"');
 
   // ---- 候选根收集（平台探测层） ----
 
-  /// videoconfig 候选文档根：USERPROFILE\Documents、各 OneDrive 变量的
-  /// Documents 与「文档」（OneDrive 中文重定向）。
-  List<String> documentRoots() {
+  /// 配置文件根：仅 `%USERPROFILE%\Saved Games`。
+  List<String> configRoots() {
     final roots = <String>[];
     void add(String? base, String leaf) {
       if (base == null || base.isEmpty) return;
@@ -88,68 +90,10 @@ class InstallLocator {
       if (!roots.contains(r)) roots.add(r);
     }
 
-    // Apex 当前实际配置位置优先：%USERPROFILE%\Saved Games\Respawn\Apex\local。
-    // 保留 Documents / OneDrive 旧位置作为兼容候选。
+    // Apex 配置文件只从系统 Saved Games 目录探测，不再扫描 Documents /
+    // OneDrive 等旧路径。
     add(env['USERPROFILE'], 'Saved Games');
-    add(env['USERPROFILE'], 'Documents');
-    for (final v in ['OneDrive', 'OneDriveCommercial', 'OneDriveConsumer']) {
-      add(env[v], 'Documents');
-      add(env[v], '文档');
-    }
     return roots;
-  }
-
-  /// Steam 根目录：HKCU SteamPath + HKLM WOW6432Node InstallPath。
-  List<String> steamRoots() {
-    final roots = <String>[];
-    final seen = <String>{};
-    void add(String? p) {
-      if (p == null || p.isEmpty) return;
-      final r = _norm(p);
-      if (seen.add(r.toLowerCase())) roots.add(r);
-    }
-
-    add(
-      registry.readString(
-        RegistryView.user,
-        r'Software\Valve\Steam',
-        'SteamPath',
-      ),
-    );
-    add(
-      registry.readString(
-        RegistryView.machine,
-        r'SOFTWARE\WOW6432Node\Valve\Steam',
-        'InstallPath',
-      ),
-    );
-    return roots;
-  }
-
-  /// Steam 根下的全部库（根自身 + libraryfolders.vdf 的全部 "path"）。
-  /// 损坏 vdf 跳过（不抛异常）。
-  List<String> steamLibraries(List<String> roots) {
-    final libs = <String>[];
-    void add(String p) {
-      final r = _norm(p);
-      if (!libs.any((l) => l.toLowerCase() == r.toLowerCase())) libs.add(r);
-    }
-
-    for (final root in roots) {
-      add(root);
-      final vdf = File('$root/steamapps/libraryfolders.vdf');
-      if (!vdf.existsSync()) continue;
-      String content;
-      try {
-        content = vdf.readAsStringSync();
-      } catch (_) {
-        continue;
-      }
-      for (final m in _vdfPathRegex.allMatches(content)) {
-        add(m.group(1)!.replaceAll('\\\\', '/'));
-      }
-    }
-    return libs;
   }
 
   /// EA App 注册表探测：卸载表（HKLM 64/32 位视图 + HKCU）里
@@ -232,45 +176,36 @@ class InstallLocator {
     return result;
   }
 
-  /// 完整探测：文档根（videoconfig 存在才算）→ Steam（注册表根 → vdf
-  /// 库 → 游戏目录）→ EA App（卸载表 + 常见根 + 盘符扫描）→ 用户记忆
-  /// 路径（仅当以上全部落空时：先按库根尝试 `customInstallDir` 下的
-  /// `steamapps/common/Apex Legends`，命中则不再把该目录本身当安装——
-  /// 用户记忆的可能是 Steam 库根；库根落空后再把它本身当游戏根候选）。
+  /// 完整探测：Saved Games 配置根 + EA App 安装目录；两者都为空时
+  /// 才回退用户手动记忆的目录。不再扫描 Steam / Documents / OneDrive。
   List<ApexInstall> locate({String? customInstallDir}) {
     final installs = <ApexInstall>[];
 
-    // 1. videoconfig 文档根。
-    for (final doc in documentRoots()) {
+    // 1. Saved Games 配置根：settings.cfg（操作设置）与
+    // videoconfig.txt（游戏画质）均可命中。
+    for (final doc in configRoots()) {
       final vc = '$doc/$_videoconfigRelative';
-      if (File(vc).existsSync()) {
-        installs.add(
-          ApexInstall(
-            installDir: doc,
-            source: InstallSource.videoconfigDoc,
-            videoconfigPath: vc,
-          ),
-        );
-      }
+      final settings = '$doc/$_settingsRelative';
+      final hasVideoconfig = File(vc).existsSync();
+      final hasSettings = File(settings).existsSync();
+      if (!hasVideoconfig && !hasSettings) continue;
+      installs.add(
+        ApexInstall(
+          installDir: doc,
+          source: InstallSource.videoconfigDoc,
+          videoconfigPath: hasVideoconfig ? vc : null,
+          settingsPath: hasSettings ? settings : null,
+        ),
+      );
     }
 
-    // 2. Steam。
-    final steamInstalls = installsFromInstallDirs(
-      steamLibraries(
-        steamRoots(),
-      ).map((lib) => '$lib/$_apexGameRelative').toList(),
-      source: InstallSource.steam,
-    );
-    installs.addAll(steamInstalls);
-
-    // 3. EA App。
+    // 2. EA App 安装目录（保留）：用于定位 autoexec.cfg。
     final eaRoots = [...eaRegistryRoots(), ...eaCommonRoots()];
     installs.addAll(
       installsFromInstallDirs(eaRoots, source: InstallSource.eaApp),
     );
 
-    // 4. 用户记忆路径：常规探测全空时兜底。先按库根（steamapps 下）探测，
-    // 命中即不回退到目录本身，避免库根与其内的游戏目录重复计入。
+    // 3. 用户手动记忆路径：自动探测全空时兜底。
     if (installs.isEmpty && customInstallDir != null) {
       final custom = _norm(customInstallDir);
       final nested = installsFromInstallDirs([
@@ -297,8 +232,8 @@ class InstallLocator {
 
 /// 从「成功打开的文件所在目录」推导 Apex 安装根（探测 v2 的
 /// customInstallDir 回写规则）：autoexec 的 cfg/global/r2 目录父级、
-/// 或 `steamapps/common/Apex Legends` 树内 → 安装根；videoconfig 的
-/// Documents 文档根与其余任意目录都不是安装目录 → null。结果与
+/// 或 `steamapps/common/Apex Legends` 树内 → 安装根；Saved Games
+/// 配置根与其余任意目录都不是安装目录 → null。结果与
 /// [InstallLocator.locate] 的 customInstallDir 语义对齐（可直接回填）。
 String? apexInstallDirFromOpenedDir(String dirPath) {
   final dir = _normPath(dirPath);

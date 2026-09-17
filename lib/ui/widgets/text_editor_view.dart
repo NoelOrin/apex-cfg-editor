@@ -9,6 +9,7 @@ import 'package:highlight/languages/cpp.dart' show cpp;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/parser/autoexec_parser.dart';
+import '../../core/parser/settings_parser.dart';
 import '../../core/parser/videoconfig_parser.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/edit_bloc.dart';
@@ -73,13 +74,13 @@ class _TextEditorViewState extends State<TextEditorView> {
       // 可空读取：EditorScreen 无 provider（任务 10 接线），null 不抛错；
       // provider 存在但 kind 未定时也按 videoconfig 处理。
       final fileBloc = context.read<FileBloc?>();
-      final isAutoexec = fileBloc?.state.kind == CfgKind.autoexec;
+      final kind = fileBloc?.state.kind ?? CfgKind.videoconfig;
       widget.editBloc.add(
-        FullTextChanged(
-          isAutoexec
-              ? const AutoexecParser().parse(_ctrl.text)
-              : const VideoconfigParser().parse(_ctrl.text),
-        ),
+        FullTextChanged(switch (kind) {
+          CfgKind.videoconfig => const VideoconfigParser().parse(_ctrl.text),
+          CfgKind.settings => const SettingsParser().parse(_ctrl.text),
+          CfgKind.autoexec => const AutoexecParser().parse(_ctrl.text),
+        }),
       );
     });
   }
@@ -271,6 +272,7 @@ class _TextEditorViewState extends State<TextEditorView> {
                 color: Colors.transparent,
                 child: CodeField(
                   controller: _ctrl,
+                  expands: true,
                   onChanged: (_) => _onChanged(),
                   textStyle: const TextStyle(
                     fontFamily: kFontMono,

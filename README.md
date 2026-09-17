@@ -1,7 +1,8 @@
 # Apex CFG Editor
 
 桌面端 Apex Legends 配置编辑器（Windows 优先，macOS 可跑测试开发调试）：把
-`videoconfig.txt` 与 `autoexec.cfg` 的裸文本编辑升级为「表格 + 全文」双模式，
+`settings.cfg`、`videoconfig.txt` 与 `autoexec.cfg` 的裸文本编辑升级为
+「表格 + 全文」双模式，
 配行级 diff、内置知识库与自动备份，免手改引号键值、不怕改坏回不去。
 
 ## 功能
@@ -15,12 +16,11 @@
   而不是静默丢内容。
 - **自动备份与还原**：每次保存前字节级备份旧文件；顶栏「还原」可回滚到
   任意历史备份。备份位置：`%APPDATA%\ApexCfgEditor\backups`。
-- **自动探测安装**（v2）：合并三类来源自动定位 Apex——Steam（注册表
-  SteamPath / InstallPath + 各库 `libraryfolders.vdf`）、EA App（卸载表
-  DisplayName 扫描 + `EA Games` / `Origin Games` 常见根与 C-F 盘符探测）、
-  配置根（优先 `USERPROFILE\Saved Games`，并兼容 `Documents` 与 OneDrive
-  重定向的 `Documents` / `文档`）下的 `videoconfig.txt`；探测全空时回退用户记忆的
-  `customInstallDir`（指定过一次即记住）。
+- **自动探测安装**（v2）：配置文件仅扫描 `USERPROFILE\Saved Games\
+  Respawn\Apex\local`，识别 `settings.cfg`（操作设置）与
+  `videoconfig.txt`（游戏画质）；游戏安装目录仅保留 EA App（卸载表
+  DisplayName 扫描 + `EA Games` / `Origin Games` 常见根与 C-F 盘符探测）。
+  自动探测为空时才回退用户记忆的 `customInstallDir`。
 - **autoexec.cfg 缺失也有入口**：找到安装但 `autoexec.cfg` 不存在时提供
   「创建 autoexec.cfg」，一键写入全注释的中英双语模板（帧数优化示例行，
   不改变游戏行为）并自动打开。
@@ -46,34 +46,28 @@ Artifacts 里上传未打 tag 的开发产物。
 
 启动时按以下顺序探测（`lib/core/paths/install_locator.dart`）：
 
-1. **配置根 videoconfig.txt**：
-   优先读取 `%USERPROFILE%\Saved Games\Respawn\Apex\local\videoconfig.txt`，
-   再兼容 `%USERPROFILE%\Documents`、`%OneDrive%\Documents` 与
-   `%OneDrive%\文档`（`OneDrive` / `OneDriveCommercial` /
-   `OneDriveConsumer` 三个变量都查）下的旧位置，命中即自动打开。
-2. **Steam**：注册表 `HKCU\Software\Valve\Steam\SteamPath` 与
-   `HKLM\SOFTWARE\WOW6432Node\Valve\Steam\InstallPath` → 各库
-   `steamapps\libraryfolders.vdf` 的全部 `"path"` →
-   `steamapps\common\Apex Legends`（**自定义库照样扫到**）。
-3. **EA App**：卸载表（HKLM 64/32 位视图 + HKCU）中 DisplayName 含
+1. **Saved Games 配置根**：只扫描 `%USERPROFILE%\Saved Games\
+   Respawn\Apex\local`。默认优先打开 `settings.cfg`（操作设置），没有时
+   回退 `videoconfig.txt`（游戏画质）；两者用途不同，不在界面中混为一类。
+2. **EA App**：卸载表（HKLM 64/32 位视图 + HKCU）中 DisplayName 含
    "Apex" 的 `InstallLocation`；加上
    `C:\Program Files\EA Games\Apex Legends`、`C:\Program Files\Origin
    Games\Apex Legends` 与 C-F 各盘符根下的 `EA Games\Apex Legends` /
    `Origin Games\Apex Legends` / `Apex Legends`。
-4. **用户记忆目录**：以上全空时回退 `customInstallDir`（settings.json）。
+3. **用户记忆目录**：以上全空时回退 `customInstallDir`（settings.json）。
 
 对每个安装目录，autoexec 候选目录为 `cfg`、`global\cfg`、`r2\cfg`
 （目录存在即算，文件可缺失；都不存在时用 `cfg` 作为可创建位置）。
 
 兜底入口：
 
-- **多个安装**（如 Steam + EA App 双装）：启动后弹出选择对话框，选哪个
-  就处理哪个的 autoexec。
+- **多个 EA App 目录**：启动后弹出选择对话框，选哪个就处理哪个的
+  autoexec。
 - **autoexec.cfg 不存在**：界面出现「创建 autoexec.cfg」，点击写入全注释
   模板（帧数优化示例，去掉行首 `//` 才生效）并自动打开。
 - **完全找不到 Apex**：界面出现「指定 Apex 目录」，用目录选择器指到
-  Apex 安装目录（或 Steam 库根），应用记住该路径并重新探测；顶栏
-  「打开文件」也始终可手动选择 `videoconfig.txt` / `autoexec.cfg`。
+  Apex 安装目录，应用记住该路径并重新探测；顶栏「打开文件」也始终可
+  手动选择 `settings.cfg` / `videoconfig.txt` / `autoexec.cfg`。
 
 ## 构建与运行
 

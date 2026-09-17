@@ -14,6 +14,7 @@ import 'package:apex_cfg_editor/ui/editor_screen.dart';
 import 'package:apex_cfg_editor/ui/locale_preference.dart';
 import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
 import 'package:apex_cfg_editor/ui/theme/theme_mode_scope.dart';
+import 'package:apex_cfg_editor/ui/widgets/window_resize_frame.dart';
 import 'package:fluent_ui/fluent_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:window_manager/window_manager.dart';
@@ -32,6 +33,8 @@ Future<void> main() async {
     await windowManager.ensureInitialized();
     await windowManager.waitUntilReadyToShow(options, () async {
       await windowManager.setAsFrameless();
+      await windowManager.setResizable(true);
+      await windowManager.setMaximizable(true);
       await windowManager.setMinimumSize(const Size(960, 640));
     });
   } catch (_) {
@@ -229,27 +232,29 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
           themeMode: _themeMode,
           locale: _localePreference.locale,
           home: Builder(
-            builder: (context) => Container(
-              // 无边框窗口没有系统投影/边框：1px 酸绿描边保证窗口边界
-              // 在桌面上可见（颜色取当前主题色板主色）。
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: AcidPalette.of(context).acid,
-                  width: 1,
+            builder: (context) => WindowResizeFrame(
+              child: Container(
+                // 无边框窗口没有系统投影/边框：1px 酸绿描边保证窗口边界
+                // 在桌面上可见（颜色取当前主题色板主色）。
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: AcidPalette.of(context).acid,
+                    width: 1,
+                  ),
                 ),
-              ),
-              child: RepositoryProvider<KbService>.value(
-                value: widget.kb,
-                child: EditorScreen(
-                  editBloc: editBloc,
-                  diffBloc: diffBloc,
-                  fileBloc: fileBloc,
-                  settings: settings,
-                  autoDetect: widget.autoDetect,
-                  backupDir: backups.baseDir,
-                  logDir: defaultLogDir(),
-                  onSettingsChanged: _syncRuntimeSettings,
-                  onResetSettings: _resetSettings,
+                child: RepositoryProvider<KbService>.value(
+                  value: widget.kb,
+                  child: EditorScreen(
+                    editBloc: editBloc,
+                    diffBloc: diffBloc,
+                    fileBloc: fileBloc,
+                    settings: settings,
+                    autoDetect: widget.autoDetect,
+                    backupDir: backups.baseDir,
+                    logDir: defaultLogDir(),
+                    onSettingsChanged: _syncRuntimeSettings,
+                    onResetSettings: _resetSettings,
+                  ),
                 ),
               ),
             ),

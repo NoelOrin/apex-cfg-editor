@@ -282,11 +282,11 @@ void main() {
   });
 
   group('assembly widgets', () {
-    testWidgets('auto-detect opens videoconfig found under injected home dir', (
+    testWidgets('auto-detect opens settings.cfg found under Saved Games', (
       t,
     ) async {
       final home = '${tmp.path}/home';
-      final cfg = File('$home/Documents/Respawn/Apex/local/videoconfig.txt')
+      final cfg = File('$home/Saved Games/Respawn/Apex/local/settings.cfg')
         ..createSync(recursive: true)
         ..writeAsStringSync(_old);
       final (file, edit, diff) = _wire('${tmp.path}/backups');
@@ -310,7 +310,8 @@ void main() {
 
       // Windows 上探测路径用 `\` 拼接（文件系统等价），归一化后比较。
       expect(_norm(file.state.path!), _norm(cfg.path));
-      expect(find.text('videoconfig.txt'), findsOneWidget); // AppBar 标题
+      expect(find.text('settings.cfg'), findsOneWidget); // AppBar 标题
+      expect(find.text('Table · Controls'), findsOneWidget);
       expect(find.text('setting.fps_max'), findsOneWidget); // 表格模式渲染内容
     });
 

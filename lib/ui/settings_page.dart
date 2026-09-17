@@ -61,7 +61,7 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     final settings = widget.settings;
     _autoDetectOnStartup = settings?.readAutoDetectOnStartup() ?? true;
-    _preferredOpenKind = settings?.readPreferredOpenKind() ?? 'videoconfig';
+    _preferredOpenKind = settings?.readPreferredOpenKind() ?? 'settings';
     _reopenLastFile = settings?.readReopenLastFile() ?? false;
     _autoCreateMissingTemplate =
         settings?.readAutoCreateMissingTemplate() ?? false;
@@ -116,7 +116,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     setState(() {
       _autoDetectOnStartup = true;
-      _preferredOpenKind = 'videoconfig';
+      _preferredOpenKind = 'settings';
       _reopenLastFile = false;
       _autoCreateMissingTemplate = false;
       _backupEnabled = true;
@@ -201,7 +201,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l.interfaceSection,
                     style: TextStyle(
-                      fontFamily: kFontDisplay,
+                      fontFamily: kFontUi,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -214,7 +214,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l.updateSection,
                     style: TextStyle(
-                      fontFamily: kFontDisplay,
+                      fontFamily: kFontUi,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -227,7 +227,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l.fileBehaviorSection,
                     style: TextStyle(
-                      fontFamily: kFontDisplay,
+                      fontFamily: kFontUi,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -240,7 +240,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l.backupSection,
                     style: TextStyle(
-                      fontFamily: kFontDisplay,
+                      fontFamily: kFontUi,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -253,7 +253,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l.diagnosticsSection,
                     style: TextStyle(
-                      fontFamily: kFontDisplay,
+                      fontFamily: kFontUi,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -266,7 +266,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l.appInfoSection,
                     style: TextStyle(
-                      fontFamily: kFontDisplay,
+                      fontFamily: kFontUi,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -279,7 +279,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   Text(
                     l.resetSection,
                     style: TextStyle(
-                      fontFamily: kFontDisplay,
+                      fontFamily: kFontUi,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -487,6 +487,11 @@ class _SettingsPageState extends State<SettingsPage> {
               spacing: 24,
               runSpacing: 10,
               children: [
+                RadioButton<String>(
+                  value: 'settings',
+                  content: Text(l.preferredSettings),
+                  enabled: widget.settings != null,
+                ),
                 RadioButton<String>(
                   value: 'videoconfig',
                   content: Text(l.preferredVideoconfig),

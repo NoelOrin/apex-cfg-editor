@@ -211,4 +211,29 @@ void main() {
       expect(ctrl.text, isNot(contains('fps_max')));
     });
   });
+
+  testWidgets('long text stays vertically scrollable inside a bounded panel', (
+    t,
+  ) async {
+    final longText = List.generate(120, (i) => 'setting_$i 1').join('\n');
+    final edit = _realEditBloc(src: longText);
+    addTearDown(edit.close);
+
+    await t.pumpWidget(
+      _host(SizedBox(height: 180, child: TextEditorView(editBloc: edit))),
+    );
+    await t.pumpAndSettle();
+
+    final textScrollable = find.descendant(
+      of: find.byType(EditableText),
+      matching: find.byType(Scrollable),
+    );
+    expect(textScrollable, findsOneWidget);
+    final position = t.state<ScrollableState>(textScrollable).position;
+    expect(position.maxScrollExtent, greaterThan(0));
+
+    await t.drag(find.byType(EditableText), const Offset(0, -120));
+    await t.pumpAndSettle();
+    expect(position.pixels, greaterThan(0));
+  });
 }

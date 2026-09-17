@@ -4,10 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/io/cfg_file_io.dart';
 import '../core/parser/autoexec_parser.dart';
+import '../core/parser/settings_parser.dart';
 import '../core/parser/videoconfig_parser.dart';
 import 'edit_bloc.dart';
 
-enum CfgKind { videoconfig, autoexec }
+enum CfgKind { videoconfig, settings, autoexec }
 
 /// 路径的父目录（同时接受 / 与 \ 分隔，兼容 Windows 风格输入）。
 String parentDirOf(String path) {
@@ -97,12 +98,16 @@ class FileBloc extends Bloc<FileEvent, FileState> {
         final data = CfgFileIo.read(e.path);
         if (generation != _openGeneration) return;
         final fileName = e.path.split(RegExp(r'[/\\]')).last.toLowerCase();
-        final kind = fileName == 'videoconfig.txt'
-            ? CfgKind.videoconfig
-            : CfgKind.autoexec;
-        final doc = kind == CfgKind.videoconfig
-            ? VideoconfigParser().parse(data.text)
-            : AutoexecParser().parse(data.text);
+        final kind = switch (fileName) {
+          'videoconfig.txt' => CfgKind.videoconfig,
+          'settings.cfg' => CfgKind.settings,
+          _ => CfgKind.autoexec,
+        };
+        final doc = switch (kind) {
+          CfgKind.videoconfig => VideoconfigParser().parse(data.text),
+          CfgKind.settings => SettingsParser().parse(data.text),
+          CfgKind.autoexec => AutoexecParser().parse(data.text),
+        };
         editBloc.add(DocumentOpened(doc: doc, baseline: data.text));
         em(
           FileState(

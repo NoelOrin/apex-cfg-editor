@@ -632,17 +632,41 @@ abstract class AppLocalizations {
   /// **'Preferred file'**
   String get preferredOpenKind;
 
+  /// No description provided for @preferredSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'settings.cfg (controls)'**
+  String get preferredSettings;
+
   /// No description provided for @preferredVideoconfig.
   ///
   /// In en, this message translates to:
-  /// **'videoconfig.txt'**
+  /// **'videoconfig.txt (graphics)'**
   String get preferredVideoconfig;
 
   /// No description provided for @preferredAutoexec.
   ///
   /// In en, this message translates to:
-  /// **'autoexec.cfg'**
+  /// **'autoexec.cfg (startup commands)'**
   String get preferredAutoexec;
+
+  /// No description provided for @filePurposeVideoconfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Graphics'**
+  String get filePurposeVideoconfig;
+
+  /// No description provided for @filePurposeSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Controls'**
+  String get filePurposeSettings;
+
+  /// No description provided for @filePurposeAutoexec.
+  ///
+  /// In en, this message translates to:
+  /// **'Startup commands'**
+  String get filePurposeAutoexec;
 
   /// No description provided for @reopenLastFile.
   ///

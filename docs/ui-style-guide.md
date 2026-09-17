@@ -61,9 +61,9 @@ diff 语义色（`DiffColors` ThemeExtension，20%~25% 透明叠加）：
   Bold Italic 四个字重，family 名 `ChakraPetch`。
 - 适用范围：标题、顶栏品牌名、大数字；全大写 + 斜体 + 紧字距
   （品牌名 `APEX CFG EDITOR` 为基准样式）。
-- UI 正文字体：Windows 使用 **Segoe UI Variable Text**，中文经
-  `fontFamilyFallback` 回退微软雅黑 / 苹方 / Noto Sans SC；避免 11-13px
-  小字使用展示字体导致笔画发虚。
+- Windows UI 正文字体统一使用 **Microsoft YaHei UI**（中英文同一
+  字体族），再回退微软雅黑 / Segoe UI / 苹方 / Noto Sans SC；避免
+  11-13px 小字中西文混排时反复切字体导致笔画发虚。
 - 展示字体仅用于品牌与标题，不强制套用到按钮、列表、设置说明等正文。
 - cfg 内容区（表格 / diff / 文本编辑器）一律维持 monospace。
 
@@ -82,6 +82,8 @@ diff 语义色（`DiffColors` ThemeExtension，20%~25% 透明叠加）：
 - 切换入口：自绘标题栏 Lucide sun/moon 按钮（`ThemeModeScope` 注入）。
 - 无边框窗口：`setAsFrameless()` + `WindowOptions(titleBarStyle: hidden)`
   兜底；根容器 1px 酸绿描边保证窗口边界在桌面上可见。
+- 无边框窗口显式保持 `setResizable(true)`，并通过 6px 透明的
+  四边 / 四角命中区支持拖拽缩放；最大化与全屏时自动禁用。
 - 自绘标题栏（高 44）：斜切 Logo + 品牌名 + 拖拽区（拖动 + 双击最大化）
   + 业务按钮 + 主题切换 + 最小化/最大化/关闭；关闭必须经退出保护
   （ExitGuard 三选流程），禁止无提示丢数据退出。

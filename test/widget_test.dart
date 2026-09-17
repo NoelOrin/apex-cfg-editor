@@ -6,6 +6,7 @@ import 'package:apex_cfg_editor/main.dart';
 import 'package:apex_cfg_editor/ui/editor_screen.dart';
 import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
 import 'package:apex_cfg_editor/ui/locale_preference.dart';
+import 'package:apex_cfg_editor/ui/widgets/window_resize_frame.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -94,6 +95,7 @@ void main() {
     await _pumpApp(tester, '${tmp.path}/settings.json');
     await tester.pump();
 
+    expect(find.byType(WindowResizeFrame), findsOneWidget);
     // 无边框窗口无系统投影：根容器必须有 1px 酸绿描边（当前主题主色）。
     final frame = find.ancestor(
       of: find.byType(EditorScreen),

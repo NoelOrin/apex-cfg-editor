@@ -288,10 +288,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get preferredOpenKind => 'Preferred file';
 
   @override
-  String get preferredVideoconfig => 'videoconfig.txt';
+  String get preferredSettings => 'settings.cfg (controls)';
 
   @override
-  String get preferredAutoexec => 'autoexec.cfg';
+  String get preferredVideoconfig => 'videoconfig.txt (graphics)';
+
+  @override
+  String get preferredAutoexec => 'autoexec.cfg (startup commands)';
+
+  @override
+  String get filePurposeVideoconfig => 'Graphics';
+
+  @override
+  String get filePurposeSettings => 'Controls';
+
+  @override
+  String get filePurposeAutoexec => 'Startup commands';
 
   @override
   String get reopenLastFile => 'Reopen the last file';

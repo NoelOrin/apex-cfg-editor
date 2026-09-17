@@ -43,8 +43,7 @@ void main() {
     String? autoexecSubdir,
     bool autoexecFile = false,
   }) {
-    final dir = Directory('${tmp.path}/$name')
-      ..createSync(recursive: true);
+    final dir = Directory('${tmp.path}/$name')..createSync(recursive: true);
     if (autoexecSubdir != null) {
       final cfg = Directory('${dir.path}/$autoexecSubdir')
         ..createSync(recursive: true);
@@ -55,218 +54,46 @@ void main() {
     return dir.path;
   }
 
-  group('document roots (videoconfig 候选)', () {
-    test('Saved Games is preferred over Documents when both exist', () {
-      final savedGames = '${tmp.path}/Saved Games';
-      final documents = '${tmp.path}/Documents';
-      File('$savedGames/Respawn/Apex/local/videoconfig.txt')
-          .createSync(recursive: true);
-      File('$documents/Respawn/Apex/local/videoconfig.txt')
-          .createSync(recursive: true);
-      final r = InstallLocator(
-        registry: FakeRegistry(),
-        drives: FakeDrives([]),
-        env: {'USERPROFILE': tmp.path},
-      ).locate();
-      expect(r, hasLength(2));
-      expect(r.first.videoconfigPath,
-          samePath('$savedGames/Respawn/Apex/local/videoconfig.txt'));
-    });
-
-    test('finds videoconfig under USERPROFILE/Documents', () {
-      final doc = '${tmp.path}/Documents';
-      File('$doc/Respawn/Apex/local/videoconfig.txt')
-          .createSync(recursive: true);
+  group('Saved Games config roots', () {
+    test('finds settings.cfg and videoconfig.txt in the same local dir', () {
+      final root = '${tmp.path}/Saved Games/Respawn/Apex/local';
+      File('$root/settings.cfg').createSync(recursive: true);
+      File('$root/videoconfig.txt').createSync(recursive: true);
       final r = InstallLocator(
         registry: FakeRegistry(),
         drives: FakeDrives([]),
         env: {'USERPROFILE': tmp.path},
       ).locate();
       expect(r, hasLength(1));
-      expect(r.first.videoconfigPath,
-          samePath('$doc/Respawn/Apex/local/videoconfig.txt'));
-      expect(r.first.source, InstallSource.videoconfigDoc);
+      expect(r.first.settingsPath, samePath('$root/settings.cfg'));
+      expect(r.first.videoconfigPath, samePath('$root/videoconfig.txt'));
     });
 
-    test('OneDrive env variants: Documents and 文档, all three variables', () {
-      // %OneDrive% 指向 OneDrive 根，其下 Documents / 文档 才是文档库。
-      for (final leaf in ['Documents', '文档']) {
-        final doc = '${tmp.path}/OneDrive/$leaf';
-        File('$doc/Respawn/Apex/local/videoconfig.txt')
-            .createSync(recursive: true);
-        final r = InstallLocator(
-          registry: FakeRegistry(),
-          drives: FakeDrives([]),
-          env: {'OneDrive': '${tmp.path}/OneDrive'},
-        ).locate();
-        expect(r.map((i) => _norm(i.videoconfigPath)),
-            contains(_norm('$doc/Respawn/Apex/local/videoconfig.txt')));
-      }
-      for (final varName in ['OneDriveCommercial', 'OneDriveConsumer']) {
-        final doc = '${tmp.path}/$varName/Documents';
-        File('$doc/Respawn/Apex/local/videoconfig.txt')
-            .createSync(recursive: true);
-        final r = InstallLocator(
-          registry: FakeRegistry(),
-          drives: FakeDrives([]),
-          env: {varName: '${tmp.path}/$varName'},
-        ).locate();
-        expect(r.map((i) => _norm(i.videoconfigPath)),
-            contains(_norm('$doc/Respawn/Apex/local/videoconfig.txt')));
-      }
-    });
-
-    test('no videoconfig file → no document entry', () {
-      Directory('${tmp.path}/Documents/Respawn/Apex/local')
-          .createSync(recursive: true);
+    test('settings.cfg alone is enough for a config candidate', () {
+      final root = '${tmp.path}/Saved Games/Respawn/Apex/local';
+      File('$root/settings.cfg').createSync(recursive: true);
       final r = InstallLocator(
         registry: FakeRegistry(),
         drives: FakeDrives([]),
         env: {'USERPROFILE': tmp.path},
+      ).locate();
+      expect(r, hasLength(1));
+      expect(r.first.settingsPath, samePath('$root/settings.cfg'));
+    });
+
+    test('Documents and OneDrive paths are ignored', () {
+      File(
+        '${tmp.path}/Documents/Respawn/Apex/local/videoconfig.txt',
+      ).createSync(recursive: true);
+      File(
+        '${tmp.path}/OneDrive/Documents/Respawn/Apex/local/settings.cfg',
+      ).createSync(recursive: true);
+      final r = InstallLocator(
+        registry: FakeRegistry(),
+        drives: FakeDrives([]),
+        env: {'USERPROFILE': tmp.path, 'OneDrive': '${tmp.path}/OneDrive'},
       ).locate();
       expect(r, isEmpty);
-    });
-  });
-
-  group('steam roots (registry + libraryfolders.vdf)', () {
-    test('HKCU SteamPath → vdf → Apex install with existing autoexec dir',
-        () {
-      final apex = makeApexInstall(
-          name: 'Steam/steamapps/common/Apex Legends',
-          autoexecSubdir: 'global/cfg',
-          autoexecFile: true);
-      final steamRoot = '${tmp.path}/Steam';
-      Directory('$steamRoot/steamapps').createSync(recursive: true);
-      File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync('''
-"libraryfolders"
-{
-  "0" { "path" "$steamRoot" }
-}
-''');
-      final r = InstallLocator(
-        registry: FakeRegistry(values: {
-          'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-        }),
-        drives: FakeDrives([]),
-        env: const {},
-      ).locate();
-      expect(r, hasLength(1));
-      expect(_norm(r.first.installDir), _norm(apex));
-      expect(r.first.source, InstallSource.steam);
-      expect(r.first.autoexecDir, samePath('$apex/global/cfg'));
-      expect(r.first.autoexecPath, samePath('$apex/global/cfg/autoexec.cfg'));
-    });
-
-    test('HKLM WOW6432Node InstallPath used when HKCU missing', () {
-      final apex = makeApexInstall(
-          name: 'Steam2/steamapps/common/Apex Legends');
-      final steamRoot = '${tmp.path}/Steam2';
-      Directory('$steamRoot/steamapps').createSync(recursive: true);
-      File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-          '"libraryfolders"\n{\n  "0" { "path" "$steamRoot" }\n}\n');
-      final r = InstallLocator(
-        registry: FakeRegistry(values: {
-          'machine|SOFTWARE\\WOW6432Node\\Valve\\Steam|InstallPath':
-              steamRoot,
-        }),
-        drives: FakeDrives([]),
-        env: const {},
-      ).locate();
-      expect(r, hasLength(1));
-      expect(_norm(r.first.installDir), _norm(apex));
-      expect(r.first.autoexecPath, isNull);
-    });
-
-    test('vdf backslash escapes unescaped; secondary library probed', () {
-      // vdf 的 "path" 是库根（不是游戏目录）；游戏目录由
-      // <库根>/steamapps/common/Apex Legends 推导。
-      final libRoot = '${tmp.path}/SteamLib';
-      final apex = makeApexInstall(
-          name: 'SteamLib/steamapps/common/Apex Legends',
-          autoexecSubdir: 'r2/cfg',
-          autoexecFile: true);
-      final steamRoot = '${tmp.path}/Steam3';
-      Directory('$steamRoot/steamapps').createSync(recursive: true);
-      // vdf 中 Windows 路径的反斜杠转义：/ → \\
-      final winPath = libRoot.replaceAll('/', r'\\');
-      File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
-          '"libraryfolders"\n{\n  "0" { "path" "$winPath" }\n}\n');
-      final r = InstallLocator(
-        registry: FakeRegistry(values: {
-          'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-        }),
-        drives: FakeDrives([]),
-        env: const {},
-      ).locate();
-      expect(r, hasLength(1));
-      expect(r.first.autoexecDir, samePath('$apex/r2/cfg'));
-    });
-
-    test('corrupt vdf skipped without throwing', () {
-      final steamRoot = '${tmp.path}/Steam4';
-      Directory('$steamRoot/steamapps').createSync(recursive: true);
-      File('$steamRoot/steamapps/libraryfolders.vdf')
-          .writeAsBytesSync([0xFF, 0xFE, 0x80, 0x00]);
-      final r = InstallLocator(
-        registry: FakeRegistry(values: {
-          'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-        }),
-        drives: FakeDrives([]),
-        env: const {},
-      ).locate();
-      expect(r, isEmpty);
-    });
-
-    test('cfg dir exists without autoexec.cfg → dir recorded, path null '
-        '(first candidate creatable)', () {
-      makeApexInstall(
-          name: 'Steam5/steamapps/common/Apex Legends',
-          autoexecSubdir: 'cfg');
-      final steamRoot = '${tmp.path}/Steam5-roots';
-      Directory('$steamRoot/steamapps').createSync(recursive: true);
-      File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync('''
-"libraryfolders"
-{
-  "0" { "path" "${tmp.path}/Steam5" }
-}
-''');
-      final r = InstallLocator(
-        registry: FakeRegistry(values: {
-          'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-        }),
-        drives: FakeDrives([]),
-        env: const {},
-      ).locate();
-      expect(r, hasLength(1));
-      expect(r.first.autoexecDir,
-          samePath('${tmp.path}/Steam5/steamapps/common/Apex Legends/cfg'));
-      expect(r.first.autoexecPath, isNull);
-    });
-
-    test('no cfg subdir at all → first candidate (cfg) as creatable position',
-        () {
-      final apex = makeApexInstall(
-          name: 'Steam6/steamapps/common/Apex Legends');
-      final steamRoot = '${tmp.path}/Steam6-roots';
-      Directory('$steamRoot/steamapps').createSync(recursive: true);
-      File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync('''
-"libraryfolders"
-{
-  "0" { "path" "$steamRoot" }
-  "1" { "path" "${tmp.path}/Steam6" }
-}
-''');
-      final r = InstallLocator(
-        registry: FakeRegistry(values: {
-          'user|Software\\Valve\\Steam|SteamPath': steamRoot,
-        }),
-        drives: FakeDrives([]),
-        env: const {},
-      ).locate();
-      expect(r, hasLength(1));
-      expect(_norm(r.first.installDir), _norm(apex));
-      expect(r.first.autoexecDir, samePath('$apex/cfg'));
-      expect(Directory('$apex/cfg').existsSync(), isFalse); // 尚未创建
     });
   });
 
@@ -274,12 +101,15 @@ void main() {
     test('uninstall entry with Apex in DisplayName (case-insensitive) → '
         'InstallLocation becomes install', () {
       final apex = makeApexInstall(
-          name: 'EA Games/Apex Legends', autoexecSubdir: 'cfg');
+        name: 'EA Games/Apex Legends',
+        autoexecSubdir: 'cfg',
+      );
       final r = InstallLocator(
         registry: FakeRegistry(
           keys: {
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall':
-                ['Apex Legends™'],
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall': [
+              'Apex Legends™',
+            ],
             'machine|SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall':
                 [],
             'user|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall': [],
@@ -304,8 +134,9 @@ void main() {
       final r = InstallLocator(
         registry: FakeRegistry(
           keys: {
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall':
-                ['Some Game'],
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall': [
+              'Some Game',
+            ],
           },
           values: {
             'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Some Game|DisplayName':
@@ -320,33 +151,43 @@ void main() {
       expect(r, isEmpty);
     });
 
-    test('drive-letter scan yields EA Games / Origin Games / plain candidates',
-        () {
-      final probe = InstallLocator(
-        registry: FakeRegistry(),
-        drives: FakeDrives(['C', 'D']),
-        env: const {},
-      );
-      final roots = probe.eaCommonRoots();
-      expect(roots, containsAll([
-        'C:/Program Files/EA Games/Apex Legends',
-        'C:/Program Files/Origin Games/Apex Legends',
-        'D:/EA Games/Apex Legends',
-        'D:/Origin Games/Apex Legends',
-        'D:/Apex Legends',
-      ]));
-    });
+    test(
+      'drive-letter scan yields EA Games / Origin Games / plain candidates',
+      () {
+        final probe = InstallLocator(
+          registry: FakeRegistry(),
+          drives: FakeDrives(['C', 'D']),
+          env: const {},
+        );
+        final roots = probe.eaCommonRoots();
+        expect(
+          roots,
+          containsAll([
+            'C:/Program Files/EA Games/Apex Legends',
+            'C:/Program Files/Origin Games/Apex Legends',
+            'D:/EA Games/Apex Legends',
+            'D:/Origin Games/Apex Legends',
+            'D:/Apex Legends',
+          ]),
+        );
+      },
+    );
   });
 
   group('installsFromInstallDirs (纯逻辑：候选根 → 去重列表)', () {
     test('existing dir → install with autoexec candidates; dedup on '
         'normalized path (case + slash-insensitive)', () {
       final apex = makeApexInstall(autoexecSubdir: 'global/cfg');
-      final r = InstallLocator(
-        registry: FakeRegistry(),
-        drives: FakeDrives([]),
-        env: const {},
-      ).installsFromInstallDirs([apex, apex.toUpperCase(), apex.replaceAll('/', '\\')]);
+      final r =
+          InstallLocator(
+            registry: FakeRegistry(),
+            drives: FakeDrives([]),
+            env: const {},
+          ).installsFromInstallDirs([
+            apex,
+            apex.toUpperCase(),
+            apex.replaceAll('/', '\\'),
+          ]);
       expect(r, hasLength(1));
       expect(r.first.autoexecDir, samePath('$apex/global/cfg'));
     });
@@ -364,9 +205,10 @@ void main() {
   group('customInstallDir (用户记忆路径)', () {
     test('detection empty → custom dir candidates included', () {
       final apex = makeApexInstall(
-          name: 'Custom/steamapps/common/Apex Legends',
-          autoexecSubdir: 'global/cfg',
-          autoexecFile: true);
+        name: 'Custom/steamapps/common/Apex Legends',
+        autoexecSubdir: 'global/cfg',
+        autoexecFile: true,
+      );
       final r = InstallLocator(
         registry: FakeRegistry(),
         drives: FakeDrives([]),
@@ -380,7 +222,10 @@ void main() {
 
     test('custom dir itself used when it is the game root', () {
       final apex = makeApexInstall(
-          name: 'GameRoot', autoexecSubdir: 'cfg', autoexecFile: true);
+        name: 'GameRoot',
+        autoexecSubdir: 'cfg',
+        autoexecFile: true,
+      );
       final r = InstallLocator(
         registry: FakeRegistry(),
         drives: FakeDrives([]),
@@ -392,9 +237,10 @@ void main() {
     });
 
     test('detection non-empty → custom dir NOT added', () {
-      final doc = '${tmp.path}/Documents';
-      File('$doc/Respawn/Apex/local/videoconfig.txt')
-          .createSync(recursive: true);
+      final doc = '${tmp.path}/Saved Games';
+      File(
+        '$doc/Respawn/Apex/local/videoconfig.txt',
+      ).createSync(recursive: true);
       makeApexInstall(name: 'Elsewhere');
       final r = InstallLocator(
         registry: FakeRegistry(),
@@ -416,29 +262,18 @@ void main() {
   });
 
   group('ordering', () {
-    test('videoconfig docs → steam → ea', () {
-      final doc = '${tmp.path}/Documents';
-      File('$doc/Respawn/Apex/local/videoconfig.txt')
-          .createSync(recursive: true);
-      final steamApex = makeApexInstall(
-          name: 'S/steamapps/common/Apex Legends');
-      final steamRoot = '${tmp.path}/SR';
-      Directory('$steamRoot/steamapps').createSync(recursive: true);
-      File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync('''
-"libraryfolders"
-{
-  "0" { "path" "${tmp.path}/S" }
-}
-''');
+    test('Saved Games config → EA install only', () {
+      final doc = '${tmp.path}/Saved Games';
+      File('$doc/Respawn/Apex/local/settings.cfg').createSync(recursive: true);
       final eaApex = makeApexInstall(name: 'EA/Origin Games/Apex Legends');
       final r = InstallLocator(
         registry: FakeRegistry(
           keys: {
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall':
-                ['EALauncher'],
+            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall': [
+              'EALauncher',
+            ],
           },
           values: {
-            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
             'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EALauncher|DisplayName':
                 'Apex Legends',
             'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EALauncher|InstallLocation':
@@ -448,9 +283,11 @@ void main() {
         drives: FakeDrives([]),
         env: {'USERPROFILE': tmp.path},
       ).locate();
-      expect(r.map((i) => i.source).toList(),
-          [InstallSource.videoconfigDoc, InstallSource.steam, InstallSource.eaApp]);
-      expect(_norm(r[1].installDir), _norm(steamApex));
+      expect(r.map((i) => i.source).toList(), [
+        InstallSource.videoconfigDoc,
+        InstallSource.eaApp,
+      ]);
+      expect(_norm(r[1].installDir), _norm(eaApex));
     });
   });
 
@@ -458,8 +295,10 @@ void main() {
     test('cfg / global/cfg / r2/cfg 父目录 → 剥到安装根', () {
       const f = apexInstallDirFromOpenedDir;
       expect(_norm(f('${tmp.path}/Apex/cfg')!), _norm('${tmp.path}/Apex'));
-      expect(_norm(f('${tmp.path}/Apex/global/cfg')!),
-          _norm('${tmp.path}/Apex'));
+      expect(
+        _norm(f('${tmp.path}/Apex/global/cfg')!),
+        _norm('${tmp.path}/Apex'),
+      );
       expect(_norm(f('${tmp.path}/Apex/r2/cfg')!), _norm('${tmp.path}/Apex'));
     });
 
@@ -471,17 +310,18 @@ void main() {
       expect(_norm(f(apex)!), _norm(apex));
     });
 
-    test('videoconfig 文档目录 → null（Documents 根不是安装目录）', () {
+    test('Saved Games 配置目录 → null（配置根不是安装目录）', () {
       expect(
-          apexInstallDirFromOpenedDir(
-              '${tmp.path}/Documents/Respawn/Apex/local'),
-          isNull);
+        apexInstallDirFromOpenedDir(
+          '${tmp.path}/Saved Games/Respawn/Apex/local',
+        ),
+        isNull,
+      );
     });
 
     test('随机目录 → null；反斜杠输入归一化', () {
       expect(apexInstallDirFromOpenedDir('${tmp.path}/Downloads'), isNull);
-      expect(
-          apexInstallDirFromOpenedDir(r'C:\Game\Apex\cfg'), 'C:/Game/Apex');
+      expect(apexInstallDirFromOpenedDir(r'C:\Game\Apex\cfg'), 'C:/Game/Apex');
     });
   });
 }
