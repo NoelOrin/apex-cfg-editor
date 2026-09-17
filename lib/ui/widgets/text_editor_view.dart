@@ -178,7 +178,11 @@ class _TextEditorViewState extends State<TextEditorView> {
           child: TextBox(
             key: const ValueKey('findField'),
             controller: _findCtrl,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+            style: const TextStyle(
+              fontFamily: kFontMono,
+              fontFamilyFallback: kFontMonoFallbacks,
+              fontSize: 13,
+            ),
             placeholder: l.find,
             onSubmitted: (_) => _findNext(),
           ),
@@ -202,7 +206,11 @@ class _TextEditorViewState extends State<TextEditorView> {
           child: TextBox(
             key: const ValueKey('replaceField'),
             controller: _replaceCtrl,
-            style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+            style: const TextStyle(
+              fontFamily: kFontMono,
+              fontFamilyFallback: kFontMonoFallbacks,
+              fontSize: 13,
+            ),
             placeholder: l.replace,
           ),
         ),
@@ -265,7 +273,8 @@ class _TextEditorViewState extends State<TextEditorView> {
                   controller: _ctrl,
                   onChanged: (_) => _onChanged(),
                   textStyle: const TextStyle(
-                    fontFamily: 'monospace',
+                    fontFamily: kFontMono,
+                    fontFamilyFallback: kFontMonoFallbacks,
                     fontSize: 13,
                   ),
                 ),

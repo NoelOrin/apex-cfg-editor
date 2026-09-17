@@ -7,7 +7,12 @@ import '../../state/diff_bloc.dart';
 import '../theme/acid_theme.dart';
 import '../theme/diff_colors.dart';
 
-const _mono = TextStyle(fontFamily: 'monospace', fontSize: 12, height: 1.3);
+const _mono = TextStyle(
+  fontFamily: kFontMono,
+  fontFamilyFallback: kFontMonoFallbacks,
+  fontSize: 12,
+  height: 1.3,
+);
 
 /// 栏最小宽度：窗口过窄时不再压缩，改为横向滚动。
 const _minColumnWidth = 320.0;

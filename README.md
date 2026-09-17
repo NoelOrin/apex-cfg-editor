@@ -18,8 +18,8 @@
 - **自动探测安装**（v2）：合并三类来源自动定位 Apex——Steam（注册表
   SteamPath / InstallPath + 各库 `libraryfolders.vdf`）、EA App（卸载表
   DisplayName 扫描 + `EA Games` / `Origin Games` 常见根与 C-F 盘符探测）、
-  文档根（`USERPROFILE\Documents` 与 OneDrive 重定向的 `Documents` /
-  `文档`）下的 `videoconfig.txt`；探测全空时回退用户记忆的
+  配置根（优先 `USERPROFILE\Saved Games`，并兼容 `Documents` 与 OneDrive
+  重定向的 `Documents` / `文档`）下的 `videoconfig.txt`；探测全空时回退用户记忆的
   `customInstallDir`（指定过一次即记住）。
 - **autoexec.cfg 缺失也有入口**：找到安装但 `autoexec.cfg` 不存在时提供
   「创建 autoexec.cfg」，一键写入全注释的中英双语模板（帧数优化示例行，
@@ -46,10 +46,11 @@ Artifacts 里上传未打 tag 的开发产物。
 
 启动时按以下顺序探测（`lib/core/paths/install_locator.dart`）：
 
-1. **文档根 videoconfig.txt**：`%USERPROFILE%\Documents`、
-   `%OneDrive%\Documents`、`%OneDrive%\文档`（`OneDrive` /
-   `OneDriveCommercial` / `OneDriveConsumer` 三个变量都查）下的
-   `Respawn\Apex\local\videoconfig.txt`，命中即自动打开。
+1. **配置根 videoconfig.txt**：
+   优先读取 `%USERPROFILE%\Saved Games\Respawn\Apex\local\videoconfig.txt`，
+   再兼容 `%USERPROFILE%\Documents`、`%OneDrive%\Documents` 与
+   `%OneDrive%\文档`（`OneDrive` / `OneDriveCommercial` /
+   `OneDriveConsumer` 三个变量都查）下的旧位置，命中即自动打开。
 2. **Steam**：注册表 `HKCU\Software\Valve\Steam\SteamPath` 与
    `HKLM\SOFTWARE\WOW6432Node\Valve\Steam\InstallPath` → 各库
    `steamapps\libraryfolders.vdf` 的全部 `"path"` →

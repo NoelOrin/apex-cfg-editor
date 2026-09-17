@@ -34,9 +34,19 @@ void main() {
     test('display font is ChakraPetch with Chinese fallback chain', () {
       // ThemeData 不再直接暴露 fontFamily；断言走 textTheme 中的正文样式。
       final body = theme.textTheme.bodyMedium!;
-      expect(body.fontFamily, 'ChakraPetch');
+      expect(body.fontFamily, kFontUi);
       expect(body.fontFamilyFallback, contains('PingFang SC'));
       expect(body.fontFamilyFallback, contains('Microsoft YaHei'));
+    });
+
+    test('Fluent body uses UI font while headings keep display font', () {
+      final fluentTheme = buildFluentTheme(Brightness.dark);
+      expect(fluentTheme.typography.body!.fontFamily, kFontUi);
+      expect(
+        fluentTheme.typography.body!.fontFamilyFallback,
+        contains('Microsoft YaHei UI'),
+      );
+      expect(fluentTheme.typography.title!.fontFamily, kFontDisplay);
     });
   });
 

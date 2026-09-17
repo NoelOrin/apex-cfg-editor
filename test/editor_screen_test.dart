@@ -237,8 +237,12 @@ void main() {
       ),
     );
 
-    expect(find.byTooltip('Reselect file'), findsOneWidget);
-    await t.tap(find.byTooltip('Reselect file'));
+    expect(find.byKey(const ValueKey('titlebar.openFile')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('workspace.reselectFile')),
+      findsOneWidget,
+    );
+    await t.tap(find.byKey(const ValueKey('workspace.reselectFile')));
     await t.pumpAndSettle();
 
     verify(
@@ -294,7 +298,7 @@ void main() {
     );
     await t.pumpAndSettle();
 
-    await t.tap(find.byTooltip('Open file'));
+    await t.tap(find.byKey(const ValueKey('titlebar.openFile')));
     await t.pump(const Duration(milliseconds: 300));
     await t.pump();
 

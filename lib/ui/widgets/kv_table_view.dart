@@ -58,7 +58,8 @@ class KvTableView extends StatelessWidget {
                   title: Text(
                     line.raw,
                     style: FluentTheme.of(context).typography.caption?.copyWith(
-                      fontFamily: 'monospace',
+                      fontFamily: kFontMono,
+                      fontFamilyFallback: kFontMonoFallbacks,
                       color: FluentTheme.of(
                         context,
                       ).resources.textFillColorSecondary,
@@ -104,7 +105,10 @@ class KvTableView extends StatelessWidget {
                 onPressed: () => editBloc.add(SelectionChanged(i)),
                 title: Text(
                   key,
-                  style: const TextStyle(fontFamily: 'monospace'),
+                  style: const TextStyle(
+                    fontFamily: kFontMono,
+                    fontFamilyFallback: kFontMonoFallbacks,
+                  ),
                 ),
                 subtitle: entry == null || entry.description.trim().isEmpty
                     ? null

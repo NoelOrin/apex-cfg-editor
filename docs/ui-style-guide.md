@@ -61,8 +61,10 @@ diff 语义色（`DiffColors` ThemeExtension，20%~25% 透明叠加）：
   Bold Italic 四个字重，family 名 `ChakraPetch`。
 - 适用范围：标题、顶栏品牌名、大数字；全大写 + 斜体 + 紧字距
   （品牌名 `APEX CFG EDITOR` 为基准样式）。
-- 中文经 `fontFamilyFallback` 回退系统字体（苹方 / 雅黑 / Noto Sans SC），
-  不影响中文正文渲染。
+- UI 正文字体：Windows 使用 **Segoe UI Variable Text**，中文经
+  `fontFamilyFallback` 回退微软雅黑 / 苹方 / Noto Sans SC；避免 11-13px
+  小字使用展示字体导致笔画发虚。
+- 展示字体仅用于品牌与标题，不强制套用到按钮、列表、设置说明等正文。
 - cfg 内容区（表格 / diff / 文本编辑器）一律维持 monospace。
 
 ### 质感细节（克制，不堆砌）

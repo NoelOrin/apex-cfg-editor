@@ -10,20 +10,40 @@ import 'diff_colors.dart';
 /// 不影响中文正文渲染。
 const String kFontDisplay = 'ChakraPetch';
 
-/// cfg 内容区维持 monospace（表格 / diff / 文本编辑器已按需指定）。
-const String kFontMono = 'monospace';
+/// UI 字体：Windows 原生 Segoe UI Variable。小字号不再强制使用展示字体，
+/// 避免 Chakra Petch 在 11-13px 下笔画发虚；中文经回退链使用微软雅黑。
+const String kFontUi = 'Segoe UI Variable Text';
 
-/// 中文字体回退链：Per-glyph 回退，拉丁字形命中 ChakraPetch，
-/// 中文落到系统字体（macOS 苹方 / Windows 雅黑 / Linux Noto），最后 monospace。
+/// cfg 内容区维持 monospace（表格 / diff / 文本编辑器已按需指定）。
+const String kFontMono = 'Consolas';
+
+/// 通用字体回退链：拉丁优先 Segoe UI Variable，中文落到微软雅黑 /
+/// 苹方 / Noto Sans SC，避免缺字时由渲染器选择不可预测的字体。
 const List<String> kFontFallbacks = [
+  'Segoe UI Variable Text',
+  'Segoe UI',
   'PingFang SC',
   'Microsoft YaHei UI',
   'Microsoft YaHei',
   'Noto Sans SC',
-  'Menlo',
+  'sans-serif',
+];
+
+/// 等宽字体回退链：Windows 优先 Consolas，避免 generic monospace 映射成
+/// 较旧的点阵/衬线字体；菜单与代码区共享。
+const List<String> kFontMonoFallbacks = [
+  'Cascadia Mono',
   'Consolas',
+  'SF Mono',
+  'Menlo',
   'monospace',
 ];
+
+TextStyle? _withFont(
+  TextStyle? style, {
+  required String family,
+  required List<String> fallbacks,
+}) => style?.copyWith(fontFamily: family, fontFamilyFallback: fallbacks);
 
 /// 酸性风格色板（ThemeExtension）：全应用颜色集中于此与 [DiffColors]，
 /// 组件一律经 `Theme.of(context).extension<AcidPalette>()` 取色，
@@ -176,7 +196,49 @@ fluent.FluentThemeData buildFluentTheme(
   final typography = fluent.Typography.fromBrightness(
     brightness: brightness,
     color: palette.text,
-  ).apply(fontFamily: kFontDisplay);
+  );
+  final uiTypography = fluent.Typography.raw(
+    display: _withFont(
+      typography.display,
+      family: kFontDisplay,
+      fallbacks: kFontFallbacks,
+    ),
+    titleLarge: _withFont(
+      typography.titleLarge,
+      family: kFontDisplay,
+      fallbacks: kFontFallbacks,
+    ),
+    title: _withFont(
+      typography.title,
+      family: kFontDisplay,
+      fallbacks: kFontFallbacks,
+    ),
+    subtitle: _withFont(
+      typography.subtitle,
+      family: kFontDisplay,
+      fallbacks: kFontFallbacks,
+    ),
+    bodyLarge: _withFont(
+      typography.bodyLarge,
+      family: kFontUi,
+      fallbacks: kFontFallbacks,
+    ),
+    bodyStrong: _withFont(
+      typography.bodyStrong,
+      family: kFontUi,
+      fallbacks: kFontFallbacks,
+    ),
+    body: _withFont(
+      typography.body,
+      family: kFontUi,
+      fallbacks: kFontFallbacks,
+    ),
+    caption: _withFont(
+      typography.caption,
+      family: kFontUi,
+      fallbacks: kFontFallbacks,
+    ),
+  );
   final extensions = <ThemeExtension<dynamic>>[
     palette,
     brightness == Brightness.dark ? DiffColors.dark : DiffColors.light,
@@ -187,7 +249,7 @@ fluent.FluentThemeData buildFluentTheme(
   return fluent.FluentThemeData(
     brightness: brightness,
     accentColor: accent,
-    typography: typography,
+    typography: uiTypography,
     scaffoldBackgroundColor: palette.bg,
     micaBackgroundColor: palette.bg,
     acrylicBackgroundColor: palette.panel,
@@ -284,7 +346,7 @@ ThemeData buildAcidTheme(Brightness brightness) {
     brightness: brightness,
     colorScheme: scheme,
     scaffoldBackgroundColor: p.bg,
-    fontFamily: kFontDisplay,
+    fontFamily: kFontUi,
     fontFamilyFallback: kFontFallbacks,
     splashFactory: NoSplash.splashFactory,
     // 酸性风格：选中行酸绿薄涂，焦点不再额外发光。

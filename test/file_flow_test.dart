@@ -347,7 +347,7 @@ void main() {
         expect(file.state.warning, isNull);
         expect(find.text('Open a cfg file to start editing'), findsOneWidget);
 
-        await t.tap(find.byTooltip('Open file'));
+        await t.tap(find.byKey(const ValueKey('titlebar.openFile')));
         await t.pumpAndSettle();
 
         expect(file.state.path, cfg.path);

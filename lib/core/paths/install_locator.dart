@@ -88,6 +88,9 @@ class InstallLocator {
       if (!roots.contains(r)) roots.add(r);
     }
 
+    // Apex 当前实际配置位置优先：%USERPROFILE%\Saved Games\Respawn\Apex\local。
+    // 保留 Documents / OneDrive 旧位置作为兼容候选。
+    add(env['USERPROFILE'], 'Saved Games');
     add(env['USERPROFILE'], 'Documents');
     for (final v in ['OneDrive', 'OneDriveCommercial', 'OneDriveConsumer']) {
       add(env[v], 'Documents');
@@ -270,17 +273,13 @@ class InstallLocator {
     // 命中即不回退到目录本身，避免库根与其内的游戏目录重复计入。
     if (installs.isEmpty && customInstallDir != null) {
       final custom = _norm(customInstallDir);
-      final nested = installsFromInstallDirs(
-        ['$custom/$_apexGameRelative'],
-        source: InstallSource.custom,
-      );
+      final nested = installsFromInstallDirs([
+        '$custom/$_apexGameRelative',
+      ], source: InstallSource.custom);
       installs.addAll(
         nested.isNotEmpty
             ? nested
-            : installsFromInstallDirs(
-                [custom],
-                source: InstallSource.custom,
-              ),
+            : installsFromInstallDirs([custom], source: InstallSource.custom),
       );
     }
     return installs;
@@ -312,9 +311,7 @@ String? apexInstallDirFromOpenedDir(String dirPath) {
     if (segments.length > suffix.length) {
       final tail = segments.sublist(segments.length - suffix.length);
       if (tail.join('/').toLowerCase() == cand) {
-        return segments
-            .sublist(0, segments.length - suffix.length)
-            .join('/');
+        return segments.sublist(0, segments.length - suffix.length).join('/');
       }
     }
   }

@@ -56,6 +56,23 @@ void main() {
   }
 
   group('document roots (videoconfig 候选)', () {
+    test('Saved Games is preferred over Documents when both exist', () {
+      final savedGames = '${tmp.path}/Saved Games';
+      final documents = '${tmp.path}/Documents';
+      File('$savedGames/Respawn/Apex/local/videoconfig.txt')
+          .createSync(recursive: true);
+      File('$documents/Respawn/Apex/local/videoconfig.txt')
+          .createSync(recursive: true);
+      final r = InstallLocator(
+        registry: FakeRegistry(),
+        drives: FakeDrives([]),
+        env: {'USERPROFILE': tmp.path},
+      ).locate();
+      expect(r, hasLength(2));
+      expect(r.first.videoconfigPath,
+          samePath('$savedGames/Respawn/Apex/local/videoconfig.txt'));
+    });
+
     test('finds videoconfig under USERPROFILE/Documents', () {
       final doc = '${tmp.path}/Documents';
       File('$doc/Respawn/Apex/local/videoconfig.txt')

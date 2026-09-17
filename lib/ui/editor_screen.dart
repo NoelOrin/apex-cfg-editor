@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
@@ -154,6 +155,15 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
   bool _textMode = false;
   bool _showSettings = false;
 
+  /// 原生关闭是否被拦截。仅在文档有未保存修改时开启，干净文档直接交给
+  /// Windows 处理，避免关窗事件再绕一轮 Dart/平台通道才退出。
+  bool _preventClose = true;
+  Future<void> _preventCloseSync = Future<void>.value();
+
+  /// 防止 close() 触发的 onWindowClose 再次进入退出流程。
+  bool _exiting = false;
+  StreamSubscription<EditState>? _dirtyGuardSub;
+
   late final UpdateService _updateService;
 
   _DetectPhase _phase = _DetectPhase.idle;
@@ -178,25 +188,58 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
 
   @override
   void dispose() {
+    _dirtyGuardSub?.cancel();
     windowManager.removeListener(this);
     super.dispose();
   }
 
   /// window_manager 在 macOS 开发期 / 测试环境可能没有原生窗口通道：
   /// 全部调用 try/catch 容错，失败时退出保护退化为 PopScope 守护。
-  Future<void> _setupWindowGuard() async {
-    try {
-      await windowManager.setPreventClose(true);
-    } catch (_) {
-      // 无窗口通道（测试 / 未初始化平台）：忽略，PopScope 仍生效。
-    }
+  void _setupWindowGuard() {
+    _preventClose = widget.editBloc.state.dirty;
+    _queuePreventClose(_preventClose);
+    _dirtyGuardSub = widget.editBloc.stream.listen((state) {
+      _syncPreventClose(state.dirty);
+    });
   }
 
   Future<void> _destroyWindow() async {
+    if (_exiting) return;
+    _exiting = true;
+    await _preventCloseSync;
+    if (_preventClose) {
+      _preventClose = false;
+      await _setPreventClose(false);
+    }
     try {
-      await windowManager.destroy();
+      // 先隐藏使窗口立刻从桌面消失；close() 走原生 WM_CLOSE，比
+      // destroy() 的 PostQuitMessage 更直接。close 失败再强制销毁。
+      await windowManager.hide();
+      await windowManager.close();
     } catch (_) {
-      // 测试环境无原生通道：忽略（退出决策逻辑已由 ExitGuard 覆盖测试）。
+      try {
+        await windowManager.destroy();
+      } catch (_) {
+        // 测试环境无原生窗口通道：忽略；退出决策由 ExitGuard 覆盖测试。
+      }
+    }
+  }
+
+  void _syncPreventClose(bool dirty) {
+    if (_preventClose == dirty) return;
+    _preventClose = dirty;
+    _queuePreventClose(dirty);
+  }
+
+  void _queuePreventClose(bool value) {
+    _preventCloseSync = _preventCloseSync.then((_) => _setPreventClose(value));
+  }
+
+  Future<void> _setPreventClose(bool value) async {
+    try {
+      await windowManager.setPreventClose(value);
+    } catch (_) {
+      // 无窗口通道（测试 / 未初始化平台）：PopScope 与 ExitGuard 仍生效。
     }
   }
 
@@ -211,7 +254,9 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
   void onWindowClose() async {
     // Windows 关窗（setPreventClose 拦截后的真实退出请求）。
     // confirmExit 内部完成三选决策与 destroy。
-    if (!mounted) return;
+    if (!mounted || _exiting) return;
+    // 干净文档已关闭原生拦截：本次 WM_CLOSE 可直接走系统默认销毁。
+    if (!widget.editBloc.state.dirty && !_preventClose) return;
     await _exitGuard.confirmExit();
   }
 
@@ -455,12 +500,29 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
 
   static Future<String?> _pickWithFilePicker(String? initialDirectory) async {
     // file_picker 12.x：单选走静态 FilePicker.pickFile。
-    final file = await FilePicker.pickFile(
-      type: FileType.custom,
-      allowedExtensions: const ['cfg', 'txt'],
-      initialDirectory: initialDirectory,
-    );
-    return file?.path;
+    Future<String?> pick(String? dir) async {
+      final file = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: const ['cfg', 'txt'],
+        initialDirectory: dir,
+      );
+      return file?.path;
+    }
+
+    final initial =
+        initialDirectory != null &&
+            initialDirectory.isNotEmpty &&
+            Directory(initialDirectory).existsSync()
+        ? initialDirectory
+        : null;
+    try {
+      return await pick(initial);
+    } catch (_) {
+      // 上次路径被移动或删除时，部分 Windows 文件选择器会直接失败；
+      // 去掉失效初始目录重试一次，保证「重新选择」始终可恢复。
+      if (initial == null) rethrow;
+      return pick(null);
+    }
   }
 
   /// 还原完成刷新。还原链路 RestoreRequested → restoreImpl →
@@ -550,12 +612,11 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
         builder: (fluentContext) {
           _fluentContext = fluentContext;
           return PopScope(
-            // 桌面端没有系统返回栈：批准退出 = 销毁窗口（原生关闭已被
-            // window_manager 拦截），因此 canPop 恒 false，统一走 ExitGuard
-            //（confirmExit 内部完成三选决策与 destroy）。
+            // 桌面端没有系统返回栈：canPop 恒 false，统一走 ExitGuard。
+            // 原生关闭仅在脏文档时拦截；干净文档由 Windows 直接销毁。
             canPop: false,
             onPopInvokedWithResult: (didPop, _) async {
-              if (didPop) return;
+              if (didPop || _exiting) return;
               await _exitGuard.confirmExit();
             },
             child: Container(
@@ -590,6 +651,8 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                                   ? l.openFile
                                   : l.reselectFile,
                               child: IconButton(
+                                key: const ValueKey('titlebar.openFile'),
+                                iconButtonMode: IconButtonMode.small,
                                 icon: Icon(
                                   s.path == null
                                       ? LucideIcons.folderOpen
@@ -683,6 +746,10 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                                           _WorkbenchHeader(
                                             editBloc: widget.editBloc,
                                             textMode: _textMode,
+                                            hasFile:
+                                                widget.fileBloc.state.path !=
+                                                null,
+                                            onReselectFile: _openFileManually,
                                             onModeChanged: (next) => setState(
                                               () => _textMode = next,
                                             ),
@@ -778,11 +845,15 @@ class _ToolbarDivider extends StatelessWidget {
 class _WorkbenchHeader extends StatelessWidget {
   final EditBloc editBloc;
   final bool textMode;
+  final bool hasFile;
+  final VoidCallback onReselectFile;
   final ValueChanged<bool> onModeChanged;
 
   const _WorkbenchHeader({
     required this.editBloc,
     required this.textMode,
+    required this.hasFile,
+    required this.onReselectFile,
     required this.onModeChanged,
   });
 
@@ -810,11 +881,29 @@ class _WorkbenchHeader extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontFamily: kFontDisplay,
+                  fontFamily: kFontUi,
                   fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.7,
+                  fontWeight: FontWeight.w600,
                   color: palette.text,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Tooltip(
+              message: hasFile ? l.reselectFile : l.openFile,
+              child: Button(
+                key: const ValueKey('workspace.reselectFile'),
+                onPressed: onReselectFile,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      hasFile ? LucideIcons.fileInput : LucideIcons.folderOpen,
+                      size: 15,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(hasFile ? l.reselectFile : l.openFile),
+                  ],
                 ),
               ),
             ),
