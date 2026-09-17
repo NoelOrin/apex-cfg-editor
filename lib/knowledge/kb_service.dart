@@ -2,8 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/services.dart';
 
-/// 知识库覆盖的配置文件域：videoconfig.txt 与 autoexec.cfg。
-enum KbFile { videoconfig, autoexec }
+/// 知识库覆盖的配置文件域：videoconfig.txt、settings.cfg 与 autoexec.cfg。
+enum KbFile { videoconfig, settings, autoexec }
 
 /// 知识库条目的单个可选值。
 class KbValue {
@@ -40,34 +40,45 @@ class KbEntry {
 
 class KbService {
   /// locale → 键 → 条目 JSON。键为规范化形态（去引号、trim、小写）。
-  /// 测试注入；生产用 [fromAssets]。
+  /// 测试注入；生产用 [fromAssets]。保留此字段兼容旧测试与跨域回退。
   final Map<String, Map<String, dynamic>> data;
+
+  /// locale → 文件域 → 键 → 条目 JSON。生产查询优先使用按域数据，
+  /// 避免 settings.cfg 与 autoexec.cfg 的同名键互相覆盖。
+  final Map<String, Map<KbFile, Map<String, dynamic>>> fileData;
   static const _assetBase = 'assets/kb';
 
-  const KbService({required this.data});
+  const KbService({required this.data, this.fileData = const {}});
 
   /// 从 assets/kb/{zh,en}/{videoconfig,autoexec}.json 加载，
   /// 同一语言的两个文件按序合并为一张表。
   static Future<KbService> fromAssets() async {
     final out = <String, Map<String, dynamic>>{};
+    final byFile = <String, Map<KbFile, Map<String, dynamic>>>{};
     for (final loc in const ['zh', 'en']) {
       final merged = <String, dynamic>{};
+      final localeFiles = <KbFile, Map<String, dynamic>>{};
       for (final f in KbFile.values) {
         final raw = await rootBundle.loadString(
           '$_assetBase/$loc/${f.name}.json',
         );
         final json = jsonDecode(raw) as Map<String, dynamic>;
-        merged.addAll({for (final e in json.entries) _norm(e.key): e.value});
+        final normalized = {
+          for (final e in json.entries) _norm(e.key): e.value,
+        };
+        localeFiles[f] = normalized;
+        merged.addAll(normalized);
       }
       out[loc] = merged;
+      byFile[loc] = localeFiles;
     }
-    return KbService(data: out);
+    return KbService(data: out, fileData: byFile);
   }
 
   /// 查找键的说明；先查请求语言，缺失时回退英文，仍未命中返回 null。
   KbEntry? lookup(KbFile file, String key, String locale) {
     for (final loc in [locale, if (locale != 'en') 'en']) {
-      final table = data[loc];
+      final table = fileData[loc]?[file] ?? data[loc];
       if (table == null) continue;
       for (final k in _candidates(key)) {
         final hit = table[k];

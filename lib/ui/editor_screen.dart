@@ -801,6 +801,7 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                                             child: KbCard(
                                               editBloc: widget.editBloc,
                                               showEmptyState: true,
+                                              fileBloc: widget.fileBloc,
                                             ),
                                           ),
                                         ),

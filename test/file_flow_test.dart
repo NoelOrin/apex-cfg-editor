@@ -152,11 +152,12 @@ void main() {
       final kb = await KbService.fromAssets();
       expect(kb.data['en'], isNotEmpty);
       expect(kb.data['zh'], isNotEmpty);
-      // 跨域候选：videoconfig 前缀键回退命中 autoexec 表的 fps_max。
+      // autoexec 域的 fps_max 与 videoconfig 域的 setting.gamma 均从 assets 真实加载。
       expect(
-        kb.lookup(KbFile.videoconfig, 'setting.fps_max', 'en')?.name,
+        kb.lookup(KbFile.autoexec, 'fps_max', 'en')?.name,
         'FPS Cap',
       );
+      expect(kb.lookup(KbFile.settings, 'mouse_sensitivity', 'en'), isNotNull);
       expect(kb.lookup(KbFile.videoconfig, 'setting.gamma', 'zh'), isNotNull);
     });
 

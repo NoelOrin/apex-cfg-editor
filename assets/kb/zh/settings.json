@@ -1,0 +1,156 @@
+{
+  "bind_US_standard": {
+    "name": "键位绑定",
+    "description": "标准键鼠或手柄配置中的基础按键绑定。第一个字符串是按键，第二个字符串是执行的游戏动作，末尾数值表示该绑定的附加状态。",
+    "recommended": "按游戏内按键布局配置",
+    "risk": "low",
+    "values": []
+  },
+  "bind_held_US_standard": {
+    "name": "按住键位绑定",
+    "description": "标准配置中按住某个按键时执行的动作绑定，常用于手柄按键或需要区分点按与长按的操作。",
+    "recommended": "保持游戏默认，确认长按动作后再修改",
+    "risk": "medium",
+    "values": []
+  },
+  "cc_linger_time": {
+    "name": "字幕停留时间",
+    "description": "控制字幕或字幕提示在屏幕上停留的时间，单位为秒。",
+    "recommended": "按阅读速度设置",
+    "risk": "low",
+    "values": []
+  },
+  "cc_predisplay_time": {
+    "name": "字幕预显示时间",
+    "description": "控制字幕内容在语音播放前提前出现的时间，单位为秒。",
+    "recommended": "保持默认 0.25",
+    "risk": "low",
+    "values": []
+  },
+  "chroma_enable": {
+    "name": "色度功能",
+    "description": "游戏色度或外设灯效功能的开关。通常由支持的外设软件或游戏版本使用。",
+    "recommended": "不使用相关功能时保持 0",
+    "risk": "low",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "func_break_max_pieces": {
+    "name": "可破坏物最大碎片数",
+    "description": "限制可破坏物体生成的最大碎片数量。数值越低可减少物理与渲染开销，但破坏效果会更简单。",
+    "recommended": "保持默认，低端设备可适当降低",
+    "risk": "low",
+    "values": []
+  },
+  "gfx_amdUseLowLatency": {
+    "name": "AMD 低延迟模式",
+    "description": "AMD 显卡低延迟路径的开关，用于减少渲染队列造成的输入延迟。仅对支持的 AMD 驱动和游戏版本生效。",
+    "recommended": "AMD 显卡可设为 1，其他显卡保持默认",
+    "risk": "low",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "gfx_nvnUseLowLatency": {
+    "name": "NVIDIA 低延迟模式",
+    "description": "NVIDIA 显卡低延迟路径的开关，用于减少渲染队列造成的输入延迟。仅对支持的 NVIDIA 驱动和游戏版本生效。",
+    "recommended": "NVIDIA 显卡可设为 1",
+    "risk": "low",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "gfx_nvnUseLowLatencyBoost": {
+    "name": "NVIDIA 低延迟增强",
+    "description": "NVIDIA 低延迟模式的增强选项，可能通过提高 GPU 调度积极性进一步降低延迟，但会增加功耗或造成帧率波动。",
+    "recommended": "先保持 1，出现波动时改为 0",
+    "risk": "medium",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "hdr_screenshot_directory": {
+    "name": "HDR 截图目录",
+    "description": "保存 HDR 截图的目录路径。为空时使用游戏或系统默认截图位置。",
+    "recommended": "留空使用默认目录",
+    "risk": "low",
+    "values": []
+  },
+  "lookspring": {
+    "name": "视角回中",
+    "description": "控制移动或特定操作后视角是否自动回到中心。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "lookstrafe": {
+    "name": "视角横移",
+    "description": "控制横向移动输入是否影响视角转动，主要影响手柄或特定控制方案的操作手感。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "m_acceleration": {
+    "name": "鼠标加速度",
+    "description": "控制鼠标移动是否应用加速度。关闭后鼠标距离与视角移动更线性、更容易保持一致的肌肉记忆。",
+    "recommended": "0（关闭）",
+    "risk": "low",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "m_clamp_to_window": {
+    "name": "鼠标限制在窗口",
+    "description": "窗口化运行时把鼠标指针限制在游戏窗口范围内，避免移动到窗口外。",
+    "recommended": "窗口化时设为 1",
+    "risk": "low",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "miles_channels": {
+    "name": "音频通道数",
+    "description": "Miles 音频系统使用的输出通道配置。它会影响声音混合方式，不是游戏音量滑块。",
+    "recommended": "保持游戏默认",
+    "risk": "medium",
+    "values": []
+  },
+  "miles_dumpuploadtime": {
+    "name": "音频上传调试时间",
+    "description": "Miles 音频系统调试用的上传时间记录开关或参数，普通玩家通常无需修改。",
+    "recommended": "保持默认 0",
+    "risk": "low",
+    "values": []
+  },
+  "miles_output_device": {
+    "name": "音频输出设备",
+    "description": "指定 Miles 音频系统使用的输出设备名称。为空时由系统或游戏自动选择默认设备。",
+    "recommended": "留空使用系统默认设备",
+    "risk": "low",
+    "values": []
+  },
+  "mouse_sensitivity": {
+    "name": "鼠标灵敏度",
+    "description": "游戏内鼠标灵敏度倍率，与鼠标 DPI 共同决定普通视角的转动速度。",
+    "recommended": "按个人手感设置",
+    "risk": "low",
+    "values": []
+  },
+  "mouse_use_per_scope_sensitivity_scalars": {
+    "name": "分倍镜灵敏度",
+    "description": "控制瞄准时是否分别使用各倍率的灵敏度系数。开启后每个瞄准倍率可单独调整。",
+    "recommended": "1（开启）",
+    "risk": "low",
+    "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]
+  },
+  "mouse_zoomed_sensitivity_scalar_0": {"name": "无倍率瞄准灵敏度", "description": "无倍率或第一档瞄准状态下的鼠标灵敏度系数。", "recommended": "按个人手感设置", "risk": "low", "values": []},
+  "mouse_zoomed_sensitivity_scalar_1": {"name": "低倍率瞄准灵敏度", "description": "第二档瞄准倍率下的鼠标灵敏度系数。", "recommended": "按个人手感设置", "risk": "low", "values": []},
+  "mouse_zoomed_sensitivity_scalar_2": {"name": "中低倍率瞄准灵敏度", "description": "第三档瞄准倍率下的鼠标灵敏度系数。", "recommended": "按个人手感设置", "risk": "low", "values": []},
+  "mouse_zoomed_sensitivity_scalar_3": {"name": "中倍率瞄准灵敏度", "description": "第四档瞄准倍率下的鼠标灵敏度系数。", "recommended": "按个人手感设置", "risk": "low", "values": []},
+  "mouse_zoomed_sensitivity_scalar_4": {"name": "高倍率瞄准灵敏度", "description": "第五档瞄准倍率下的鼠标灵敏度系数。", "recommended": "按个人手感设置", "risk": "low", "values": []},
+  "mouse_zoomed_sensitivity_scalar_5": {"name": "超高倍率瞄准灵敏度", "description": "第六档瞄准倍率下的鼠标灵敏度系数。", "recommended": "按个人手感设置", "risk": "low", "values": []},
+  "mouse_zoomed_sensitivity_scalar_6": {"name": "特殊瞄准灵敏度 6", "description": "第七档瞄准倍率下的鼠标灵敏度系数。具体对应倍率由游戏版本决定。", "recommended": "按个人手感设置", "risk": "low", "values": []},
+  "mouse_zoomed_sensitivity_scalar_7": {"name": "特殊瞄准灵敏度 7", "description": "第八档瞄准倍率下的鼠标灵敏度系数。具体对应倍率由游戏版本决定。", "recommended": "按个人手感设置", "risk": "low", "values": []},
+  "name": {"name": "玩家名称", "description": "游戏内显示的玩家名称。", "recommended": "按游戏内昵称规则设置", "risk": "low", "values": []},
+  "sound_num_speakers": {"name": "扬声器布局", "description": "音频输出使用的扬声器或耳机通道布局编号。设置错误可能导致声道定位异常。", "recommended": "按实际音频设备选择，常见立体声为 2", "risk": "medium", "values": []},
+  "sound_volume_voice": {"name": "语音音量", "description": "队友语音或语音聊天的播放音量，不影响游戏音效和音乐音量。", "recommended": "按队友语音清晰度调整", "risk": "low", "values": []},
+  "sv_specaccelerate": {"name": "观战加速度", "description": "观战或自由视角模式中的移动加速度参数。普通对局通常不会使用。", "recommended": "保持默认 1000.0", "risk": "low", "values": []},
+  "sv_specnoclip": {"name": "观战穿透移动", "description": "控制观战自由视角是否允许穿过场景物体。主要用于观战或调试状态。", "recommended": "保持游戏默认", "risk": "low", "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]},
+  "sv_specspeed": {"name": "观战移动速度", "description": "观战自由视角的基础移动速度。", "recommended": "保持默认 5.0", "risk": "low", "values": []},
+  "sv_voiceenable": {"name": "语音聊天总开关", "description": "控制游戏语音聊天功能是否启用。关闭后无法正常收听或使用语音聊天。", "recommended": "1（开启）", "risk": "low", "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]},
+  "ui_layout_mode": {"name": "界面布局模式", "description": "保存游戏用户界面布局模式的内部编号。不同版本对编号含义可能不同，建议通过游戏设置界面修改。", "recommended": "保持游戏生成的值", "risk": "medium", "values": []},
+  "voice_input_device": {"name": "语音输入设备", "description": "指定语音聊天使用的麦克风设备名称。为空时使用系统默认输入设备。", "recommended": "留空或使用游戏内选择的设备", "risk": "low", "values": []},
+  "voice_modenable": {"name": "语音聊天模块", "description": "控制语音聊天模块是否启用。关闭会影响语音输入和语音播放。", "recommended": "1（开启）", "risk": "low", "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]},
+  "voice_scale": {"name": "语音音量比例", "description": "语音聊天播放音量的比例系数。", "recommended": "1.0 或按个人需要调整", "risk": "low", "values": []},
+  "voice_vox": {"name": "语音激活模式", "description": "控制是否启用由声音阈值触发的语音激活模式。", "recommended": "使用按键说话时保持 0", "risk": "low", "values": [{"v": "0", "label": "关闭"}, {"v": "1", "label": "开启"}]},
+  "VoiceChatMode": {"name": "语音聊天模式", "description": "保存语音聊天模式的内部编号，例如按键说话或持续语音。具体编号由游戏版本定义。", "recommended": "通过游戏内语音设置修改", "risk": "low", "values": []}
+}

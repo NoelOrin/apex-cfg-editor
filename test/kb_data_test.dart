@@ -3,11 +3,11 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// 知识库数据本体测试（任务 6 账本项）：校验 assets/kb 下四份 JSON 的
+/// 知识库数据本体测试（任务 6 账本项）：校验 assets/kb 下六份 JSON 的
 /// zh/en 键集一致、五字段完整、risk 枚举合法、values 子结构合规。
 /// 直接读盘而非注入，保证测试的就是打包进 assets 的真实数据。
 void main() {
-  const files = ['videoconfig', 'autoexec'];
+  const files = ['videoconfig', 'settings', 'autoexec'];
   const locales = ['zh', 'en'];
   const fiveFields = ['name', 'description', 'recommended', 'risk', 'values'];
   const allowedRisks = {'low', 'medium', 'high'};

@@ -6,18 +6,31 @@ import '../../core/parser/cfg_document.dart';
 import '../../knowledge/kb_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../state/edit_bloc.dart';
+import '../../state/file_bloc.dart';
 import '../theme/acid_theme.dart';
+import 'kv_table_view.dart';
 
 /// 选中键的 Fluent 知识说明面板。
 ///
 /// [editBloc] 为显式接线；未传入时兼容旧宿主的 context provider 模式。
 /// [showEmptyState] 用于工作台面板：无选中项或未收录时给出稳定提示，而不是
 /// 留下整块空白。
+/// 传入 [fileBloc] 时按文件类型选择对应知识库域（settings.cfg 用操作设置域），
+/// 不传则回退按行类型判断（兼容旧宿主）。
 class KbCard extends StatelessWidget {
   final EditBloc? editBloc;
   final bool showEmptyState;
 
-  const KbCard({super.key, this.editBloc, this.showEmptyState = false});
+  /// 可选的文件 Bloc。传入时按文件类型（settings.cfg / videoconfig /
+  /// autoexec）选择对应知识库域；为 null 时回退按行类型判断（兼容旧宿主）。
+  final FileBloc? fileBloc;
+
+  const KbCard({
+    super.key,
+    this.editBloc,
+    this.fileBloc,
+    this.showEmptyState = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -42,9 +55,18 @@ class KbCard extends StatelessWidget {
                 : const SizedBox.shrink();
           }
 
+          // 优先按 FileBloc 的文件类型选域（settings.cfg 与 autoexec 同名键会
+          // 互相覆盖）；无 FileBloc 时回退旧行类型逻辑。
+          final file = fileBloc != null
+              ? kbFileForKind(fileBloc!.state.kind)
+              : switch (doc.lines[i]) {
+                  KeyValueLine() => KbFile.videoconfig,
+                  CvarLine() => KbFile.autoexec,
+                  _ => KbFile.autoexec,
+                };
           final kv = switch (doc.lines[i]) {
-            KeyValueLine(:final key) => (key: key, file: KbFile.videoconfig),
-            CvarLine(:final key) => (key: key, file: KbFile.autoexec),
+            KeyValueLine(:final key) => (key: key, file: file),
+            CvarLine(:final key) => (key: key, file: file),
             _ => null,
           };
           if (kv == null) {

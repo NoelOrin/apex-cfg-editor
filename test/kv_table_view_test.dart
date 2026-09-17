@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:apex_cfg_editor/core/parser/cfg_document.dart';
+import 'package:apex_cfg_editor/core/parser/settings_parser.dart';
 import 'package:apex_cfg_editor/core/parser/videoconfig_parser.dart';
 import 'package:apex_cfg_editor/knowledge/kb_service.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
@@ -217,6 +220,47 @@ void main() {
 
     expect(find.text('限制游戏最大帧率。'), findsOneWidget);
     expect(find.text('Frame rate limit'), findsNothing);
+  });
+
+  testWidgets('settings.cfg uses the settings knowledge-base domain', (t) async {
+    const src = '"mouse_sensitivity" "1.26"\n';
+    final edit = EditBloc();
+    addTearDown(edit.close);
+    final file = _realFileBloc(edit);
+    addTearDown(file.close);
+    final temp = File('${Directory.systemTemp.path}/settings.cfg')
+      ..writeAsStringSync(src);
+    addTearDown(() => temp.deleteSync());
+
+    edit.add(DocumentOpened(doc: const SettingsParser().parse(src), baseline: src));
+    file.add(OpenRequested(temp.path));
+    await t.pump();
+
+    const kb = KbService(
+      data: {
+        'en': {},
+      },
+      fileData: {
+        'en': {
+          KbFile.settings: {
+            'mouse_sensitivity': {
+              'name': 'Mouse Sensitivity',
+              'description': 'Settings.cfg mouse sensitivity.',
+              'recommended': 'Use your preferred value',
+              'risk': 'low',
+              'values': [],
+            },
+          },
+        },
+      },
+    );
+
+    await t.pumpWidget(
+      _host(KvTableView(editBloc: edit, fileBloc: file), kb: kb),
+    );
+    await t.pumpAndSettle();
+
+    expect(find.text('Settings.cfg mouse sensitivity.'), findsOneWidget);
   });
 
   testWidgets(

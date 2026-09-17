@@ -134,15 +134,13 @@ GitHub Release 会自动挂载 `ApexCfgEditorSetup-v*.exe` 与
 知识库是四份纯 JSON（构建时打进 assets，无需改代码）：
 
 ```
-assets/kb/zh/videoconfig.json   assets/kb/zh/autoexec.json
-assets/kb/en/videoconfig.json   assets/kb/en/autoexec.json
+assets/kb/zh/videoconfig.json   assets/kb/zh/settings.json    assets/kb/zh/autoexec.json
+assets/kb/en/videoconfig.json   assets/kb/en/settings.json   assets/kb/en/autoexec.json
 ```
 
 新增/修改一个键的说明：
 
-1. **改哪份**：键出现在 `videoconfig.txt`（`"setting.xxx"` 引号键）就改
-   `videoconfig.json`；出现在 `autoexec.cfg`（裸 cvar 名）就改
-   `autoexec.json`。两边的键都按规范化形态书写（无引号、无首尾空白）。
+1. **改哪份**：按文件域选 JSON。`settings.cfg` 的键（操作设置，如按键绑定、灵敏度、音频、语音）改 `settings.json`；`videoconfig.txt` 的 `"setting.xxx"` 引号键改 `videoconfig.json`；`autoexec.cfg` 的裸 cvar 名改 `autoexec.json`。三份 JSON 都按规范化形态书写（无引号、无首尾空白），同名键（如 `name`）按文件域隔离、互不覆盖。
 2. **en/zh 同步**：同一键必须同时出现在 zh 与 en 两份同名文件里，
    键集不一致会被 `test/kb_data_test.dart` 拦下。
 3. **条目 schema**：

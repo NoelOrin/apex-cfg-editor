@@ -37,4 +37,24 @@ void main() {
     final kb = KbService(data: {'en': zh});
     expect(kb.lookup(KbFile.autoexec, 'fps_max', 'zh')!.name, '帧率上限');
   });
+
+  test('settings domain resolves settings.cfg descriptions', () {
+    const settings = {
+      'mouse_sensitivity': {
+        'name': '鼠标灵敏度',
+        'description': '游戏内鼠标灵敏度倍率。',
+        'recommended': '按个人习惯设置',
+        'risk': 'low',
+        'values': [],
+      },
+    };
+    final kb = KbService(
+      data: {'zh': settings, 'en': {}},
+    );
+
+    expect(
+      kb.lookup(KbFile.settings, 'mouse_sensitivity', 'zh')!.description,
+      '游戏内鼠标灵敏度倍率。',
+    );
+  });
 }
