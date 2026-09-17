@@ -235,8 +235,10 @@ void main() {
 
     expect(find.text('Multiple Apex installations detected'), findsOneWidget);
     expect(find.text('EA App'), findsNWidgets(2));
+    final installTiles = find.byType(fluent.ListTile);
+    expect(installTiles, findsNWidgets(2));
 
-    await t.tap(find.text(eaApexB));
+    await t.tap(installTiles.last);
     await t.pumpAndSettle();
 
     expect(_norm(file.state.path!), _norm('$eaApexB/global/cfg/autoexec.cfg'));
