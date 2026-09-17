@@ -157,7 +157,7 @@ class UpdateService {
       if (response.statusCode != HttpStatus.ok) {
         throw HttpException('GitHub returned ${response.statusCode}', uri: uri);
       }
-      return response.transform(utf8.decoder).join();
+      return await response.transform(utf8.decoder).join();
     } finally {
       client.close(force: true);
     }
