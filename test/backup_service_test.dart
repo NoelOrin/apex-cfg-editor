@@ -16,7 +16,10 @@ void main() {
     b.backupBeforeSave(target.path, utf8.encode('v1\n'));
     final files = b.listBackups(target.path);
     expect(files, hasLength(1));
-    expect(RegExp(r'\d{8}-\d{9}\.cfg$').hasMatch(files.first.split('/').last), isTrue);
+    expect(
+      RegExp(r'\d{8}-\d{9}\.cfg$').hasMatch(files.first.split('/').last),
+      isTrue,
+    );
     // 字节级复制（规格 §7）：备份内容与当前文件字节一致。
     expect(File(files.first).readAsBytesSync(), utf8.encode('v1\n'));
   });
@@ -32,8 +35,10 @@ void main() {
     final files = b.listBackups(forward);
     expect(files, hasLength(1));
     // 目录名就是文件名（不含盘符/目录段）。
-    expect(File(files.first).parent.path,
-        '${tmp.path}/appdata/videoconfig.txt');
+    expect(
+      File(files.first).parent.path,
+      '${tmp.path}/appdata/videoconfig.txt',
+    );
     expect(File(files.first).readAsBytesSync(), utf8.encode('v\n'));
     // 同一文件的反斜杠写法解析到同一备份目录。
     expect(b.listBackups(backward), files);
@@ -41,7 +46,8 @@ void main() {
 
   test('two backups within the same second produce two distinct files', () {
     final target = File('${tmp.path}/Documents/videoconfig.txt')
-      ..createSync(recursive: true)..writeAsStringSync('v\n');
+      ..createSync(recursive: true)
+      ..writeAsStringSync('v\n');
     final b = BackupService(baseDir: '${tmp.path}/appdata');
     b.backupBeforeSave(target.path, utf8.encode('v1\n'));
     b.backupBeforeSave(target.path, utf8.encode('v2\n'));
@@ -65,7 +71,8 @@ void main() {
 
   test('list newest first', () {
     final target = File('${tmp.path}/Documents/videoconfig.txt')
-      ..createSync(recursive: true)..writeAsStringSync('v\n');
+      ..createSync(recursive: true)
+      ..writeAsStringSync('v\n');
     final b = BackupService(baseDir: '${tmp.path}/appdata');
     b.backupBeforeSave(target.path, utf8.encode('v\n'));
     b.backupBeforeSave(target.path, utf8.encode('v\n'));
@@ -75,7 +82,8 @@ void main() {
 
   test('list newest first with distinct hand-written timestamps', () {
     final target = File('${tmp.path}/Documents/videoconfig.txt')
-      ..createSync(recursive: true)..writeAsStringSync('v\n');
+      ..createSync(recursive: true)
+      ..writeAsStringSync('v\n');
     final b = BackupService(baseDir: '${tmp.path}/appdata');
     b.backupBeforeSave(target.path, utf8.encode('v\n'));
     final backupDir = File(b.listBackups(target.path).first).parent;
@@ -85,5 +93,39 @@ void main() {
     expect(l, hasLength(3)); // 3 个独立文件，排除同秒合并干扰
     expect(l.first.endsWith('20270101-000000.cfg'), isTrue); // 新→旧
     expect(l.last.endsWith('20260101-000000.cfg'), isTrue);
+  });
+
+  test('prunes old backups for one target to the configured limit', () {
+    final target = File('${tmp.path}/Documents/videoconfig.txt')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('v\n');
+    final b = BackupService(baseDir: '${tmp.path}/appdata');
+    for (var i = 0; i < 5; i++) {
+      b.backupBeforeSave(target.path, utf8.encode('v$i\n'));
+    }
+
+    expect(b.pruneBackups(target.path, 2), 3);
+    expect(b.listBackups(target.path), hasLength(2));
+  });
+
+  test('pruneAll cleans every target and reports latest backup time', () {
+    final first = File('${tmp.path}/one/videoconfig.txt')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('v\n');
+    final second = File('${tmp.path}/two/autoexec.cfg')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('v\n');
+    final b = BackupService(baseDir: '${tmp.path}/appdata');
+    for (var i = 0; i < 3; i++) {
+      b.backupBeforeSave(first.path, utf8.encode('one$i\n'));
+      b.backupBeforeSave(second.path, utf8.encode('two$i\n'));
+    }
+    final newest = File(b.listBackups(second.path).first);
+    newest.setLastModifiedSync(DateTime(2026, 5, 6, 7, 8));
+
+    expect(b.pruneAll(1), 4);
+    expect(b.listBackups(first.path), hasLength(1));
+    expect(b.listBackups(second.path), hasLength(1));
+    expect(b.latestBackupTime(), isNotNull);
   });
 }

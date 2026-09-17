@@ -16,7 +16,8 @@ void main() {
     test('parses lastOpenDir string payload', () {
       expect(
         SettingsStore.lastOpenDirFromJson(
-            '{"lastOpenDir": "C:/Users/x/Documents"}'),
+          '{"lastOpenDir": "C:/Users/x/Documents"}',
+        ),
         'C:/Users/x/Documents',
       );
     });
@@ -37,8 +38,9 @@ void main() {
     });
 
     test('write creates file, roundtrips and overwrites', () {
-      final store =
-          SettingsStore(settingsPath: '${tmp.path}/nested/settings.json');
+      final store = SettingsStore(
+        settingsPath: '${tmp.path}/nested/settings.json',
+      );
       store.writeLastOpenDir('${tmp.path}/a');
       expect(store.readLastOpenDir(), '${tmp.path}/a');
       store.writeLastOpenDir('${tmp.path}/b');
@@ -54,8 +56,9 @@ void main() {
     test('unwritable path write fails silently', () {
       // 父路径是文件：createSync 抛错 → 静默跳过，不抛异常。
       final blocker = File('${tmp.path}/blocker')..writeAsStringSync('x');
-      final store =
-          SettingsStore(settingsPath: '${blocker.path}/settings.json');
+      final store = SettingsStore(
+        settingsPath: '${blocker.path}/settings.json',
+      );
       expect(() => store.writeLastOpenDir('${tmp.path}/a'), returnsNormally);
       expect(store.readLastOpenDir(), isNull);
     });
@@ -108,87 +111,132 @@ void main() {
     });
   });
 
-group('customInstallDir (用户记忆的 Apex 安装目录)', () {
-  test('roundtrips via json without clobbering lastOpenDir', () {
-    final path = '${tmp.path}/settings.json';
-    final store = SettingsStore(settingsPath: path);
-    expect(store.readCustomInstallDir(), isNull);
+  group('customInstallDir (用户记忆的 Apex 安装目录)', () {
+    test('roundtrips via json without clobbering lastOpenDir', () {
+      final path = '${tmp.path}/settings.json';
+      final store = SettingsStore(settingsPath: path);
+      expect(store.readCustomInstallDir(), isNull);
 
-    store.writeLastOpenDir('${tmp.path}/docs');
-    store.writeCustomInstallDir('D:/Games/Apex Legends');
-    expect(store.readCustomInstallDir(), 'D:/Games/Apex Legends');
-    // 两个字段互不覆盖：写 customInstallDir 后 lastOpenDir 仍在。
-    expect(store.readLastOpenDir(), '${tmp.path}/docs');
-    // 反向亦然：再写 lastOpenDir 不丢 customInstallDir。
-    store.writeLastOpenDir('${tmp.path}/other');
-    expect(store.readCustomInstallDir(), 'D:/Games/Apex Legends');
-  });
+      store.writeLastOpenDir('${tmp.path}/docs');
+      store.writeCustomInstallDir('D:/Games/Apex Legends');
+      expect(store.readCustomInstallDir(), 'D:/Games/Apex Legends');
+      // 两个字段互不覆盖：写 customInstallDir 后 lastOpenDir 仍在。
+      expect(store.readLastOpenDir(), '${tmp.path}/docs');
+      // 反向亦然：再写 lastOpenDir 不丢 customInstallDir。
+      store.writeLastOpenDir('${tmp.path}/other');
+      expect(store.readCustomInstallDir(), 'D:/Games/Apex Legends');
+    });
 
-  test('missing/empty/non-string and invalid json are null', () {
-    expect(SettingsStore.customInstallDirFromJson('{}'), isNull);
-    expect(
+    test('missing/empty/non-string and invalid json are null', () {
+      expect(SettingsStore.customInstallDirFromJson('{}'), isNull);
+      expect(
         SettingsStore.customInstallDirFromJson('{"customInstallDir": ""}'),
-        isNull);
-    expect(
+        isNull,
+      );
+      expect(
         SettingsStore.customInstallDirFromJson('{"customInstallDir": 42}'),
-        isNull);
-    expect(SettingsStore.customInstallDirFromJson('not json'), isNull);
+        isNull,
+      );
+      expect(SettingsStore.customInstallDirFromJson('not json'), isNull);
+    });
+
+    test('missing file reads as null without throwing', () {
+      final store = SettingsStore(settingsPath: '${tmp.path}/none.json');
+      expect(store.readCustomInstallDir(), isNull);
+    });
+
+    test('unwritable path write fails silently', () {
+      final blocker = File('${tmp.path}/blocker2')..writeAsStringSync('x');
+      final store = SettingsStore(
+        settingsPath: '${blocker.path}/settings.json',
+      );
+      expect(
+        () => store.writeCustomInstallDir('${tmp.path}/a'),
+        returnsNormally,
+      );
+      expect(store.readCustomInstallDir(), isNull);
+    });
   });
 
-  test('missing file reads as null without throwing', () {
-    final store = SettingsStore(settingsPath: '${tmp.path}/none.json');
-    expect(store.readCustomInstallDir(), isNull);
+  group('themeModeRaw (亮/暗主题记忆，酸性风格 v2)', () {
+    test('parses themeMode string payload', () {
+      expect(
+        SettingsStore.themeModeRawFromJson('{"themeMode": "light"}'),
+        'light',
+      );
+    });
+
+    test('missing/empty/non-string values and invalid json are null', () {
+      expect(SettingsStore.themeModeRawFromJson('{}'), isNull);
+      expect(SettingsStore.themeModeRawFromJson('{"themeMode": ""}'), isNull);
+      expect(SettingsStore.themeModeRawFromJson('{"themeMode": 42}'), isNull);
+      expect(SettingsStore.themeModeRawFromJson('["a"]'), isNull);
+      expect(SettingsStore.themeModeRawFromJson('not json'), isNull);
+    });
+
+    test('roundtrips via json without clobbering other fields', () {
+      final path = '${tmp.path}/settings.json';
+      final store = SettingsStore(settingsPath: path);
+      expect(store.readThemeModeRaw(), isNull);
+
+      store.writeLastOpenDir('${tmp.path}/docs');
+      store.writeThemeModeRaw('light');
+      expect(store.readThemeModeRaw(), 'light');
+      expect(store.readLastOpenDir(), '${tmp.path}/docs');
+
+      store.writeThemeModeRaw('dark');
+      expect(store.readThemeModeRaw(), 'dark');
+    });
+
+    test('missing file reads as null without throwing', () {
+      final store = SettingsStore(settingsPath: '${tmp.path}/none.json');
+      expect(store.readThemeModeRaw(), isNull);
+    });
+
+    test('unwritable path write fails silently', () {
+      final blocker = File('${tmp.path}/blocker3')..writeAsStringSync('x');
+      final store = SettingsStore(
+        settingsPath: '${blocker.path}/settings.json',
+      );
+      expect(() => store.writeThemeModeRaw('light'), returnsNormally);
+      expect(store.readThemeModeRaw(), isNull);
+    });
   });
 
-  test('unwritable path write fails silently', () {
-    final blocker = File('${tmp.path}/blocker2')..writeAsStringSync('x');
-    final store = SettingsStore(settingsPath: '${blocker.path}/settings.json');
-    expect(
-        () => store.writeCustomInstallDir('${tmp.path}/a'), returnsNormally);
-    expect(store.readCustomInstallDir(), isNull);
+  group('localeRaw (界面语言记忆)', () {
+    test('parses locale string payload', () {
+      expect(SettingsStore.localeRawFromJson('{"locale": "en"}'), 'en');
+    });
+
+    test('missing/empty/non-string values and invalid json are null', () {
+      expect(SettingsStore.localeRawFromJson('{}'), isNull);
+      expect(SettingsStore.localeRawFromJson('{"locale": ""}'), isNull);
+      expect(SettingsStore.localeRawFromJson('{"locale": 42}'), isNull);
+      expect(SettingsStore.localeRawFromJson('["a"]'), isNull);
+      expect(SettingsStore.localeRawFromJson('not json'), isNull);
+    });
+
+    test('roundtrips without clobbering other settings', () {
+      final path = '${tmp.path}/settings.json';
+      final store = SettingsStore(settingsPath: path);
+
+      store.writeThemeModeRaw('dark');
+      store.writeLocaleRaw('zh');
+      expect(store.readLocaleRaw(), 'zh');
+      expect(store.readThemeModeRaw(), 'dark');
+
+      store.writeLocaleRaw('system');
+      expect(store.readLocaleRaw(), 'system');
+    });
+
+    test('unwritable path write fails silently', () {
+      final blocker = File('${tmp.path}/blocker-locale')
+        ..writeAsStringSync('x');
+      final store = SettingsStore(
+        settingsPath: '${blocker.path}/settings.json',
+      );
+      expect(() => store.writeLocaleRaw('en'), returnsNormally);
+      expect(store.readLocaleRaw(), isNull);
+    });
   });
-});
-
-group('themeModeRaw (亮/暗主题记忆，酸性风格 v2)', () {
-  test('parses themeMode string payload', () {
-    expect(
-      SettingsStore.themeModeRawFromJson('{"themeMode": "light"}'),
-      'light',
-    );
-  });
-
-  test('missing/empty/non-string values and invalid json are null', () {
-    expect(SettingsStore.themeModeRawFromJson('{}'), isNull);
-    expect(SettingsStore.themeModeRawFromJson('{"themeMode": ""}'), isNull);
-    expect(SettingsStore.themeModeRawFromJson('{"themeMode": 42}'), isNull);
-    expect(SettingsStore.themeModeRawFromJson('["a"]'), isNull);
-    expect(SettingsStore.themeModeRawFromJson('not json'), isNull);
-  });
-
-  test('roundtrips via json without clobbering other fields', () {
-    final path = '${tmp.path}/settings.json';
-    final store = SettingsStore(settingsPath: path);
-    expect(store.readThemeModeRaw(), isNull);
-
-    store.writeLastOpenDir('${tmp.path}/docs');
-    store.writeThemeModeRaw('light');
-    expect(store.readThemeModeRaw(), 'light');
-    expect(store.readLastOpenDir(), '${tmp.path}/docs');
-
-    store.writeThemeModeRaw('dark');
-    expect(store.readThemeModeRaw(), 'dark');
-  });
-
-  test('missing file reads as null without throwing', () {
-    final store = SettingsStore(settingsPath: '${tmp.path}/none.json');
-    expect(store.readThemeModeRaw(), isNull);
-  });
-
-  test('unwritable path write fails silently', () {
-    final blocker = File('${tmp.path}/blocker3')..writeAsStringSync('x');
-    final store = SettingsStore(settingsPath: '${blocker.path}/settings.json');
-    expect(() => store.writeThemeModeRaw('light'), returnsNormally);
-    expect(store.readThemeModeRaw(), isNull);
-  });
-});
 }

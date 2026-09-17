@@ -1,7 +1,7 @@
 import 'dart:io';
 
 class BackupService {
-  final String baseDir; // Windows: %APPDATA%\ApexCfgEditor\backups
+  String baseDir; // Windows: %APPDATA%\ApexCfgEditor\backups
   BackupService({required this.baseDir});
 
   String _dirFor(String path) {
@@ -49,6 +49,48 @@ class BackupService {
         .map((f) => f.path)
         .toList()
       ..sort((a, b) => b.compareTo(a)); // 新→旧
+  }
+
+  /// 删除目标文件的旧备份，保留按文件名排序后的最新 [limit] 个。
+  int pruneBackups(String path, int limit) {
+    final files = listBackups(path);
+    final keep = limit < 1 ? 1 : limit;
+    var removed = 0;
+    for (final old in files.skip(keep)) {
+      try {
+        File(old).deleteSync();
+        removed++;
+      } catch (_) {}
+    }
+    return removed;
+  }
+
+  /// 遍历备份根目录下的每个目标文件目录并执行数量裁剪。
+  int pruneAll(int limit) {
+    final root = Directory(baseDir);
+    if (!root.existsSync()) return 0;
+    var removed = 0;
+    for (final entity in root.listSync()) {
+      if (entity is Directory) {
+        removed += pruneBackups(entity.path, limit);
+      }
+    }
+    return removed;
+  }
+
+  /// 返回所有备份文件中最后修改的时间。
+  DateTime? latestBackupTime() {
+    final root = Directory(baseDir);
+    if (!root.existsSync()) return null;
+    DateTime? latest;
+    for (final entity in root.listSync(recursive: true).whereType<File>()) {
+      if (!entity.path.endsWith('.cfg')) continue;
+      try {
+        final time = entity.statSync().modified;
+        if (latest == null || time.isAfter(latest)) latest = time;
+      } catch (_) {}
+    }
+    return latest;
   }
 
   Future<void> restore(String targetPath, String backupPath) async {

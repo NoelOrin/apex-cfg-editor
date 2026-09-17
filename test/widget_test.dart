@@ -5,22 +5,26 @@ import 'package:apex_cfg_editor/knowledge/kb_service.dart';
 import 'package:apex_cfg_editor/main.dart';
 import 'package:apex_cfg_editor/ui/editor_screen.dart';
 import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
+import 'package:apex_cfg_editor/ui/locale_preference.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// 主题切换按钮（自绘标题栏内，ThemeModeScope 由应用壳注入）。
 const _themeToggleKey = ValueKey('titlebar.themeToggle');
+const _settingsButtonKey = ValueKey('titlebar.settings');
 
 Future<void> _pumpApp(
   WidgetTester tester,
   String settingsPath, {
   ThemeMode? initialThemeMode,
+  AppLocalePreference? initialLocalePreference,
 }) => tester.pumpWidget(
   ApexCfgEditorApp(
     kb: const KbService(data: {}),
     autoDetect: false,
     settingsPath: settingsPath,
     initialThemeMode: initialThemeMode,
+    initialLocalePreference: initialLocalePreference,
   ),
 );
 
@@ -37,6 +41,51 @@ void main() {
     await tester.pump();
 
     expect(find.text('APEX CFG EDITOR'), findsOneWidget);
+  });
+
+  testWidgets('language selector changes locale immediately and persists', (
+    tester,
+  ) async {
+    final settingsPath = '${tmp.path}/settings.json';
+    await _pumpApp(
+      tester,
+      settingsPath,
+      initialLocalePreference: AppLocalePreference.zh,
+    );
+    await tester.pump();
+
+    await tester.tap(find.byKey(_settingsButtonKey));
+    await tester.pumpAndSettle();
+    expect(find.text('界面语言'), findsOneWidget);
+
+    await tester.tap(find.text('English'));
+    await tester.pumpAndSettle();
+
+    expect(
+      Localizations.localeOf(
+        tester.element(find.byType(EditorScreen)),
+      ).languageCode,
+      'en',
+    );
+    expect(find.text('Settings'), findsOneWidget);
+    expect(SettingsStore(settingsPath: settingsPath).readLocaleRaw(), 'en');
+  });
+
+  testWidgets('language preference is restored from settings.json on startup', (
+    tester,
+  ) async {
+    final settingsPath = '${tmp.path}/settings.json';
+    SettingsStore(settingsPath: settingsPath).writeLocaleRaw('en');
+
+    await _pumpApp(tester, settingsPath);
+    await tester.pump();
+
+    expect(
+      Localizations.localeOf(
+        tester.element(find.byType(EditorScreen)),
+      ).languageCode,
+      'en',
+    );
   });
 
   testWidgets('frameless shell draws 1px acid border around window content', (

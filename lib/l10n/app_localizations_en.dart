@@ -28,6 +28,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Key not documented yet. You can still edit it.';
 
   @override
+  String get kbSelectKeyHint =>
+      'Select a setting to view its description and recommendation.';
+
+  @override
+  String get knowledgeBase => 'Knowledge base';
+
+  @override
+  String get diffPreview => 'Changes';
+
+  @override
+  String get noFileOpen => 'No file open';
+
+  @override
+  String get unsavedBadge => 'Unsaved';
+
+  @override
   String get emptyDocHint => 'Open a cfg file to start editing';
 
   @override
@@ -46,6 +62,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openFile => 'Open file';
+
+  @override
+  String get reselectFile => 'Reselect file';
 
   @override
   String get fileOpenFailed => 'Failed to open file';
@@ -161,4 +180,194 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toggleTheme => 'Toggle theme';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get interfaceSection => 'Interface';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get languageDescription =>
+      'Choose the language used by the editor interface.';
+
+  @override
+  String get languageSystem => 'System default';
+
+  @override
+  String get languageChinese => '简体中文';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get appInfoSection => 'Application';
+
+  @override
+  String get applicationVersion => 'Version';
+
+  @override
+  String get buildNumber => 'Build';
+
+  @override
+  String get repository => 'GitHub repository';
+
+  @override
+  String get license => 'License';
+
+  @override
+  String get configDirectory => 'Configuration directory';
+
+  @override
+  String get backupDirectory => 'Backup directory';
+
+  @override
+  String get logDirectory => 'Log directory';
+
+  @override
+  String get mitLicense => 'MIT License';
+
+  @override
+  String get notAvailable => 'Not available';
+
+  @override
+  String get openInBrowser => 'Open in browser';
+
+  @override
+  String get diagnosticsSection => 'Diagnostics';
+
+  @override
+  String get runDiagnostics => 'Run diagnostics';
+
+  @override
+  String get diagnosticsNotRun => 'Diagnostics have not been run yet.';
+
+  @override
+  String get configDirectoryExists => 'Configuration directory exists';
+
+  @override
+  String get configDirectoryWritable => 'Configuration directory is writable';
+
+  @override
+  String get encoding => 'Detected encoding';
+
+  @override
+  String get encodingUtf8 => 'UTF-8';
+
+  @override
+  String get encodingGbk => 'GBK';
+
+  @override
+  String get encodingUnknown => 'Unknown';
+
+  @override
+  String get latestBackup => 'Latest backup';
+
+  @override
+  String get noBackup => 'No backup found';
+
+  @override
+  String get yes => 'Yes';
+
+  @override
+  String get no => 'No';
+
+  @override
+  String get fileBehaviorSection => 'File opening';
+
+  @override
+  String get autoDetectOnStartup => 'Detect Apex files on startup';
+
+  @override
+  String get preferredOpenKind => 'Preferred file';
+
+  @override
+  String get preferredVideoconfig => 'videoconfig.txt';
+
+  @override
+  String get preferredAutoexec => 'autoexec.cfg';
+
+  @override
+  String get reopenLastFile => 'Reopen the last file';
+
+  @override
+  String get autoCreateMissingTemplate => 'Create missing autoexec template';
+
+  @override
+  String get backupSection => 'Automatic backups';
+
+  @override
+  String get enableBackups => 'Create a backup before saving';
+
+  @override
+  String get backupLimit => 'Backups per file';
+
+  @override
+  String get backupDirectoryInput => 'Backup directory';
+
+  @override
+  String get chooseDirectory => 'Choose directory';
+
+  @override
+  String get openDirectory => 'Open directory';
+
+  @override
+  String get cleanOldBackups => 'Clean old backups';
+
+  @override
+  String cleanedBackups(Object count) {
+    return 'Removed $count old backups';
+  }
+
+  @override
+  String get resetSection => 'Reset';
+
+  @override
+  String get resetSettings => 'Restore default settings';
+
+  @override
+  String get resetSettingsTitle => 'Restore default settings?';
+
+  @override
+  String get resetSettingsBody =>
+      'Only application settings will be removed. Configuration files and backups will not be deleted.';
+
+  @override
+  String get resetSettingsConfirm => 'Restore defaults';
+
+  @override
+  String get updateSection => 'Updates';
+
+  @override
+  String get currentVersion => 'Current version';
+
+  @override
+  String get checkForUpdates => 'Check for updates';
+
+  @override
+  String get checkingForUpdates => 'Checking for updates...';
+
+  @override
+  String get upToDate => 'You\'re up to date';
+
+  @override
+  String newVersionAvailable(Object version) {
+    return 'New version available: $version';
+  }
+
+  @override
+  String get viewReleaseNotes => 'View release notes';
+
+  @override
+  String get updateCheckFailed => 'Update check failed';
+
+  @override
+  String get updateCheckFailedHint =>
+      'Check your network connection and try again.';
 }

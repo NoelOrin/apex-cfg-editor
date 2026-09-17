@@ -91,6 +91,8 @@ jobs:
           flutter build windows --release
           --build-name ${{ steps.release.outputs.app_version }}
           --build-number ${{ github.run_number }}
+          --dart-define=APP_VERSION=${{ steps.release.outputs.app_version }}
+          --dart-define=APP_BUILD_NUMBER=${{ github.run_number }}
 
       - name: Compile installer
         shell: pwsh

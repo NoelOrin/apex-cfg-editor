@@ -98,11 +98,57 @@ void main() {
     );
   });
 
-  testWidgets('kb hit shows subtitle and dropdown; select emits value', (
-    t,
-  ) async {
-    const kbSrc = '"setting.fps_max" "1"\n"setting.r_full" "1"\n';
-    final edit = _realEditBloc(src: kbSrc);
+  testWidgets(
+    'kb hit shows localized description and dropdown; select emits value',
+    (t) async {
+      const kbSrc = '"setting.fps_max" "1"\n"setting.r_full" "1"\n';
+      final edit = _realEditBloc(src: kbSrc);
+      addTearDown(edit.close);
+      final file = _realFileBloc(edit);
+      addTearDown(file.close);
+      const kb = KbService(
+        data: {
+          'en': {
+            'setting.fps_max': {
+              'name': 'FPS Cap',
+              'description': 'Frame rate limit',
+              'recommended': '0',
+              'risk': 'low',
+              'values': [
+                {'v': '0', 'label': 'Capped'},
+                {'v': '1', 'label': 'Uncapped'},
+              ],
+            },
+          },
+        },
+      );
+
+      await t.pumpWidget(
+        _host(
+          KvTableView(editBloc: edit, fileBloc: file),
+          kb: kb,
+        ),
+      );
+      await t.pumpAndSettle();
+
+      // KB 命中：subtitle 显示 entry.description；行 0 是下拉，行 1 无条目仍是文本框。
+      expect(find.text('Frame rate limit'), findsOneWidget);
+      expect(find.byType(fluent.ComboBox<String>), findsOneWidget);
+      expect(find.byType(fluent.TextBox), findsOneWidget);
+
+      // 下拉当前值 '1' → 按钮显示 label 'Uncapped'；打开菜单选 'Capped'（v='0'）。
+      await t.tap(find.text('Uncapped'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Capped'));
+      await t.pumpAndSettle();
+
+      expect((edit.state.doc!.lines[0] as KeyValueLine).value, '0');
+      expect(edit.state.dirty, isTrue);
+    },
+  );
+
+  testWidgets('unmatched cfg field leaves description blank', (t) async {
+    final edit = _realEditBloc();
     addTearDown(edit.close);
     final file = _realFileBloc(edit);
     addTearDown(file.close);
@@ -114,10 +160,7 @@ void main() {
             'description': 'Frame rate limit',
             'recommended': '0',
             'risk': 'low',
-            'values': [
-              {'v': '0', 'label': 'Capped'},
-              {'v': '1', 'label': 'Uncapped'},
-            ],
+            'values': [],
           },
         },
       },
@@ -131,19 +174,49 @@ void main() {
     );
     await t.pumpAndSettle();
 
-    // KB 命中：subtitle 显示 entry.name；行 0 是下拉，行 1 无条目仍是文本框。
-    expect(find.text('FPS Cap'), findsOneWidget);
-    expect(find.byType(fluent.ComboBox<String>), findsOneWidget);
-    expect(find.byType(fluent.TextBox), findsOneWidget);
+    expect(find.text('Frame rate limit'), findsOneWidget);
+    expect(find.text('FPS Cap'), findsNothing);
+  });
 
-    // 下拉当前值 '1' → 按钮显示 label 'Uncapped'；打开菜单选 'Capped'（v='0'）。
-    await t.tap(find.text('Uncapped'));
-    await t.pumpAndSettle();
-    await t.tap(find.text('Capped'));
+  testWidgets('cfg description follows the selected locale', (t) async {
+    final edit = _realEditBloc();
+    addTearDown(edit.close);
+    final file = _realFileBloc(edit);
+    addTearDown(file.close);
+    const kb = KbService(
+      data: {
+        'zh': {
+          'setting.fps_max': {
+            'name': '帧率上限',
+            'description': '限制游戏最大帧率。',
+            'recommended': '0',
+            'risk': 'low',
+            'values': [],
+          },
+        },
+      },
+    );
+
+    await t.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: [
+          fluent.FluentLocalizations.delegate,
+          ...AppLocalizations.localizationsDelegates,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: RepositoryProvider<KbService>.value(
+          value: kb,
+          child: Scaffold(
+            body: KvTableView(editBloc: edit, fileBloc: file),
+          ),
+        ),
+      ),
+    );
     await t.pumpAndSettle();
 
-    expect((edit.state.doc!.lines[0] as KeyValueLine).value, '0');
-    expect(edit.state.dirty, isTrue);
+    expect(find.text('限制游戏最大帧率。'), findsOneWidget);
+    expect(find.text('Frame rate limit'), findsNothing);
   });
 
   testWidgets(

@@ -28,7 +28,7 @@ void main() {
     expect(e!.name, '帧率上限');
   });
 
-  test('miss → null（UI 层走 kbNotDocumented 兜底）', () {
+  test('miss → null（UI 层保持留空）', () {
     final kb = KbService(data: {'zh': zh, 'en': {}});
     expect(kb.lookup(KbFile.autoexec, 'mat_queue_mode', 'zh'), isNull);
   });

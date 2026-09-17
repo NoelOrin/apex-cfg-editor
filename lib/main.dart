@@ -11,6 +11,7 @@ import 'package:apex_cfg_editor/state/diff_bloc.dart';
 import 'package:apex_cfg_editor/state/edit_bloc.dart';
 import 'package:apex_cfg_editor/state/file_bloc.dart';
 import 'package:apex_cfg_editor/ui/editor_screen.dart';
+import 'package:apex_cfg_editor/ui/locale_preference.dart';
 import 'package:apex_cfg_editor/ui/theme/acid_theme.dart';
 import 'package:apex_cfg_editor/ui/theme/theme_mode_scope.dart';
 import 'package:fluent_ui/fluent_ui.dart';
@@ -56,20 +57,28 @@ Future<void> backupThenWrite(
   BackupService backups,
   String path,
   String text,
-  CfgEncoding enc,
-) async {
+  CfgEncoding enc, {
+  bool backupEnabled = true,
+  int backupLimit = SettingsStore.defaultBackupLimit,
+}) async {
   final current = File(path).readAsBytesSync();
-  backups.backupBeforeSave(path, current);
+  if (backupEnabled) {
+    backups.backupBeforeSave(path, current);
+    backups.pruneBackups(path, backupLimit);
+  }
   CfgFileIo.write(path, text, enc, bom: CfgFileIo.hasBom(current));
 }
 
 /// 应用壳：持有三个 bloc 的生命周期并完成真实装配；同时持有亮/暗
 /// 主题模式（ThemeModeScope 注入标题栏切换按钮，切换即写入
 /// settings.json，启动恢复）。
+/// 语言偏好同样由应用壳持有（LocalePreferenceScope 注入设置页）。
 ///
 /// 主题走 acid_theme.dart 的 buildFluentTheme（Fluent UI + 酸性风格 v2）：
 /// 色值集中在 [AcidPalette]，diff 红绿高亮见 [DiffColors]。启动时默认暗色；
 /// settings.json 记忆的 themeMode 优先，测试可经 initialThemeMode 注入。
+String defaultLogDir() => '${appDataDir()}/logs';
+
 class ApexCfgEditorApp extends StatefulWidget {
   /// 知识库。生产由 main() 从 assets 加载；测试注入（空表 / 临时数据）。
   final KbService kb;
@@ -88,6 +97,9 @@ class ApexCfgEditorApp extends StatefulWidget {
   /// 测试接缝：显式初始主题模式。null → 读 settings.json，仍无则暗色。
   final ThemeMode? initialThemeMode;
 
+  /// 测试接缝：显式初始语言偏好。null → 读 settings.json，仍无则跟随系统。
+  final AppLocalePreference? initialLocalePreference;
+
   const ApexCfgEditorApp({
     super.key,
     required this.kb,
@@ -95,6 +107,7 @@ class ApexCfgEditorApp extends StatefulWidget {
     this.settingsPath,
     this.autoDetect = true,
     this.initialThemeMode,
+    this.initialLocalePreference,
   });
 
   @override
@@ -106,9 +119,13 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
   late final DiffBloc diffBloc;
   late final FileBloc fileBloc;
   late final SettingsStore settings;
+  late final BackupService backups;
 
   /// 当前主题模式（默认暗色；settings.json 记忆值优先，测试注入最高）。
   late ThemeMode _themeMode;
+
+  /// 当前语言偏好（默认跟随系统；settings.json 记忆值优先，测试注入最高）。
+  late AppLocalePreference _localePreference;
 
   @override
   void initState() {
@@ -119,15 +136,25 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
     // 文档状态漏进 diff。EditorScreen 内所有 OpenRequested 都晚于本方法。
     editBloc = EditBloc();
     diffBloc = DiffBloc(editStream: editBloc.stream);
-    final backups = BackupService(
-      baseDir: widget.backupBaseDir ?? defaultBackupBase(),
-    );
     final settings = SettingsStore(
       settingsPath: widget.settingsPath ?? defaultSettingsPath(),
     );
+    backups = BackupService(
+      baseDir:
+          settings.readBackupDir() ??
+          widget.backupBaseDir ??
+          defaultBackupBase(),
+    );
     fileBloc = FileBloc(
       editBloc: editBloc,
-      saveImpl: (path, text, enc) => backupThenWrite(backups, path, text, enc),
+      saveImpl: (path, text, enc) => backupThenWrite(
+        backups,
+        path,
+        text,
+        enc,
+        backupEnabled: settings.readBackupEnabled(),
+        backupLimit: settings.readBackupLimit(),
+      ),
       listBackupsImpl: backups.listBackups,
       restoreImpl: backups.restore,
       onOpenSucceeded: (dir) {
@@ -137,12 +164,16 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
         final install = apexInstallDirFromOpenedDir(dir);
         if (install != null) settings.writeCustomInstallDir(install);
       },
+      onOpenFileSucceeded: settings.writeLastOpenFile,
     );
     this.settings = settings;
     _themeMode =
         widget.initialThemeMode ??
         themeModeFromRaw(settings.readThemeModeRaw()) ??
         ThemeMode.dark;
+    _localePreference =
+        widget.initialLocalePreference ??
+        appLocalePreferenceFromRaw(settings.readLocaleRaw());
   }
 
   @override
@@ -160,33 +191,66 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
     settings.writeThemeModeRaw(themeModeToRaw(mode));
   }
 
+  /// 界面语言切换入口（设置页）：立即刷新 FluentApp.locale 并持久化。
+  void _setLocalePreference(AppLocalePreference preference) {
+    setState(() => _localePreference = preference);
+    settings.writeLocaleRaw(preference.raw);
+  }
+
+  void _syncRuntimeSettings() {
+    backups.baseDir =
+        settings.readBackupDir() ?? widget.backupBaseDir ?? defaultBackupBase();
+    setState(() {});
+  }
+
+  void _resetSettings() {
+    settings.reset();
+    backups.baseDir = widget.backupBaseDir ?? defaultBackupBase();
+    setState(() {
+      _themeMode = ThemeMode.dark;
+      _localePreference = AppLocalePreference.system;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return ThemeModeScope(
       mode: _themeMode,
       onChanged: _setThemeMode,
-      child: FluentApp(
-        onGenerateTitle: (c) => AppLocalizations.of(c)!.appTitle,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        theme: buildFluentTheme(Brightness.light),
-        darkTheme: buildFluentTheme(Brightness.dark),
-        themeMode: _themeMode,
-        home: Builder(
-          builder: (context) => Container(
-            // 无边框窗口没有系统投影/边框：1px 酸绿描边保证窗口边界
-            // 在桌面上可见（颜色取当前主题色板主色）。
-            decoration: BoxDecoration(
-              border: Border.all(color: AcidPalette.of(context).acid, width: 1),
-            ),
-            child: RepositoryProvider<KbService>.value(
-              value: widget.kb,
-              child: EditorScreen(
-                editBloc: editBloc,
-                diffBloc: diffBloc,
-                fileBloc: fileBloc,
-                settings: settings,
-                autoDetect: widget.autoDetect,
+      child: LocalePreferenceScope(
+        preference: _localePreference,
+        onChanged: _setLocalePreference,
+        child: FluentApp(
+          onGenerateTitle: (c) => AppLocalizations.of(c)!.appTitle,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: buildFluentTheme(Brightness.light),
+          darkTheme: buildFluentTheme(Brightness.dark),
+          themeMode: _themeMode,
+          locale: _localePreference.locale,
+          home: Builder(
+            builder: (context) => Container(
+              // 无边框窗口没有系统投影/边框：1px 酸绿描边保证窗口边界
+              // 在桌面上可见（颜色取当前主题色板主色）。
+              decoration: BoxDecoration(
+                border: Border.all(
+                  color: AcidPalette.of(context).acid,
+                  width: 1,
+                ),
+              ),
+              child: RepositoryProvider<KbService>.value(
+                value: widget.kb,
+                child: EditorScreen(
+                  editBloc: editBloc,
+                  diffBloc: diffBloc,
+                  fileBloc: fileBloc,
+                  settings: settings,
+                  autoDetect: widget.autoDetect,
+                  backupDir: backups.baseDir,
+                  logDir: defaultLogDir(),
+                  onSettingsChanged: _syncRuntimeSettings,
+                  onResetSettings: _resetSettings,
+                ),
               ),
             ),
           ),

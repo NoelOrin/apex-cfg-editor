@@ -105,7 +105,7 @@ void main() {
     },
   );
 
-  testWidgets('undocumented key shows kbNotDocumented fallback (en)', (
+  testWidgets('undocumented key leaves the description panel blank (en)', (
     t,
   ) async {
     final edit = _editBloc();
@@ -116,9 +116,9 @@ void main() {
 
     expect(
       find.text('Key not documented yet. You can still edit it.'),
-      findsOneWidget,
+      findsNothing,
     );
-    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(find.byType(SingleChildScrollView), findsNothing);
   });
 
   testWidgets(
@@ -168,21 +168,47 @@ void main() {
     expect(find.byType(SingleChildScrollView), findsNothing);
   });
 
-  testWidgets('zh locale shows Chinese fallback text and recommended prefix', (
-    t,
-  ) async {
+  testWidgets('zh locale keeps localized recommended prefix', (t) async {
     final edit = _editBloc();
     addTearDown(edit.close);
     edit.add(SelectionChanged(4));
     await t.pumpWidget(_host(edit, locale: const Locale('zh')));
     await t.pumpAndSettle();
 
-    expect(find.text('该键尚未收录说明，仍可编辑。'), findsOneWidget);
+    expect(find.text('该键尚未收录说明，仍可编辑。'), findsNothing);
 
     // 命中条目的推荐值行同样走 i18n 前缀。
     edit.add(SelectionChanged(0));
     await t.pumpAndSettle();
     expect(find.text('推荐：0'), findsOneWidget);
+  });
+
+  testWidgets('explicit editBloc renders without a context provider', (
+    t,
+  ) async {
+    final edit = _editBloc();
+    addTearDown(edit.close);
+    edit.add(SelectionChanged(0));
+
+    await t.pumpWidget(
+      MaterialApp(
+        theme: _theme(),
+        locale: const Locale('en'),
+        localizationsDelegates: [
+          fluent.FluentLocalizations.delegate,
+          ...AppLocalizations.localizationsDelegates,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: RepositoryProvider<KbService>.value(
+          value: const KbService(data: _kbData),
+          child: Scaffold(body: KbCard(editBloc: edit, showEmptyState: true)),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(find.text('FPS Cap'), findsOneWidget);
+    expect(find.text('Limits the frame rate.'), findsOneWidget);
   });
 
   testWidgets('no KbService provider hides the card', (t) async {

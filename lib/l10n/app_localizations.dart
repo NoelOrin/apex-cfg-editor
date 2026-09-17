@@ -134,6 +134,36 @@ abstract class AppLocalizations {
   /// **'Key not documented yet. You can still edit it.'**
   String get kbNotDocumented;
 
+  /// No description provided for @kbSelectKeyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a setting to view its description and recommendation.'**
+  String get kbSelectKeyHint;
+
+  /// No description provided for @knowledgeBase.
+  ///
+  /// In en, this message translates to:
+  /// **'Knowledge base'**
+  String get knowledgeBase;
+
+  /// No description provided for @diffPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes'**
+  String get diffPreview;
+
+  /// No description provided for @noFileOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'No file open'**
+  String get noFileOpen;
+
+  /// No description provided for @unsavedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved'**
+  String get unsavedBadge;
+
   /// No description provided for @emptyDocHint.
   ///
   /// In en, this message translates to:
@@ -169,6 +199,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open file'**
   String get openFile;
+
+  /// No description provided for @reselectFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Reselect file'**
+  String get reselectFile;
 
   /// No description provided for @fileOpenFailed.
   ///
@@ -385,6 +421,372 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Toggle theme'**
   String get toggleTheme;
+
+  /// No description provided for @settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settings;
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// No description provided for @interfaceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Interface'**
+  String get interfaceSection;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @languageDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the language used by the editor interface.'**
+  String get languageDescription;
+
+  /// No description provided for @languageSystem.
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get languageSystem;
+
+  /// No description provided for @languageChinese.
+  ///
+  /// In en, this message translates to:
+  /// **'简体中文'**
+  String get languageChinese;
+
+  /// No description provided for @languageEnglish.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// No description provided for @appInfoSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Application'**
+  String get appInfoSection;
+
+  /// No description provided for @applicationVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get applicationVersion;
+
+  /// No description provided for @buildNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Build'**
+  String get buildNumber;
+
+  /// No description provided for @repository.
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub repository'**
+  String get repository;
+
+  /// No description provided for @license.
+  ///
+  /// In en, this message translates to:
+  /// **'License'**
+  String get license;
+
+  /// No description provided for @configDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration directory'**
+  String get configDirectory;
+
+  /// No description provided for @backupDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup directory'**
+  String get backupDirectory;
+
+  /// No description provided for @logDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Log directory'**
+  String get logDirectory;
+
+  /// No description provided for @mitLicense.
+  ///
+  /// In en, this message translates to:
+  /// **'MIT License'**
+  String get mitLicense;
+
+  /// No description provided for @notAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available'**
+  String get notAvailable;
+
+  /// No description provided for @openInBrowser.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in browser'**
+  String get openInBrowser;
+
+  /// No description provided for @diagnosticsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics'**
+  String get diagnosticsSection;
+
+  /// No description provided for @runDiagnostics.
+  ///
+  /// In en, this message translates to:
+  /// **'Run diagnostics'**
+  String get runDiagnostics;
+
+  /// No description provided for @diagnosticsNotRun.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagnostics have not been run yet.'**
+  String get diagnosticsNotRun;
+
+  /// No description provided for @configDirectoryExists.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration directory exists'**
+  String get configDirectoryExists;
+
+  /// No description provided for @configDirectoryWritable.
+  ///
+  /// In en, this message translates to:
+  /// **'Configuration directory is writable'**
+  String get configDirectoryWritable;
+
+  /// No description provided for @encoding.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected encoding'**
+  String get encoding;
+
+  /// No description provided for @encodingUtf8.
+  ///
+  /// In en, this message translates to:
+  /// **'UTF-8'**
+  String get encodingUtf8;
+
+  /// No description provided for @encodingGbk.
+  ///
+  /// In en, this message translates to:
+  /// **'GBK'**
+  String get encodingGbk;
+
+  /// No description provided for @encodingUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get encodingUnknown;
+
+  /// No description provided for @latestBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest backup'**
+  String get latestBackup;
+
+  /// No description provided for @noBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'No backup found'**
+  String get noBackup;
+
+  /// No description provided for @yes.
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get yes;
+
+  /// No description provided for @no.
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get no;
+
+  /// No description provided for @fileBehaviorSection.
+  ///
+  /// In en, this message translates to:
+  /// **'File opening'**
+  String get fileBehaviorSection;
+
+  /// No description provided for @autoDetectOnStartup.
+  ///
+  /// In en, this message translates to:
+  /// **'Detect Apex files on startup'**
+  String get autoDetectOnStartup;
+
+  /// No description provided for @preferredOpenKind.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred file'**
+  String get preferredOpenKind;
+
+  /// No description provided for @preferredVideoconfig.
+  ///
+  /// In en, this message translates to:
+  /// **'videoconfig.txt'**
+  String get preferredVideoconfig;
+
+  /// No description provided for @preferredAutoexec.
+  ///
+  /// In en, this message translates to:
+  /// **'autoexec.cfg'**
+  String get preferredAutoexec;
+
+  /// No description provided for @reopenLastFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Reopen the last file'**
+  String get reopenLastFile;
+
+  /// No description provided for @autoCreateMissingTemplate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create missing autoexec template'**
+  String get autoCreateMissingTemplate;
+
+  /// No description provided for @backupSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic backups'**
+  String get backupSection;
+
+  /// No description provided for @enableBackups.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a backup before saving'**
+  String get enableBackups;
+
+  /// No description provided for @backupLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Backups per file'**
+  String get backupLimit;
+
+  /// No description provided for @backupDirectoryInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup directory'**
+  String get backupDirectoryInput;
+
+  /// No description provided for @chooseDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose directory'**
+  String get chooseDirectory;
+
+  /// No description provided for @openDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Open directory'**
+  String get openDirectory;
+
+  /// No description provided for @cleanOldBackups.
+  ///
+  /// In en, this message translates to:
+  /// **'Clean old backups'**
+  String get cleanOldBackups;
+
+  /// No description provided for @cleanedBackups.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {count} old backups'**
+  String cleanedBackups(Object count);
+
+  /// No description provided for @resetSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get resetSection;
+
+  /// No description provided for @resetSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore default settings'**
+  String get resetSettings;
+
+  /// No description provided for @resetSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore default settings?'**
+  String get resetSettingsTitle;
+
+  /// No description provided for @resetSettingsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Only application settings will be removed. Configuration files and backups will not be deleted.'**
+  String get resetSettingsBody;
+
+  /// No description provided for @resetSettingsConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore defaults'**
+  String get resetSettingsConfirm;
+
+  /// No description provided for @updateSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates'**
+  String get updateSection;
+
+  /// No description provided for @currentVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Current version'**
+  String get currentVersion;
+
+  /// No description provided for @checkForUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get checkForUpdates;
+
+  /// No description provided for @checkingForUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking for updates...'**
+  String get checkingForUpdates;
+
+  /// No description provided for @upToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re up to date'**
+  String get upToDate;
+
+  /// No description provided for @newVersionAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'New version available: {version}'**
+  String newVersionAvailable(Object version);
+
+  /// No description provided for @viewReleaseNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'View release notes'**
+  String get viewReleaseNotes;
+
+  /// No description provided for @updateCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Update check failed'**
+  String get updateCheckFailed;
+
+  /// No description provided for @updateCheckFailedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your network connection and try again.'**
+  String get updateCheckFailedHint;
 }
 
 class _AppLocalizationsDelegate

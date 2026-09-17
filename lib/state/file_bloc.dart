@@ -74,6 +74,9 @@ class FileBloc extends Bloc<FileEvent, FileState> {
   /// 记住上次打开路径，装配层写入 settings.json）。null = 不记录。
   final void Function(String dir)? onOpenSucceeded;
 
+  /// 打开成功后回传完整文件路径，供应用设置记忆上次打开文件。
+  final void Function(String path)? onOpenFileSucceeded;
+
   /// Open requests can overlap while the filesystem is slow. Only the newest
   /// request may commit a document or file state.
   var _openGeneration = 0;
@@ -84,6 +87,7 @@ class FileBloc extends Bloc<FileEvent, FileState> {
     required this.listBackupsImpl,
     required this.restoreImpl,
     this.onOpenSucceeded,
+    this.onOpenFileSucceeded,
   }) : super(const FileState()) {
     on<OpenRequested>((e, em) async {
       final generation = ++_openGeneration;
@@ -110,6 +114,7 @@ class FileBloc extends Bloc<FileEvent, FileState> {
           ),
         );
         onOpenSucceeded?.call(parentDirOf(e.path)); // 规格 R7：记住上次路径
+        onOpenFileSucceeded?.call(e.path);
       } catch (_) {
         if (generation != _openGeneration) return;
         // A failed replacement open must leave the current document usable.

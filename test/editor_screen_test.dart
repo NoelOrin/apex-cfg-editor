@@ -19,7 +19,10 @@ class MockFileBloc extends MockBloc<FileEvent, FileState> implements FileBloc {}
 
 void main() {
   // SaveRequested 无 == 重写（按身份相等），verify 需按类型匹配。
-  setUpAll(() => registerFallbackValue(SaveRequested()));
+  setUpAll(() {
+    registerFallbackValue(SaveRequested());
+    registerFallbackValue(OpenRequested(''));
+  });
 
   testWidgets('renders top bar with mode toggle (lucide icons, no emoji)', (
     t,
@@ -58,6 +61,12 @@ void main() {
     // 模式切换为纯图标段（Tooltip 兼作语义标签），断言随 UI 形态调整。
     expect(find.byTooltip('Table'), findsOneWidget);
     expect(find.byTooltip('Text'), findsOneWidget);
+    expect(find.byKey(const ValueKey('workspace.editor')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('workspace.knowledgeBase')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const ValueKey('workspace.diffPreview')), findsOneWidget);
   });
 
   testWidgets('title bar close button routes dirty exit through ExitGuard', (
@@ -187,6 +196,59 @@ void main() {
 
     verify(
       () => file.add(any<SaveRequested>(that: isA<SaveRequested>())),
+    ).called(1);
+  });
+
+  testWidgets('reselect file button dispatches the picked path', (t) async {
+    final edit = MockEditBloc();
+    final diff = MockDiffBloc();
+    final file = MockFileBloc();
+    whenListen(
+      edit,
+      const Stream<EditState>.empty(),
+      initialState: const EditState(),
+    );
+    whenListen(
+      diff,
+      const Stream<DiffState>.empty(),
+      initialState: const DiffState(),
+    );
+    whenListen(
+      file,
+      const Stream<FileState>.empty(),
+      initialState: const FileState(path: 'C:\\old\\autoexec.cfg'),
+    );
+
+    await t.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: [
+          fluent.FluentLocalizations.delegate,
+          ...AppLocalizations.localizationsDelegates,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          autoDetect: false,
+          pickFile: () async => 'C:\\new\\videoconfig.txt',
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Reselect file'), findsOneWidget);
+    await t.tap(find.byTooltip('Reselect file'));
+    await t.pumpAndSettle();
+
+    verify(
+      () => file.add(
+        any<OpenRequested>(
+          that: predicate<OpenRequested>(
+            (event) => event.path.endsWith('new\\videoconfig.txt'),
+          ),
+        ),
+      ),
     ).called(1);
   });
 

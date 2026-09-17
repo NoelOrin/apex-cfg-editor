@@ -11,7 +11,13 @@ import 'dart:io';
 /// - `themeMode`（酸性风格 v2）：亮/暗主题模式，值为小写枚举名
 ///   （'system' / 'light' / 'dark'）；原始字符串存取，枚举映射在
 ///   UI 层（theme_mode_scope.dart），本类保持纯 Dart 可测。
+/// - `locale`：界面语言模式，值为 'system' / 'zh' / 'en'；非法值由
+///   调用方回退到跟随系统，本类只负责原始字符串持久化。
 class SettingsStore {
+  static const int defaultBackupLimit = 20;
+  static const int minBackupLimit = 1;
+  static const int maxBackupLimit = 100;
+
   final String settingsPath;
 
   SettingsStore({required this.settingsPath});
@@ -37,18 +43,27 @@ class SettingsStore {
   static String? themeModeRawFromJson(String contents) =>
       _stringFieldFromJson(contents, 'themeMode');
 
-  String? _readField(String key) {
+  static String? localeRawFromJson(String contents) =>
+      _stringFieldFromJson(contents, 'locale');
+
+  dynamic _readValue(String key) {
     try {
       final f = File(settingsPath);
       if (!f.existsSync()) return null;
-      return _stringFieldFromJson(f.readAsStringSync(), key);
+      final data = jsonDecode(f.readAsStringSync());
+      return data is Map<String, dynamic> ? data[key] : null;
     } catch (_) {
       return null;
     }
   }
 
+  String? _readField(String key) {
+    final value = _readValue(key);
+    return value is String && value.isNotEmpty ? value : null;
+  }
+
   /// 合并写入：保留文件里已有且合法的其它字段，避免多字段互相覆盖。
-  void _writeField(String key, String value) {
+  void _writeField(String key, Object? value) {
     try {
       final f = File(settingsPath);
       Map<String, dynamic> merged = {};
@@ -74,11 +89,89 @@ class SettingsStore {
 
   String? readCustomInstallDir() => _readField('customInstallDir');
 
-  void writeCustomInstallDir(String dir) => _writeField('customInstallDir', dir);
+  void writeCustomInstallDir(String dir) =>
+      _writeField('customInstallDir', dir);
 
   /// 主题模式（酸性风格 v2）：原始字符串（'light' / 'dark' / 'system'），
   /// 非法值由调用方映射为 null → 回退默认暗色。
   String? readThemeModeRaw() => _readField('themeMode');
 
   void writeThemeModeRaw(String value) => _writeField('themeMode', value);
+
+  /// 界面语言模式：原始字符串（'system' / 'zh' / 'en'）。
+  String? readLocaleRaw() => _readField('locale');
+
+  void writeLocaleRaw(String value) => _writeField('locale', value);
+
+  String? readLastOpenFile() => _readField('lastOpenFile');
+
+  void writeLastOpenFile(String path) => _writeField('lastOpenFile', path);
+
+  bool _readBool(String key, {required bool fallback}) {
+    final value = _readValue(key);
+    return value is bool ? value : fallback;
+  }
+
+  int _readInt(
+    String key, {
+    required int fallback,
+    required int min,
+    required int max,
+  }) {
+    final value = _readValue(key);
+    if (value is! int) return fallback;
+    return value.clamp(min, max);
+  }
+
+  bool readAutoDetectOnStartup() =>
+      _readBool('autoDetectOnStartup', fallback: true);
+
+  void writeAutoDetectOnStartup(bool value) =>
+      _writeField('autoDetectOnStartup', value);
+
+  String readPreferredOpenKind() {
+    final value = _readField('preferredOpenKind');
+    return value == 'autoexec' ? 'autoexec' : 'videoconfig';
+  }
+
+  void writePreferredOpenKind(String value) =>
+      _writeField('preferredOpenKind', value);
+
+  bool readReopenLastFile() => _readBool('reopenLastFile', fallback: false);
+
+  void writeReopenLastFile(bool value) => _writeField('reopenLastFile', value);
+
+  bool readAutoCreateMissingTemplate() =>
+      _readBool('autoCreateMissingTemplate', fallback: false);
+
+  void writeAutoCreateMissingTemplate(bool value) =>
+      _writeField('autoCreateMissingTemplate', value);
+
+  bool readBackupEnabled() => _readBool('backupEnabled', fallback: true);
+
+  void writeBackupEnabled(bool value) => _writeField('backupEnabled', value);
+
+  int readBackupLimit() => _readInt(
+    'backupLimit',
+    fallback: defaultBackupLimit,
+    min: minBackupLimit,
+    max: maxBackupLimit,
+  );
+
+  void writeBackupLimit(int value) =>
+      _writeField('backupLimit', value.clamp(minBackupLimit, maxBackupLimit));
+
+  String? readBackupDir() => _readField('backupDir');
+
+  void writeBackupDir(String dir) => _writeField('backupDir', dir);
+
+  /// 只删除应用设置文件，不触碰配置文件或备份。
+  void reset() {
+    try {
+      final file = File(settingsPath);
+      if (file.existsSync()) file.deleteSync();
+    } catch (_) {
+      // 静默：恢复默认失败不影响编辑器继续运行。
+    }
+  }
 }

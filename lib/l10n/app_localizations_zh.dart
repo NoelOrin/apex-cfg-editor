@@ -27,6 +27,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get kbNotDocumented => '该键尚未收录说明，仍可编辑。';
 
   @override
+  String get kbSelectKeyHint => '选择配置项可查看说明与推荐值。';
+
+  @override
+  String get knowledgeBase => '知识库';
+
+  @override
+  String get diffPreview => '变更对比';
+
+  @override
+  String get noFileOpen => '未打开文件';
+
+  @override
+  String get unsavedBadge => '未保存';
+
+  @override
   String get emptyDocHint => '打开一个 cfg 文件开始编辑';
 
   @override
@@ -45,6 +60,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get openFile => '打开文件';
+
+  @override
+  String get reselectFile => '重新选择文件';
 
   @override
   String get fileOpenFailed => '打开文件失败';
@@ -154,4 +172,191 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toggleTheme => '切换主题';
+
+  @override
+  String get settings => '设置';
+
+  @override
+  String get back => '返回';
+
+  @override
+  String get interfaceSection => '界面';
+
+  @override
+  String get language => '界面语言';
+
+  @override
+  String get languageDescription => '选择编辑器界面使用的语言。';
+
+  @override
+  String get languageSystem => '跟随系统';
+
+  @override
+  String get languageChinese => '简体中文';
+
+  @override
+  String get languageEnglish => 'English';
+
+  @override
+  String get appInfoSection => '应用信息';
+
+  @override
+  String get applicationVersion => '当前版本';
+
+  @override
+  String get buildNumber => '构建号';
+
+  @override
+  String get repository => 'GitHub 仓库';
+
+  @override
+  String get license => '许可证';
+
+  @override
+  String get configDirectory => '配置目录';
+
+  @override
+  String get backupDirectory => '备份目录';
+
+  @override
+  String get logDirectory => '日志目录';
+
+  @override
+  String get mitLicense => 'MIT 许可证';
+
+  @override
+  String get notAvailable => '不可用';
+
+  @override
+  String get openInBrowser => '在浏览器中打开';
+
+  @override
+  String get diagnosticsSection => '配置诊断';
+
+  @override
+  String get runDiagnostics => '运行诊断';
+
+  @override
+  String get diagnosticsNotRun => '尚未运行诊断。';
+
+  @override
+  String get configDirectoryExists => '配置目录存在';
+
+  @override
+  String get configDirectoryWritable => '配置目录可写';
+
+  @override
+  String get encoding => '探测到的编码';
+
+  @override
+  String get encodingUtf8 => 'UTF-8';
+
+  @override
+  String get encodingGbk => 'GBK';
+
+  @override
+  String get encodingUnknown => '未知';
+
+  @override
+  String get latestBackup => '最近备份';
+
+  @override
+  String get noBackup => '未找到备份';
+
+  @override
+  String get yes => '是';
+
+  @override
+  String get no => '否';
+
+  @override
+  String get fileBehaviorSection => '文件打开行为';
+
+  @override
+  String get autoDetectOnStartup => '启动时自动探测 Apex 文件';
+
+  @override
+  String get preferredOpenKind => '优先打开文件';
+
+  @override
+  String get preferredVideoconfig => 'videoconfig.txt';
+
+  @override
+  String get preferredAutoexec => 'autoexec.cfg';
+
+  @override
+  String get reopenLastFile => '重新打开上次文件';
+
+  @override
+  String get autoCreateMissingTemplate => '缺少 autoexec 时自动创建模板';
+
+  @override
+  String get backupSection => '自动备份';
+
+  @override
+  String get enableBackups => '保存前创建备份';
+
+  @override
+  String get backupLimit => '每个文件的备份数量';
+
+  @override
+  String get backupDirectoryInput => '备份目录';
+
+  @override
+  String get chooseDirectory => '选择目录';
+
+  @override
+  String get openDirectory => '打开目录';
+
+  @override
+  String get cleanOldBackups => '清理旧备份';
+
+  @override
+  String cleanedBackups(Object count) {
+    return '已清理 $count 个旧备份';
+  }
+
+  @override
+  String get resetSection => '恢复';
+
+  @override
+  String get resetSettings => '恢复默认设置';
+
+  @override
+  String get resetSettingsTitle => '恢复默认设置？';
+
+  @override
+  String get resetSettingsBody => '只会删除应用设置，不会删除配置文件和备份。';
+
+  @override
+  String get resetSettingsConfirm => '恢复默认';
+
+  @override
+  String get updateSection => '更新';
+
+  @override
+  String get currentVersion => '当前版本';
+
+  @override
+  String get checkForUpdates => '检查更新';
+
+  @override
+  String get checkingForUpdates => '正在检查更新...';
+
+  @override
+  String get upToDate => '已是最新版本';
+
+  @override
+  String newVersionAvailable(Object version) {
+    return '发现新版本 $version';
+  }
+
+  @override
+  String get viewReleaseNotes => '查看发行说明';
+
+  @override
+  String get updateCheckFailed => '检查更新失败';
+
+  @override
+  String get updateCheckFailedHint => '请检查网络连接后重试。';
 }

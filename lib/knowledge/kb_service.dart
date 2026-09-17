@@ -64,8 +64,7 @@ class KbService {
     return KbService(data: out);
   }
 
-  /// 查找键的说明；先查请求语言，缺失时回退英文，仍未命中返回 null
-  /// （UI 层走 kbNotDocumented 兜底）。
+  /// 查找键的说明；先查请求语言，缺失时回退英文，仍未命中返回 null。
   KbEntry? lookup(KbFile file, String key, String locale) {
     for (final loc in [locale, if (locale != 'en') 'en']) {
       final table = data[loc];

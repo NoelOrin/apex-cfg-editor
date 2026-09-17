@@ -9,28 +9,50 @@ import '../../state/edit_bloc.dart';
 import '../theme/acid_theme.dart';
 
 /// 选中键的 Fluent 知识说明面板。
+///
+/// [editBloc] 为显式接线；未传入时兼容旧宿主的 context provider 模式。
+/// [showEmptyState] 用于工作台面板：无选中项或未收录时给出稳定提示，而不是
+/// 留下整块空白。
 class KbCard extends StatelessWidget {
-  const KbCard({super.key});
+  final EditBloc? editBloc;
+  final bool showEmptyState;
+
+  const KbCard({super.key, this.editBloc, this.showEmptyState = false});
 
   @override
   Widget build(BuildContext context) {
-    final edit = context.read<EditBloc?>();
+    final edit = editBloc ?? context.read<EditBloc?>();
     if (edit == null) return const SizedBox.shrink();
     return FluentThemeFallback(
       child: BlocBuilder<EditBloc, EditState>(
         bloc: edit,
         builder: (context, s) {
+          final l = AppLocalizations.of(context)!;
           final doc = s.doc;
-          final i = s.selectedIndex;
-          if (doc == null || i == null || i < 0 || i >= doc.lines.length) {
-            return const SizedBox.shrink();
+          if (doc == null) {
+            return showEmptyState
+                ? _emptyState(context, l.kbSelectKeyHint)
+                : const SizedBox.shrink();
           }
+
+          final i = s.selectedIndex;
+          if (i == null || i < 0 || i >= doc.lines.length) {
+            return showEmptyState
+                ? _emptyState(context, l.kbSelectKeyHint)
+                : const SizedBox.shrink();
+          }
+
           final kv = switch (doc.lines[i]) {
             KeyValueLine(:final key) => (key: key, file: KbFile.videoconfig),
             CvarLine(:final key) => (key: key, file: KbFile.autoexec),
             _ => null,
           };
-          if (kv == null) return const SizedBox.shrink();
+          if (kv == null) {
+            return showEmptyState
+                ? _emptyState(context, l.kbSelectKeyHint)
+                : const SizedBox.shrink();
+          }
+
           final kb = context.read<KbService?>();
           if (kb == null) return const SizedBox.shrink();
           final entry = kb.lookup(
@@ -38,13 +60,12 @@ class KbCard extends StatelessWidget {
             kv.key,
             Localizations.localeOf(context).languageCode,
           );
-          final l = AppLocalizations.of(context)!;
-          if (entry == null) {
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(14),
-              child: Text(l.kbNotDocumented),
-            );
+          if (entry == null || entry.description.trim().isEmpty) {
+            return showEmptyState
+                ? _emptyState(context, l.kbNotDocumented)
+                : const SizedBox.shrink();
           }
+
           final high = entry.risk == 'high';
           final warned = high || entry.risk == 'medium';
           final palette = AcidPalette.of(context);
@@ -86,6 +107,20 @@ class KbCard extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _emptyState(BuildContext context, String message) {
+    final palette = AcidPalette.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: TextStyle(color: palette.textMuted, height: 1.5),
+        ),
       ),
     );
   }

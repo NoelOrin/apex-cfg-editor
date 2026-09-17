@@ -106,7 +106,9 @@ class KvTableView extends StatelessWidget {
                   key,
                   style: const TextStyle(fontFamily: 'monospace'),
                 ),
-                subtitle: entry == null ? null : Text(entry.name),
+                subtitle: entry == null || entry.description.trim().isEmpty
+                    ? null
+                    : Text(entry.description),
                 trailing: SizedBox(width: 190, child: editor),
               );
             },

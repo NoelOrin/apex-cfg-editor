@@ -308,4 +308,122 @@ void main() {
     expect(_norm(file.state.path!), _norm(autoexec.path));
     expect(_norm(store.readCustomInstallDir()!), _norm(apex.path));
   });
+
+  testWidgets('reopens last file before auto detection when enabled', (
+    t,
+  ) async {
+    final last = File('${tmp.path}/last/autoexec.cfg')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('// last\n');
+    store.writeReopenLastFile(true);
+    store.writeLastOpenFile(last.path);
+
+    final (file, edit, diff) = _wire('${tmp.path}/backups', store);
+    addTearDown(() async {
+      await file.close();
+      await diff.close();
+      await edit.close();
+    });
+
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          autoDetect: false,
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(_norm(file.state.path!), _norm(last.path));
+  });
+
+  testWidgets('prefers autoexec over videoconfig when configured', (t) async {
+    final home = Directory('${tmp.path}/home')..createSync();
+    final videoconfig =
+        File('${home.path}/Documents/Respawn/Apex/local/videoconfig.txt')
+          ..createSync(recursive: true)
+          ..writeAsStringSync('"setting.fps_max" "144"\n');
+    final apex = Directory('${tmp.path}/Lib/steamapps/common/Apex Legends')
+      ..createSync(recursive: true);
+    final autoexec = File('${apex.path}/global/cfg/autoexec.cfg')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('// auto\n');
+    final steamRoot = '${tmp.path}/Steam';
+    Directory('$steamRoot/steamapps').createSync(recursive: true);
+    File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
+      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/Lib" }\n}\n',
+    );
+    store.writePreferredOpenKind('autoexec');
+
+    final locator = InstallLocator(
+      registry: FakeRegistry(
+        values: {'user|Software\\Valve\\Steam|SteamPath': steamRoot},
+      ),
+      drives: FakeDrives(),
+      env: {'USERPROFILE': home.path},
+    );
+    final (file, edit, diff) = _wire('${tmp.path}/backups', store);
+    addTearDown(() async {
+      await file.close();
+      await diff.close();
+      await edit.close();
+    });
+
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          locator: locator,
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    expect(videoconfig.existsSync(), isTrue);
+    expect(_norm(file.state.path!), _norm(autoexec.path));
+  });
+
+  testWidgets('auto-creates missing template when configured', (t) async {
+    final apex = Directory('${tmp.path}/LibAuto/steamapps/common/Apex Legends')
+      ..createSync(recursive: true);
+    final steamRoot = '${tmp.path}/SteamAuto';
+    Directory('$steamRoot/steamapps').createSync(recursive: true);
+    File('$steamRoot/steamapps/libraryfolders.vdf').writeAsStringSync(
+      '"libraryfolders"\n{\n  "0" { "path" "${tmp.path}/LibAuto" }\n}\n',
+    );
+    store.writeAutoCreateMissingTemplate(true);
+
+    final (file, edit, diff) = _wire('${tmp.path}/backups', store);
+    addTearDown(() async {
+      await file.close();
+      await diff.close();
+      await edit.close();
+    });
+
+    await t.pumpWidget(
+      _host(
+        EditorScreen(
+          editBloc: edit,
+          diffBloc: diff,
+          fileBloc: file,
+          settings: store,
+          locator: locatorWith({
+            'user|Software\\Valve\\Steam|SteamPath': steamRoot,
+          }),
+        ),
+      ),
+    );
+    await t.pumpAndSettle();
+
+    final created = File('${apex.path}/cfg/autoexec.cfg');
+    expect(created.existsSync(), isTrue);
+    expect(_norm(file.state.path!), _norm(created.path));
+  });
 }

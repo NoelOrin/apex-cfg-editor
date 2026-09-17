@@ -13,12 +13,14 @@ import '../core/paths/install_locator.dart';
 import '../core/paths/windows_registry.dart';
 import '../core/settings/settings_store.dart';
 import '../core/templates/autoexec_template.dart';
+import '../core/update/update_service.dart';
 import '../state/diff_bloc.dart';
 import '../state/edit_bloc.dart';
 import '../state/file_bloc.dart';
 import 'backup_dialog.dart';
 import 'exit_guard.dart';
 import 'quit_dialog.dart';
+import 'settings_page.dart';
 import 'widgets/kb_card.dart';
 import 'widgets/kv_table_view.dart';
 import 'widgets/side_by_side_diff.dart';
@@ -75,8 +77,8 @@ enum _DetectPhase {
   autoexecMissing,
 }
 
-/// 主界面三区布局：顶栏（文件名/模式切换/保存/还原）+
-/// 编辑区（flex 6）+ 底部区（高 220，内含知识卡 280 宽 + 行级 diff）。
+/// 主界面三段工作台：窗口栏 + 自适应编辑面板 + 底部知识/变更双栏。
+/// 底栏高度随窗口大小时变，编辑模式下的小屏不再被固定 220 高度积压。
 /// 三个 bloc 均由外部注入（测试接缝）。
 ///
 /// 本屏同时承担装配期行为：启动自动探测（探测引擎 v2，见
@@ -112,6 +114,19 @@ class EditorScreen extends StatefulWidget {
   /// null → 不带初始目录、不读写记忆路径。
   final SettingsStore? settings;
 
+  /// 更新服务测试接缝；生产默认读取 GitHub Releases。
+  final UpdateService? updateService;
+
+  /// 设置页写入设置后通知应用壳刷新运行时依赖（例如备份目录）。
+  final VoidCallback? onSettingsChanged;
+
+  /// 设置页确认恢复默认设置后通知应用壳重置主题/语言等内存状态。
+  final VoidCallback? onResetSettings;
+
+  /// 应用信息面板展示的备份与日志目录。
+  final String? backupDir;
+  final String? logDir;
+
   const EditorScreen({
     super.key,
     required this.editBloc,
@@ -123,6 +138,11 @@ class EditorScreen extends StatefulWidget {
     this.pickDirectory,
     this.locator,
     this.settings,
+    this.updateService,
+    this.onSettingsChanged,
+    this.onResetSettings,
+    this.backupDir,
+    this.logDir,
   });
 
   @override
@@ -132,6 +152,9 @@ class EditorScreen extends StatefulWidget {
 class _EditorScreenState extends State<EditorScreen> with WindowListener {
   BuildContext? _fluentContext;
   bool _textMode = false;
+  bool _showSettings = false;
+
+  late final UpdateService _updateService;
 
   _DetectPhase _phase = _DetectPhase.idle;
 
@@ -147,6 +170,7 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
   @override
   void initState() {
     super.initState();
+    _updateService = widget.updateService ?? UpdateService();
     windowManager.addListener(this);
     _setupWindowGuard();
     WidgetsBinding.instance.addPostFrameCallback((_) => _autoDetectAndOpen());
@@ -193,9 +217,19 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
 
   /// 启动自动探测（探测引擎 v2）：videoconfig 优先自动打开，其次所选
   /// 安装的 autoexec.cfg；autoexec 缺失或探测全空时进入对应横幅状态。
-  void _autoDetectAndOpen() {
-    if (!widget.autoDetect) return;
-    _applyResults(_runLocator());
+  Future<void> _autoDetectAndOpen() async {
+    final settings = widget.settings;
+    if (settings?.readReopenLastFile() == true) {
+      final last = settings?.readLastOpenFile();
+      if (last != null && File(last).existsSync()) {
+        widget.fileBloc.add(OpenRequested(last));
+        return;
+      }
+    }
+    if (!widget.autoDetect || settings?.readAutoDetectOnStartup() == false) {
+      return;
+    }
+    await _applyResults(_runLocator());
   }
 
   /// 组装探测器：优先注入（测试），否则生产装配。homeDirOverride 仅测试
@@ -236,9 +270,33 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
       chosen = installs.first;
     }
 
-    final openPath = docResults.isNotEmpty
-        ? docResults.first.videoconfigPath
-        : chosen?.autoexecPath;
+    final preferred = widget.settings?.readPreferredOpenKind() ?? 'videoconfig';
+    if (preferred == 'autoexec' &&
+        chosen != null &&
+        chosen.autoexecPath == null &&
+        widget.settings?.readAutoCreateMissingTemplate() == true) {
+      if (!mounted) return;
+      setState(() {
+        _activeInstall = chosen;
+        _phase = _DetectPhase.autoexecMissing;
+      });
+      await _createAutoexec();
+      return;
+    }
+    final openPath = preferred == 'autoexec'
+        ? (chosen?.autoexecPath ?? docResults.firstOrNull?.videoconfigPath)
+        : (docResults.firstOrNull?.videoconfigPath ?? chosen?.autoexecPath);
+    if (openPath == null &&
+        chosen != null &&
+        widget.settings?.readAutoCreateMissingTemplate() == true) {
+      if (!mounted) return;
+      setState(() {
+        _activeInstall = chosen;
+        _phase = _DetectPhase.autoexecMissing;
+      });
+      await _createAutoexec();
+      return;
+    }
     if (openPath != null && widget.fileBloc.state.path == null) {
       widget.fileBloc.add(OpenRequested(openPath));
     }
@@ -457,7 +515,7 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
         final title = missing ? l.autoexecMissingTitle : l.apexNotFoundTitle;
         final hint = missing ? l.autoexecMissingHint : l.apexNotFoundHint;
         return Padding(
-          padding: const EdgeInsetsDirectional.fromSTEB(12, 12, 12, 0),
+          padding: const EdgeInsets.only(bottom: 8),
           child: LayoutBuilder(
             builder: (context, constraints) => InfoBar(
               isLong: constraints.maxWidth < 720,
@@ -526,95 +584,356 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                         fileName: s.path?.split('/').last.split('\\').last,
                         onClose: () => _exitGuard.confirmExit(),
                         actions: [
+                          if (!_showSettings) ...[
+                            Tooltip(
+                              message: s.path == null
+                                  ? l.openFile
+                                  : l.reselectFile,
+                              child: IconButton(
+                                icon: Icon(
+                                  s.path == null
+                                      ? LucideIcons.folderOpen
+                                      : LucideIcons.fileInput,
+                                ),
+                                onPressed: _openFileManually,
+                              ),
+                            ),
+                            const _ToolbarDivider(),
+                            Tooltip(
+                              message: l.save,
+                              child: IconButton(
+                                icon: const Icon(LucideIcons.save),
+                                onPressed: () =>
+                                    widget.fileBloc.add(SaveRequested()),
+                              ),
+                            ),
+                            Tooltip(
+                              message: l.restore,
+                              child: IconButton(
+                                icon: const Icon(LucideIcons.history),
+                                onPressed: () => showRestoreDialog(
+                                  _fluentContext ?? context,
+                                  fileBloc: widget.fileBloc,
+                                  editBloc: widget.editBloc,
+                                  onRestored: _onRestored,
+                                ),
+                              ),
+                            ),
+                            const _ToolbarDivider(),
+                          ],
                           Tooltip(
-                            message: l.openFile,
+                            message: _showSettings ? l.back : l.settings,
                             child: IconButton(
-                              icon: const Icon(LucideIcons.folderOpen),
-                              onPressed: _openFileManually,
-                            ),
-                          ),
-                          // 模式切换仅用图标（Tooltip 兼作悬停提示与无障碍语义）：
-                          // 顶栏 actions 宽度固定 ~300，配合窗口最小尺寸 960x640，
-                          // 窄窗口下不再溢出破版（任务 16 UI 打磨）。
-                          Tooltip(
-                            message: l.modeTable,
-                            child: ToggleButton(
-                              checked: !_textMode,
-                              onChanged: (_) =>
-                                  setState(() => _textMode = false),
-                              child: const Icon(LucideIcons.table2),
-                            ),
-                          ),
-                          Tooltip(
-                            message: l.modeText,
-                            child: ToggleButton(
-                              checked: _textMode,
-                              onChanged: (_) =>
-                                  setState(() => _textMode = true),
-                              child: const Icon(LucideIcons.code2),
-                            ),
-                          ),
-                          // IconButton 的 tooltip 同时充当无障碍语义。
-                          Tooltip(
-                            message: l.save,
-                            child: IconButton(
-                              icon: const Icon(LucideIcons.save),
-                              onPressed: () =>
-                                  widget.fileBloc.add(SaveRequested()),
-                            ),
-                          ),
-                          Tooltip(
-                            message: l.restore,
-                            child: IconButton(
-                              icon: const Icon(LucideIcons.history),
-                              onPressed: () => showRestoreDialog(
-                                _fluentContext ?? context,
-                                fileBloc: widget.fileBloc,
-                                editBloc: widget.editBloc,
-                                onRestored: _onRestored,
+                              key: const ValueKey('titlebar.settings'),
+                              icon: Icon(
+                                _showSettings
+                                    ? LucideIcons.arrowLeft
+                                    : LucideIcons.settings2,
+                              ),
+                              onPressed: () => setState(
+                                () => _showSettings = !_showSettings,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    // 探测 v2 空态横幅：autoexec 缺失（创建入口）或未找到
-                    // （指定目录入口）；打开文件成功后自动隐藏。
-                    _buildDetectBanner(context),
-                    Expanded(
-                      flex: 6,
-                      child: _textMode
-                          ? TextEditorView(
-                              key: ValueKey<int>(_textEpoch),
-                              editBloc: widget.editBloc,
-                            )
-                          : KvTableView(
-                              editBloc: widget.editBloc,
-                              fileBloc: widget.fileBloc,
-                            ),
-                    ),
-                    const Divider(),
-                    SizedBox(
-                      height: 220,
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 280, child: KbCard()),
-                          Container(
-                            width: 1,
-                            color: theme.resources.dividerStrokeColorDefault,
-                          ),
-                          Expanded(
-                            child: SideBySideDiff(diffBloc: widget.diffBloc),
-                          ),
-                        ],
+                    if (_showSettings)
+                      Expanded(
+                        child: SettingsPage(
+                          updateService: _updateService,
+                          settings: widget.settings,
+                          backupDir: widget.backupDir ?? '',
+                          logDir: widget.logDir ?? '',
+                          openFilePath: widget.fileBloc.state.path,
+                          onSettingsChanged: widget.onSettingsChanged,
+                          onResetSettings: widget.onResetSettings,
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final dockHeight = (constraints.maxHeight * 0.31)
+                                .clamp(190.0, 276.0);
+                            final knowledgeWidth = constraints.maxWidth < 1180
+                                ? 260.0
+                                : 304.0;
+
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                              child: Column(
+                                children: [
+                                  // 探测 v2 空态横幅：autoexec 缺失（创建入口）或
+                                  // 未找到（指定目录入口）；打开成功后自动隐藏。
+                                  _buildDetectBanner(context),
+                                  Expanded(
+                                    child: Container(
+                                      key: const ValueKey('workspace.editor'),
+                                      decoration: BoxDecoration(
+                                        color: AcidPalette.of(context).panel,
+                                        border: Border.all(
+                                          color: AcidPalette.of(
+                                            context,
+                                          ).chrome.withValues(alpha: 0.28),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        children: [
+                                          _WorkbenchHeader(
+                                            editBloc: widget.editBloc,
+                                            textMode: _textMode,
+                                            onModeChanged: (next) => setState(
+                                              () => _textMode = next,
+                                            ),
+                                          ),
+                                          Container(
+                                            height: 1,
+                                            color: AcidPalette.of(
+                                              context,
+                                            ).chrome.withValues(alpha: 0.2),
+                                          ),
+                                          Expanded(
+                                            child: _textMode
+                                                ? TextEditorView(
+                                                    key: ValueKey<int>(
+                                                      _textEpoch,
+                                                    ),
+                                                    editBloc: widget.editBloc,
+                                                  )
+                                                : KvTableView(
+                                                    editBloc: widget.editBloc,
+                                                    fileBloc: widget.fileBloc,
+                                                  ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    height: dockHeight,
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          width: knowledgeWidth,
+                                          child: _DockPanel(
+                                            key: const ValueKey(
+                                              'workspace.knowledgeBase',
+                                            ),
+                                            icon: LucideIcons.bookOpen,
+                                            title: l.knowledgeBase,
+                                            child: KbCard(
+                                              editBloc: widget.editBloc,
+                                              showEmptyState: true,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: _DockPanel(
+                                            key: const ValueKey(
+                                              'workspace.diffPreview',
+                                            ),
+                                            icon: LucideIcons.gitCompare,
+                                            title: l.diffPreview,
+                                            child: SideBySideDiff(
+                                              diffBloc: widget.diffBloc,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _ToolbarDivider extends StatelessWidget {
+  const _ToolbarDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 20,
+      color: AcidPalette.of(context).chrome.withValues(alpha: 0.24),
+    );
+  }
+}
+
+class _WorkbenchHeader extends StatelessWidget {
+  final EditBloc editBloc;
+  final bool textMode;
+  final ValueChanged<bool> onModeChanged;
+
+  const _WorkbenchHeader({
+    required this.editBloc,
+    required this.textMode,
+    required this.onModeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final palette = AcidPalette.of(context);
+    return SizedBox(
+      height: 42,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            Container(width: 3, height: 18, color: palette.acid),
+            const SizedBox(width: 9),
+            Icon(
+              textMode ? LucideIcons.code2 : LucideIcons.table2,
+              size: 15,
+              color: palette.textMuted,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                textMode ? l.modeText : l.modeTable,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: kFontDisplay,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.7,
+                  color: palette.text,
+                ),
+              ),
+            ),
+            BlocBuilder<EditBloc, EditState>(
+              bloc: editBloc,
+              buildWhen: (prev, cur) => prev.dirty != cur.dirty,
+              builder: (context, state) => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 140),
+                child: state.dirty
+                    ? Container(
+                        key: const ValueKey('workspace.dirty'),
+                        margin: const EdgeInsets.only(left: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: palette.danger.withValues(alpha: 0.12),
+                          border: Border.all(
+                            color: palette.danger.withValues(alpha: 0.42),
+                          ),
+                        ),
+                        child: Text(
+                          l.unsavedBadge,
+                          style: TextStyle(fontSize: 11, color: palette.danger),
+                        ),
+                      )
+                    : const SizedBox.shrink(key: ValueKey('workspace.clean')),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              decoration: BoxDecoration(
+                color: palette.bg.withValues(alpha: 0.5),
+                border: Border.all(
+                  color: palette.chrome.withValues(alpha: 0.28),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Tooltip(
+                    message: l.modeTable,
+                    child: ToggleButton(
+                      checked: !textMode,
+                      onChanged: (_) => onModeChanged(false),
+                      child: const Icon(LucideIcons.table2),
+                    ),
+                  ),
+                  Tooltip(
+                    message: l.modeText,
+                    child: ToggleButton(
+                      checked: textMode,
+                      onChanged: (_) => onModeChanged(true),
+                      child: const Icon(LucideIcons.code2),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DockPanel extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  const _DockPanel({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AcidPalette.of(context);
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: palette.panel,
+        border: Border.all(color: palette.chrome.withValues(alpha: 0.28)),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 36,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  Icon(icon, size: 14, color: palette.acid),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: kFontDisplay,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                        color: palette.textMuted,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(height: 1, color: palette.chrome.withValues(alpha: 0.2)),
+          Expanded(child: child),
+        ],
       ),
     );
   }
