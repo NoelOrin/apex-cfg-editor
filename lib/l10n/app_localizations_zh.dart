@@ -279,7 +279,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get preferredOpenKind => '优先打开文件';
 
   @override
-  String get preferredSettings => 'settings.cfg（操作设置）';
+  String get preferredSettings => 'settings.cfg（操作设置：按键绑定、鼠标/控制器灵敏度等）';
 
   @override
   String get preferredVideoconfig => 'videoconfig.txt（游戏画质）';

@@ -635,7 +635,7 @@ abstract class AppLocalizations {
   /// No description provided for @preferredSettings.
   ///
   /// In en, this message translates to:
-  /// **'settings.cfg (controls)'**
+  /// **'settings.cfg (controls: binds, mouse/controller sensitivity)'**
   String get preferredSettings;
 
   /// No description provided for @preferredVideoconfig.

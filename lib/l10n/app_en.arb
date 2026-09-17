@@ -94,7 +94,7 @@
   "fileBehaviorSection": "File opening",
   "autoDetectOnStartup": "Detect Apex files on startup",
   "preferredOpenKind": "Preferred file",
-  "preferredSettings": "settings.cfg (controls)",
+  "preferredSettings": "settings.cfg (controls: binds, mouse/controller sensitivity)",
   "preferredVideoconfig": "videoconfig.txt (graphics)",
   "preferredAutoexec": "autoexec.cfg (startup commands)",
   "filePurposeVideoconfig": "Graphics",

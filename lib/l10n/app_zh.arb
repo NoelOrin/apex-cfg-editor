@@ -89,7 +89,7 @@
   "fileBehaviorSection": "文件打开行为",
   "autoDetectOnStartup": "启动时自动探测 Apex 文件",
   "preferredOpenKind": "优先打开文件",
-  "preferredSettings": "settings.cfg（操作设置）",
+  "preferredSettings": "settings.cfg（操作设置：按键绑定、鼠标/控制器灵敏度等）",
   "preferredVideoconfig": "videoconfig.txt（游戏画质）",
   "preferredAutoexec": "autoexec.cfg（启动命令）",
   "filePurposeVideoconfig": "游戏画质",

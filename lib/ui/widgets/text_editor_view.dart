@@ -42,6 +42,46 @@ class TextEditorView extends StatefulWidget {
   State<TextEditorView> createState() => _TextEditorViewState();
 }
 
+CodeThemeData _buildCfgCodeTheme(Brightness brightness) {
+  final isDark = brightness == Brightness.dark;
+  return CodeThemeData(
+    styles: {
+      'root': TextStyle(
+        color: isDark ? const Color(0xFFE8F0E0) : const Color(0xFF1E241A),
+        backgroundColor: isDark
+            ? const Color(0xFF10130E)
+            : const Color(0xFFFCFDF8),
+      ),
+      'comment': TextStyle(
+        color: isDark ? const Color(0xFF82B982) : const Color(0xFF4D7A4B),
+        fontStyle: FontStyle.italic,
+      ),
+      'string': TextStyle(
+        color: isDark ? const Color(0xFFF2C56B) : const Color(0xFF9B5A00),
+      ),
+      'number': TextStyle(
+        color: isDark ? const Color(0xFF7EC8E3) : const Color(0xFF007A8A),
+      ),
+      'keyword': TextStyle(
+        color: isDark ? const Color(0xFFDDA0FF) : const Color(0xFF7B2CBF),
+        fontWeight: FontWeight.w600,
+      ),
+      'built_in': TextStyle(
+        color: isDark ? const Color(0xFFFF9F68) : const Color(0xFFC2410C),
+      ),
+      'meta': TextStyle(
+        color: isDark ? const Color(0xFF91D5FF) : const Color(0xFF146C94),
+      ),
+      'function': TextStyle(
+        color: isDark ? const Color(0xFFBFFF00) : const Color(0xFF4F6900),
+      ),
+      'title': TextStyle(
+        color: isDark ? const Color(0xFFBFFF00) : const Color(0xFF4F6900),
+      ),
+    },
+  );
+}
+
 class _TextEditorViewState extends State<TextEditorView> {
   late final CodeController _ctrl;
   Timer? _debounce;
@@ -270,14 +310,20 @@ class _TextEditorViewState extends State<TextEditorView> {
             Expanded(
               child: material.Material(
                 color: Colors.transparent,
-                child: CodeField(
-                  controller: _ctrl,
-                  expands: true,
-                  onChanged: (_) => _onChanged(),
-                  textStyle: const TextStyle(
-                    fontFamily: kFontMono,
-                    fontFamilyFallback: kFontMonoFallbacks,
-                    fontSize: 13,
+                child: CodeTheme(
+                  data: _buildCfgCodeTheme(
+                    FluentTheme.maybeOf(context)?.brightness ??
+                        material.Theme.of(context).brightness,
+                  ),
+                  child: CodeField(
+                    controller: _ctrl,
+                    expands: true,
+                    onChanged: (_) => _onChanged(),
+                    textStyle: const TextStyle(
+                      fontFamily: kFontMono,
+                      fontFamilyFallback: kFontMonoFallbacks,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),

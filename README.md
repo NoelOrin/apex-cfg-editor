@@ -17,7 +17,7 @@
 - **自动备份与还原**：每次保存前字节级备份旧文件；顶栏「还原」可回滚到
   任意历史备份。备份位置：`%APPDATA%\ApexCfgEditor\backups`。
 - **自动探测安装**（v2）：配置文件仅扫描 `USERPROFILE\Saved Games\
-  Respawn\Apex\local`，识别 `settings.cfg`（操作设置）与
+  Respawn\Apex\local`，识别 `settings.cfg`（按键绑定、鼠标/控制器灵敏度等操作设置）与
   `videoconfig.txt`（游戏画质）；游戏安装目录仅保留 EA App（卸载表
   DisplayName 扫描 + `EA Games` / `Origin Games` 常见根与 C-F 盘符探测）。
   自动探测为空时才回退用户记忆的 `customInstallDir`。
@@ -48,7 +48,7 @@ Artifacts 里上传未打 tag 的开发产物。
 
 1. **Saved Games 配置根**：只扫描 `%USERPROFILE%\Saved Games\
    Respawn\Apex\local`。默认优先打开 `settings.cfg`（操作设置），没有时
-   回退 `videoconfig.txt`（游戏画质）；两者用途不同，不在界面中混为一类。
+   回退 `videoconfig.txt`（游戏画质）；前者负责按键/灵敏度等操作，后者负责分辨率、阴影、纹理和特效，两者用途不同。
 2. **EA App**：卸载表（HKLM 64/32 位视图 + HKCU）中 DisplayName 含
    "Apex" 的 `InstallLocation`；加上
    `C:\Program Files\EA Games\Apex Legends`、`C:\Program Files\Origin

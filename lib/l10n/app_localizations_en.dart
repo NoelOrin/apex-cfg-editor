@@ -288,7 +288,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get preferredOpenKind => 'Preferred file';
 
   @override
-  String get preferredSettings => 'settings.cfg (controls)';
+  String get preferredSettings =>
+      'settings.cfg (controls: binds, mouse/controller sensitivity)';
 
   @override
   String get preferredVideoconfig => 'videoconfig.txt (graphics)';

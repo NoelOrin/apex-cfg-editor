@@ -96,6 +96,24 @@ void main() {
     expect(edit.state.dirty, isTrue);
   });
 
+  testWidgets('code mode mounts a readable syntax highlighting theme', (
+    t,
+  ) async {
+    final edit = _realEditBloc();
+    addTearDown(edit.close);
+
+    await t.pumpWidget(_host(TextEditorView(editBloc: edit)));
+    await t.pumpAndSettle();
+
+    final codeTheme = t.widget<CodeTheme>(find.byType(CodeTheme));
+    final styles = codeTheme.data!.styles;
+    expect(styles['root']?.color, isNotNull);
+    expect(styles['comment']?.color, isNotNull);
+    expect(styles['string']?.color, isNotNull);
+    expect(styles['number']?.color, isNotNull);
+    expect(styles['keyword']?.color, isNotNull);
+  });
+
   testWidgets('FileBloc kind=autoexec parses bind as CvarLine(key=bind)', (
     t,
   ) async {
