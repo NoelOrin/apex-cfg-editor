@@ -5,7 +5,7 @@ import 'package:flutter/material.dart' as material;
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_code_editor/flutter_code_editor.dart';
-import 'package:highlight/languages/cpp.dart' show cpp;
+import 'package:highlight/highlight_core.dart' show Mode;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../core/parser/autoexec_parser.dart';
@@ -16,8 +16,8 @@ import '../../state/edit_bloc.dart';
 import '../../state/file_bloc.dart';
 import '../theme/acid_theme.dart';
 
-/// 全文文本编辑视图：monospace、深色底（flutter_code_editor 默认样式
-/// 即 grey.shade900 底 + 浅色字）、cpp 语法近似高亮（cfg 命令形似 C 风格）。
+/// 全文文本编辑视图：Consolas 等宽字体、稳定底色和 Apex CFG 词法高亮。
+/// 命令、注释、字符串和数字使用独立的高对比颜色，避免配置文本难以扫描。
 ///
 /// 输入 300ms 防抖后按文件类型全文重解析进 EditBloc，与表格模式共享
 /// 同一数据源（kind 来自可空读取的 FileBloc，null 时按 videoconfig）。
@@ -41,6 +41,31 @@ class TextEditorView extends StatefulWidget {
   @override
   State<TextEditorView> createState() => _TextEditorViewState();
 }
+
+final _cfgLanguage = Mode(
+  aliases: const ['apexcfg'],
+  contains: [
+    Mode(className: 'comment', begin: r'//', end: r'$'),
+    Mode(className: 'comment', begin: r'/\*', end: r'\*/'),
+    Mode(
+      className: 'string',
+      begin: r'"',
+      end: r'"',
+      contains: [Mode(begin: r'\\[\s\S]', relevance: 0)],
+    ),
+    Mode(
+      className: 'number',
+      begin: r'\b-?(?:\d+(?:\.\d*)?|\.\d+)\b',
+      relevance: 0,
+    ),
+    Mode(
+      className: 'command',
+      begin: r'^[ \t]*[A-Za-z_][A-Za-z0-9_]*',
+      end: r'(?=\s|$)',
+      relevance: 0,
+    ),
+  ],
+);
 
 CodeThemeData _buildCfgCodeTheme(Brightness brightness) {
   final isDark = brightness == Brightness.dark;
@@ -78,6 +103,10 @@ CodeThemeData _buildCfgCodeTheme(Brightness brightness) {
       'title': TextStyle(
         color: isDark ? const Color(0xFFBFFF00) : const Color(0xFF4F6900),
       ),
+      'command': TextStyle(
+        color: isDark ? const Color(0xFFBFFF00) : const Color(0xFF4F6900),
+        fontWeight: FontWeight.w600,
+      ),
     },
   );
 }
@@ -94,7 +123,7 @@ class _TextEditorViewState extends State<TextEditorView> {
     super.initState();
     _ctrl = CodeController(
       text: widget.editBloc.state.doc?.serialize() ?? '',
-      language: cpp,
+      language: _cfgLanguage,
     );
   }
 

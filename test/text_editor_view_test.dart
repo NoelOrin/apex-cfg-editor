@@ -114,6 +114,29 @@ void main() {
     expect(styles['keyword']?.color, isNotNull);
   });
 
+  testWidgets('code mode highlights the leading Apex command token', (t) async {
+    final edit = _realEditBloc(src: 'fps_max 256\n');
+    addTearDown(edit.close);
+
+    await t.pumpWidget(_host(TextEditorView(editBloc: edit)));
+    await t.pumpAndSettle();
+
+    final codeField = t.widget<CodeField>(find.byType(CodeField));
+    final commandSpan = _findTextSpan(
+      codeField.controller.lastTextSpan,
+      'fps_max',
+    );
+    expect(commandSpan, isNotNull);
+    expect(
+      commandSpan!.style?.color,
+      t
+          .widget<CodeTheme>(find.byType(CodeTheme))
+          .data!
+          .styles['command']
+          ?.color,
+    );
+  });
+
   testWidgets('FileBloc kind=autoexec parses bind as CvarLine(key=bind)', (
     t,
   ) async {
@@ -254,4 +277,16 @@ void main() {
     await t.pumpAndSettle();
     expect(position.pixels, greaterThan(0));
   });
+}
+
+TextSpan? _findTextSpan(TextSpan? span, String text) {
+  if (span == null) return null;
+  if (span.text == text) return span;
+  for (final child in span.children ?? const <InlineSpan>[]) {
+    if (child is TextSpan) {
+      final match = _findTextSpan(child, text);
+      if (match != null) return match;
+    }
+  }
+  return null;
 }
