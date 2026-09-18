@@ -508,6 +508,26 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     return result == true;
   }
 
+  /// 校验目录真实存在且为目录；否则返回 null（避免把文件路径/失效目录传给 file_picker）。
+  static String? _validDir(String? dir) {
+    if (dir == null || dir.isEmpty) return null;
+    try {
+      if (FileSystemEntity.typeSync(dir) == FileSystemEntityType.directory) {
+        return dir;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// EA App 默认 local 配置目录：%USERPROFILE%\Saved Games\Respawn\Apex\local。
+  static String? _defaultLocalDir() {
+    final home =
+        Platform.environment['USERPROFILE'] ?? Platform.environment['HOME'];
+    if (home == null || home.isEmpty) return null;
+    final sep = Platform.pathSeparator;
+    return '$home${sep}Saved Games${sep}Respawn${sep}Apex${sep}local';
+  }
+
   static Future<String?> _pickWithFilePicker(String? initialDirectory) async {
     // file_picker 12.x：单选走静态 FilePicker.pickFile。
     Future<String?> pick(String? dir) async {
@@ -519,20 +539,22 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
       return file?.path;
     }
 
-    final initial =
-        initialDirectory != null &&
-            initialDirectory.isNotEmpty &&
-            Directory(initialDirectory).existsSync()
-        ? initialDirectory
-        : null;
-    try {
-      return await pick(initial);
-    } catch (_) {
-      // 上次路径被移动或删除时，部分 Windows 文件选择器会直接失败；
-      // 去掉失效初始目录重试一次，保证「重新选择」始终可恢复。
-      if (initial == null) rethrow;
-      return pick(null);
+    // 初始目录必须真实存在且为目录：lastOpenDir 记错成文件路径、或目录被
+    // 移动/删除时，file_picker 在 Windows 上可能直接失败且不弹框；此时回退
+    // 到 EA 默认 local 目录，仍失效再回退系统默认（dir=null）。
+    String? initial = _validDir(initialDirectory)
+        ?? _validDir(_defaultLocalDir());
+    for (final dir in [initial, null]) {
+      try {
+        final picked = await pick(dir);
+        // 用户取消返回 null；只有真正抛异常才继续回退下一档目录。
+        return picked;
+      } on Exception {
+        // 该目录失效：尝试下一档（null = 系统默认库）。
+        continue;
+      }
     }
+    return null;
   }
 
   /// 还原完成刷新。还原链路 RestoreRequested → restoreImpl →

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:apex_cfg_editor/core/backup/backup_service.dart';
 import 'package:apex_cfg_editor/core/diff/line_diff.dart';
 import 'package:apex_cfg_editor/core/parser/cfg_document.dart';
+import 'package:apex_cfg_editor/core/settings/settings_store.dart';
 import 'package:apex_cfg_editor/knowledge/kb_service.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
 import 'package:apex_cfg_editor/main.dart';
@@ -352,6 +353,54 @@ void main() {
         await t.tap(find.byKey(const ValueKey('titlebar.openFile')));
         await t.pumpAndSettle();
 
+        expect(file.state.path, cfg.path);
+        expect(edit.state.doc!.serialize(), _old);
+      },
+    );
+
+    testWidgets(
+      'reselect still opens when lastOpenDir is a file path, not a directory',
+      (t) async {
+        final home = Directory('${tmp.path}/empty_home')
+          ..createSync(recursive: true);
+        // lastOpenDir 被记成了「文件路径」而非目录（退化场景）：
+        // 旧逻辑会用 Directory(path).existsSync() 误判为有效并传给 file_picker，
+        // 在 Windows 上导致对话框不弹、无法重新选择。
+        final badDir = File('${tmp.path}/not_a_dir.txt')..writeAsStringSync('x');
+        final settingsFile = File('${tmp.path}/settings.json')
+          ..writeAsStringSync(
+            '{"lastOpenDir":"${badDir.path}"}',
+          );
+        final cfg = File('${tmp.path}/picked/settings.cfg')
+          ..createSync(recursive: true)
+          ..writeAsStringSync(_old);
+        final (file, edit, diff) = _wire('${tmp.path}/backups');
+        addTearDown(() async {
+          await file.close();
+          await diff.close();
+          await edit.close();
+        });
+
+        await t.pumpWidget(
+          _host(
+            EditorScreen(
+              editBloc: edit,
+              diffBloc: diff,
+              fileBloc: file,
+              homeDirOverride: home.path,
+              settings: SettingsStore(settingsPath: settingsFile.path),
+              pickFile: () async => cfg.path,
+            ),
+          ),
+        );
+        await t.pumpAndSettle();
+
+        expect(file.state.path, isNull); // 静默，无自动打开
+
+        await t.tap(find.byKey(const ValueKey('titlebar.openFile')));
+        await t.pumpAndSettle();
+
+        // 即便 lastOpenDir 是失效的文件路径，重新选择仍应成功打开用户指定文件。
         expect(file.state.path, cfg.path);
         expect(edit.state.doc!.serialize(), _old);
       },
