@@ -68,6 +68,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileOpenFailed => '打开文件失败';
 
   @override
+  String get fileTypeUnsupported => '仅支持编辑 settings.cfg 与 videoconfig.txt。';
+
+  @override
   String get filePickerFailed => '打开文件选择器失败';
 
   @override
@@ -130,15 +133,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get close => '关闭';
-
-  @override
-  String get createAutoexec => '创建 autoexec.cfg';
-
-  @override
-  String get autoexecMissingTitle => '已找到 Apex 安装目录，但缺少 autoexec.cfg';
-
-  @override
-  String get autoexecMissingHint => '可创建一个全注释的模板文件开始配置；在你编辑前不会改变任何游戏行为。';
 
   @override
   String get apexNotFoundTitle => '未找到 Apex';
@@ -285,9 +279,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get preferredVideoconfig => 'videoconfig.txt（游戏画质）';
 
   @override
-  String get preferredAutoexec => 'autoexec.cfg（启动命令）';
-
-  @override
   String get filePurposeVideoconfig => '游戏画质';
 
   @override
@@ -298,9 +289,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reopenLastFile => '重新打开上次文件';
-
-  @override
-  String get autoCreateMissingTemplate => '缺少 autoexec 时自动创建模板';
 
   @override
   String get backupSection => '自动备份';

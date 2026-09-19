@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:apex_cfg_editor/core/parser/autoexec_parser.dart';
 import 'package:apex_cfg_editor/core/parser/cfg_document.dart';
 import 'package:apex_cfg_editor/core/parser/videoconfig_parser.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
@@ -22,13 +21,6 @@ EditBloc _realEditBloc({String src = _src}) {
   bloc.add(DocumentOpened(doc: VideoconfigParser().parse(src), baseline: src));
   return bloc;
 }
-
-FileBloc _realFileBloc(EditBloc edit) => FileBloc(
-  editBloc: edit,
-  saveImpl: (_, _, _) async {},
-  listBackupsImpl: (_) => const [],
-  restoreImpl: (_, _) async {},
-);
 
 Widget _host(Widget child, {FileBloc? fileBloc}) => MaterialApp(
   // 查找替换栏的文案走 AppLocalizations：host 需要挂 delegates。
@@ -137,38 +129,15 @@ void main() {
     );
   });
 
-  testWidgets('FileBloc kind=autoexec parses bind as CvarLine(key=bind)', (
-    t,
-  ) async {
-    final edit = EditBloc();
-    addTearDown(edit.close);
-    final file = _realFileBloc(edit);
-    addTearDown(file.close);
-
-    // 真实 FileBloc：临时 autoexec.cfg（非 videoconfig.txt 结尾 → autoexec）。
-    final dir = Directory.systemTemp.createTempSync('apex_cfg_editor_te14');
-    addTearDown(() => dir.deleteSync(recursive: true));
-    final path = '${dir.path}${Platform.pathSeparator}autoexec.cfg';
-    File(path).writeAsStringSync('// my autoexec\n');
-    file.add(OpenRequested(path));
-    await t.pump(); // 冲刷微任务：DocumentOpened 就绪后再进入文本模式
-
-    await t.pumpWidget(_host(TextEditorView(editBloc: edit), fileBloc: file));
-    await t.pumpAndSettle();
-
-    // 追加一行 bind。
-    await t.enterText(
-      find.byType(CodeField),
+  test('AutoexecParser parses bind as CvarLine(key=bind)', () {
+    // 编辑器不再打开 autoexec.cfg，但解析器仍须正确把 bind 行解析为
+    // CvarLine（键名 bind、值为剩余参数字符串），供知识库与序列化复用。
+    final doc = const AutoexecParser().parse(
       '// my autoexec\nbind "F6" "quit"\n',
     );
-    await t.pump(const Duration(milliseconds: 400));
-    await t.pump();
-
-    final doc = edit.state.doc!;
     final bind = doc.lines.whereType<CvarLine>().toList();
     expect(bind.map((l) => l.key), contains('bind'));
     expect(bind.firstWhere((l) => l.key == 'bind').value, '"F6" "quit"');
-    expect(edit.state.dirty, isTrue);
   });
 
   group('find & replace bar (spec R4)', () {

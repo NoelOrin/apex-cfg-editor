@@ -50,7 +50,6 @@ class _SettingsPageState extends State<SettingsPage> {
   late bool _autoDetectOnStartup;
   late String _preferredOpenKind;
   late bool _reopenLastFile;
-  late bool _autoCreateMissingTemplate;
   late bool _backupEnabled;
   late int _backupLimit;
   late String _backupDir;
@@ -63,8 +62,6 @@ class _SettingsPageState extends State<SettingsPage> {
     _autoDetectOnStartup = settings?.readAutoDetectOnStartup() ?? true;
     _preferredOpenKind = settings?.readPreferredOpenKind() ?? 'settings';
     _reopenLastFile = settings?.readReopenLastFile() ?? false;
-    _autoCreateMissingTemplate =
-        settings?.readAutoCreateMissingTemplate() ?? false;
     _backupEnabled = settings?.readBackupEnabled() ?? true;
     _backupLimit =
         settings?.readBackupLimit() ?? SettingsStore.defaultBackupLimit;
@@ -118,7 +115,6 @@ class _SettingsPageState extends State<SettingsPage> {
       _autoDetectOnStartup = true;
       _preferredOpenKind = 'settings';
       _reopenLastFile = false;
-      _autoCreateMissingTemplate = false;
       _backupEnabled = true;
       _backupLimit = SettingsStore.defaultBackupLimit;
       _backupDir = widget.backupDir;
@@ -497,11 +493,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   content: Text(l.preferredVideoconfig),
                   enabled: widget.settings != null,
                 ),
-                RadioButton<String>(
-                  value: 'autoexec',
-                  content: Text(l.preferredAutoexec),
-                  enabled: widget.settings != null,
-                ),
               ],
             ),
           ),
@@ -510,14 +501,6 @@ class _SettingsPageState extends State<SettingsPage> {
             setState(() => _reopenLastFile = value);
             _saveSetting((s) => s.writeReopenLastFile(value));
           }),
-          _settingSwitch(
-            l.autoCreateMissingTemplate,
-            _autoCreateMissingTemplate,
-            (value) {
-              setState(() => _autoCreateMissingTemplate = value);
-              _saveSetting((s) => s.writeAutoCreateMissingTemplate(value));
-            },
-          ),
         ],
       ),
     );

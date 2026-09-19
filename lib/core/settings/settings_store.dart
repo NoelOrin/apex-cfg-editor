@@ -131,7 +131,8 @@ class SettingsStore {
 
   String readPreferredOpenKind() {
     final value = _readField('preferredOpenKind');
-    return value == 'autoexec' || value == 'videoconfig' ? value! : 'settings';
+    // 编辑器只支持 settings.cfg 与 videoconfig.txt，autoexec 不再作为可选项。
+    return value == 'videoconfig' ? value! : 'settings';
   }
 
   void writePreferredOpenKind(String value) =>
@@ -140,12 +141,6 @@ class SettingsStore {
   bool readReopenLastFile() => _readBool('reopenLastFile', fallback: false);
 
   void writeReopenLastFile(bool value) => _writeField('reopenLastFile', value);
-
-  bool readAutoCreateMissingTemplate() =>
-      _readBool('autoCreateMissingTemplate', fallback: false);
-
-  void writeAutoCreateMissingTemplate(bool value) =>
-      _writeField('autoCreateMissingTemplate', value);
 
   bool readBackupEnabled() => _readBool('backupEnabled', fallback: true);
 

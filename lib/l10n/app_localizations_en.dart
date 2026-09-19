@@ -70,6 +70,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileOpenFailed => 'Failed to open file';
 
   @override
+  String get fileTypeUnsupported =>
+      'Only settings.cfg and videoconfig.txt can be edited.';
+
+  @override
   String get filePickerFailed => 'Failed to open the file picker';
 
   @override
@@ -135,17 +139,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get close => 'Close';
-
-  @override
-  String get createAutoexec => 'Create autoexec.cfg';
-
-  @override
-  String get autoexecMissingTitle =>
-      'Apex install found, but autoexec.cfg is missing';
-
-  @override
-  String get autoexecMissingHint =>
-      'Create a commented template to start configuring; it changes nothing until you edit it.';
 
   @override
   String get apexNotFoundTitle => 'Apex not found';
@@ -295,9 +288,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get preferredVideoconfig => 'videoconfig.txt (graphics)';
 
   @override
-  String get preferredAutoexec => 'autoexec.cfg (startup commands)';
-
-  @override
   String get filePurposeVideoconfig => 'Graphics';
 
   @override
@@ -308,9 +298,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reopenLastFile => 'Reopen the last file';
-
-  @override
-  String get autoCreateMissingTemplate => 'Create missing autoexec template';
 
   @override
   String get backupSection => 'Automatic backups';

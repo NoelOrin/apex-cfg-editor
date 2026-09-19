@@ -98,11 +98,19 @@ class FileBloc extends Bloc<FileEvent, FileState> {
         final data = CfgFileIo.read(e.path);
         if (generation != _openGeneration) return;
         final fileName = e.path.split(RegExp(r'[/\\]')).last.toLowerCase();
+        // 编辑器只支持 settings.cfg（操作设置）与 videoconfig.txt（游戏画质）；
+        // 其它文件（如 autoexec.cfg）直接拒绝，避免误改启动命令。
         final kind = switch (fileName) {
           'videoconfig.txt' => CfgKind.videoconfig,
           'settings.cfg' => CfgKind.settings,
-          _ => CfgKind.autoexec,
+          _ => null,
         };
+        if (kind == null) {
+          if (generation != _openGeneration) return;
+          // 不支持的文件类型：不打开、不清空当前文档，仅提示。
+          em(previous.copyWith(busy: false, warning: () => 'fileTypeUnsupported'));
+          return;
+        }
         final doc = switch (kind) {
           CfgKind.videoconfig => VideoconfigParser().parse(data.text),
           CfgKind.settings => SettingsParser().parse(data.text),

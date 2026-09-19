@@ -214,7 +214,7 @@ void main() {
       await edit.close();
     });
 
-    test('open falls back to autoexec kind by file name', () async {
+    test('open rejects autoexec.cfg (unsupported type)', () async {
       final file = File('${tmp.path}/autoexec.cfg')
         ..writeAsStringSync('fps_max 0\n');
       final edit = EditBloc();
@@ -226,8 +226,9 @@ void main() {
       );
       bloc.add(OpenRequested(file.path));
       await Future<void>.delayed(const Duration(milliseconds: 50));
-      expect(bloc.state.kind, CfgKind.autoexec);
-      expect(edit.state.doc!.lines.first, isA<CvarLine>());
+      expect(bloc.state.kind, isNull);
+      expect(bloc.state.warning, 'fileTypeUnsupported');
+      expect(edit.state.doc, isNull);
       await bloc.close();
       await edit.close();
     });

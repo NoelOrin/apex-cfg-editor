@@ -13,7 +13,6 @@ import '../core/io/cfg_file_io.dart';
 import '../core/paths/install_locator.dart';
 import '../core/paths/windows_registry.dart';
 import '../core/settings/settings_store.dart';
-import '../core/templates/autoexec_template.dart';
 import '../core/update/update_service.dart';
 import '../state/diff_bloc.dart';
 import '../state/edit_bloc.dart';
@@ -74,8 +73,7 @@ enum _DetectPhase {
   /// 探测全空：提示手动选择或指定 Apex 目录。
   notFound,
 
-  /// 找到安装但 autoexec.cfg 缺失：提供创建模板入口。
-  autoexecMissing,
+  /// 仅 settings.cfg / videoconfig.txt 会被接受；其余为未找到态。
 }
 
 /// 主界面三段工作台：窗口栏 + 自适应编辑面板 + 底部知识/变更双栏。
@@ -84,7 +82,7 @@ enum _DetectPhase {
 ///
 /// 本屏同时承担装配期行为：启动自动探测（探测引擎 v2，见
 /// [InstallLocator]）、「打开文件」手动选择（[pickFile]）、指定 Apex 目录
-/// （探测 v2 的 customInstallDir 回写）、创建 autoexec.cfg 模板、还原
+/// （探测 v2 的 customInstallDir 回写）、还原
 /// 对话框接线和退出保护（PopScope + window_manager WindowListener，
 /// 均经 [ExitGuard] 决策）。
 class EditorScreen extends StatefulWidget {
@@ -168,8 +166,7 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
 
   _DetectPhase _phase = _DetectPhase.idle;
 
-  /// 用户在多安装选择对话框中选定的安装（创建 autoexec 的目标）。
-  ApexInstall? _activeInstall;
+  /// 用户在多安装选择对话框中选定的安装。
 
   /// 还原后递增，作为 TextEditorView 的 key 强制重建子树（见 _onRestored）。
   int _textEpoch = 0;
@@ -260,8 +257,8 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     await _exitGuard.confirmExit();
   }
 
-  /// 启动自动探测（探测引擎 v2）：videoconfig 优先自动打开，其次所选
-  /// 安装的 autoexec.cfg；autoexec 缺失或探测全空时进入对应横幅状态。
+  /// 启动自动探测（探测引擎 v2）：优先打开 settings.cfg，其次 videoconfig.txt；
+  /// 二者均来自 Saved Games；探测全空时进入「未找到」横幅状态。
   Future<void> _autoDetectAndOpen() async {
     final settings = widget.settings;
     if (settings?.readReopenLastFile() == true) {
@@ -297,149 +294,30 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
             customInstallDir ?? widget.settings?.readCustomInstallDir(),
       );
 
-  /// 探测结果落地：文档根（videoconfig）优先自动打开；安装候选多于一个
-  /// 时弹选择对话框；所选安装有 autoexec.cfg 就打开，只有目录就进入
-  /// 「创建 autoexec.cfg」横幅；全空进入「未找到」横幅。
+  /// 探测结果落地：只处理 settings.cfg（操作设置）与 videoconfig.txt（游戏画质），
+  /// 二者均来自 Saved Games；多安装候选弹选择对话框；全空进入「未找到」横幅。
+  /// 编辑器不再支持 autoexec.cfg，因此移除其候选与「创建模板」流程。
   Future<void> _applyResults(List<ApexInstall> results) async {
     final configResults = results
         .where((r) => r.videoconfigPath != null || r.settingsPath != null)
         .toList();
-    final installs = results
-        .where((r) => r.videoconfigPath == null && r.settingsPath == null)
-        .toList();
-
-    ApexInstall? chosen;
-    if (installs.length > 1) {
-      if (!mounted) return;
-      chosen = await _showInstallChooser(installs);
-      if (!mounted) return;
-      // 用户取消选择：不再自动处理 autoexec，退回「未找到」横幅
-      // （顶栏「打开文件」始终可用）。
-    } else if (installs.isNotEmpty) {
-      chosen = installs.first;
-    }
 
     final preferred = widget.settings?.readPreferredOpenKind() ?? 'settings';
-    if (preferred == 'autoexec' &&
-        chosen != null &&
-        chosen.autoexecPath == null &&
-        widget.settings?.readAutoCreateMissingTemplate() == true) {
-      if (!mounted) return;
-      setState(() {
-        _activeInstall = chosen;
-        _phase = _DetectPhase.autoexecMissing;
-      });
-      await _createAutoexec();
-      return;
-    }
     final config = configResults.firstOrNull;
     final openPath = switch (preferred) {
-      'autoexec' =>
-        chosen?.autoexecPath ?? config?.settingsPath ?? config?.videoconfigPath,
-      'videoconfig' =>
-        config?.videoconfigPath ?? chosen?.autoexecPath ?? config?.settingsPath,
-      _ =>
-        config?.settingsPath ?? chosen?.autoexecPath ?? config?.videoconfigPath,
+      'videoconfig' => config?.videoconfigPath ?? config?.settingsPath,
+      _ => config?.settingsPath ?? config?.videoconfigPath,
     };
-    if (openPath == null &&
-        chosen != null &&
-        widget.settings?.readAutoCreateMissingTemplate() == true) {
-      if (!mounted) return;
-      setState(() {
-        _activeInstall = chosen;
-        _phase = _DetectPhase.autoexecMissing;
-      });
-      await _createAutoexec();
-      return;
-    }
     if (openPath != null && widget.fileBloc.state.path == null) {
       widget.fileBloc.add(OpenRequested(openPath));
     }
     if (!mounted) return;
     setState(() {
-      _activeInstall = chosen;
-      _phase = openPath != null
-          ? _DetectPhase.idle
-          : chosen != null
-          ? _DetectPhase.autoexecMissing
-          : _DetectPhase.notFound;
+      _phase = openPath != null ? _DetectPhase.idle : _DetectPhase.notFound;
     });
   }
 
   /// 多安装选择对话框（Steam + EA App 双装等）。取消返回 null。
-  Future<ApexInstall?> _showInstallChooser(List<ApexInstall> installs) {
-    final l = AppLocalizations.of(context)!;
-    String sourceLabel(InstallSource s) => switch (s) {
-      InstallSource.steam => l.installSourceSteam,
-      InstallSource.eaApp => l.installSourceEaApp,
-      _ => l.installSourceCustom,
-    };
-    IconData sourceIcon(InstallSource s) => switch (s) {
-      InstallSource.steam => LucideIcons.gamepad2,
-      InstallSource.eaApp => LucideIcons.appWindow,
-      _ => LucideIcons.folder,
-    };
-    return showDialog<ApexInstall>(
-      context: _fluentContext ?? context,
-      builder: (dialogContext) => ContentDialog(
-        title: Text(l.chooseInstallTitle),
-        content: SizedBox(
-          width: 520,
-          height: 220,
-          child: ListView(
-            children: [
-              for (final install in installs)
-                ListTile(
-                  leading: Icon(sourceIcon(install.source)),
-                  title: Text(sourceLabel(install.source)),
-                  subtitle: Text(
-                    install.installDir,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  onPressed: () => Navigator.of(dialogContext).pop(install),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          Button(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l.cancel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 「创建 autoexec.cfg」：写入全注释模板（目录按可创建位置补建）后
-  /// 自动打开。模板不改变任何游戏行为。
-  Future<void> _createAutoexec() async {
-    final dir = _activeInstall?.autoexecDir;
-    if (dir == null) return;
-    final file = File('$dir/autoexec.cfg');
-    try {
-      if (!file.existsSync()) {
-        file.parent.createSync(recursive: true);
-        CfgFileIo.write(file.path, autoexecTemplate, CfgEncoding.utf8);
-      }
-    } catch (_) {
-      if (mounted) {
-        _showErrorInfoBar(
-          _fluentContext ?? context,
-          AppLocalizations.of(context)!.fileSaveFailed,
-        );
-      }
-      return;
-    }
-    if (!mounted) return;
-    setState(() => _phase = _DetectPhase.idle);
-    if (widget.fileBloc.state.path == null) {
-      widget.fileBloc.add(OpenRequested(file.path));
-    }
-  }
-
-  /// 「指定 Apex 目录」：选择目录 → 记入 customInstallDir → 以该目录
   /// 重新探测（locate 内部按 fallback 语义合并候选）。
   Future<void> _pickApexDir() async {
     final l = AppLocalizations.of(context)!;
@@ -470,6 +348,15 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
           ? await pick()
           : await _pickWithFilePicker(widget.settings?.readLastOpenDir());
       if (path == null || !mounted) return; // 用户取消
+      // 编辑器只接受 settings.cfg 与 videoconfig.txt；其它文件不打开并提示。
+      if (!_isEditableFile(path)) {
+        if (!mounted) return;
+        _showErrorInfoBar(
+          _fluentContext ?? context,
+          AppLocalizations.of(context)!.fileTypeUnsupported,
+        );
+        return;
+      }
       if (widget.editBloc.state.dirty) {
         final proceed = await _confirmOpenOverDirty(path);
         if (!proceed || !mounted) return;
@@ -526,6 +413,14 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     if (home == null || home.isEmpty) return null;
     final sep = Platform.pathSeparator;
     return '$home${sep}Saved Games${sep}Respawn${sep}Apex${sep}local';
+  }
+
+  /// 编辑器仅支持 settings.cfg（操作设置）与 videoconfig.txt（游戏画质）。
+  static const Set<String> _editableFiles = {'settings.cfg', 'videoconfig.txt'};
+
+  static bool _isEditableFile(String path) {
+    final name = path.split(RegExp(r'[/\\]')).last.toLowerCase();
+    return _editableFiles.contains(name);
   }
 
   static Future<String?> _pickWithFilePicker(String? initialDirectory) async {
@@ -605,9 +500,8 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
         if (s.path != null || _phase == _DetectPhase.idle) {
           return const SizedBox.shrink();
         }
-        final missing = _phase == _DetectPhase.autoexecMissing;
-        final title = missing ? l.autoexecMissingTitle : l.apexNotFoundTitle;
-        final hint = missing ? l.autoexecMissingHint : l.apexNotFoundHint;
+        final title = l.apexNotFoundTitle;
+        final hint = l.apexNotFoundHint;
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: LayoutBuilder(
@@ -615,18 +509,11 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
               isLong: constraints.maxWidth < 720,
               title: Text(title),
               content: Text(hint),
-              severity: missing
-                  ? InfoBarSeverity.warning
-                  : InfoBarSeverity.info,
-              action: missing
-                  ? Button(
-                      onPressed: _createAutoexec,
-                      child: Text(l.createAutoexec),
-                    )
-                  : HyperlinkButton(
-                      onPressed: _pickApexDir,
-                      child: Text(l.specifyApexDir),
-                    ),
+              severity: InfoBarSeverity.info,
+              action: HyperlinkButton(
+                onPressed: _pickApexDir,
+                child: Text(l.specifyApexDir),
+              ),
             ),
           ),
         );
@@ -759,8 +646,8 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                               child: Column(
                                 children: [
-                                  // 探测 v2 空态横幅：autoexec 缺失（创建入口）或
-                                  // 未找到（指定目录入口）；打开成功后自动隐藏。
+                                  // 探测 v2 空态横幅：未找到配置（指定目录入口）；
+                                  // 打开成功后自动隐藏。
                                   _buildDetectBanner(context),
                                   Expanded(
                                     child: Container(

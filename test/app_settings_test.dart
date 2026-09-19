@@ -14,7 +14,6 @@ void main() {
     expect(store.readAutoDetectOnStartup(), isTrue);
     expect(store.readPreferredOpenKind(), 'settings');
     expect(store.readReopenLastFile(), isFalse);
-    expect(store.readAutoCreateMissingTemplate(), isFalse);
     expect(store.readBackupEnabled(), isTrue);
     expect(store.readBackupLimit(), SettingsStore.defaultBackupLimit);
     expect(store.readBackupDir(), isNull);
@@ -26,18 +25,17 @@ void main() {
 
     store.writeThemeModeRaw('dark');
     store.writeAutoDetectOnStartup(false);
-    store.writePreferredOpenKind('autoexec');
+    store.writePreferredOpenKind('videoconfig');
     store.writeReopenLastFile(true);
-    store.writeAutoCreateMissingTemplate(true);
     store.writeBackupEnabled(false);
     store.writeBackupLimit(7);
     store.writeBackupDir('${tmp.path}/custom-backups');
     store.writeLastOpenFile('${tmp.path}/autoexec.cfg');
 
     expect(store.readAutoDetectOnStartup(), isFalse);
-    expect(store.readPreferredOpenKind(), 'autoexec');
+    // videoconfig 仍是合法可选项。
+    expect(store.readPreferredOpenKind(), 'videoconfig');
     expect(store.readReopenLastFile(), isTrue);
-    expect(store.readAutoCreateMissingTemplate(), isTrue);
     expect(store.readBackupEnabled(), isFalse);
     expect(store.readBackupLimit(), 7);
     expect(store.readBackupDir(), '${tmp.path}/custom-backups');

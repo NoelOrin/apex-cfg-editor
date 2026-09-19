@@ -56,18 +56,15 @@ Artifacts 里上传未打 tag 的开发产物。
    `Origin Games\Apex Legends` / `Apex Legends`。
 3. **用户记忆目录**：以上全空时回退 `customInstallDir`（settings.json）。
 
-对每个安装目录，autoexec 候选目录为 `cfg`、`global\cfg`、`r2\cfg`
-（目录存在即算，文件可缺失；都不存在时用 `cfg` 作为可创建位置）。
+对每个安装目录，应用在其 `Respawn\Apex\local\` 下探测 `settings.cfg` 与
+  `videoconfig.txt`（操作设置与游戏画质），命中即作为可打开配置；
+  安装目录仅用于辅助定位，不再处理 `autoexec.cfg`。
 
 兜底入口：
 
-- **多个 EA App 目录**：启动后弹出选择对话框，选哪个就处理哪个的
-  autoexec。
-- **autoexec.cfg 不存在**：界面出现「创建 autoexec.cfg」，点击写入全注释
-  模板（帧数优化示例，去掉行首 `//` 才生效）并自动打开。
 - **完全找不到 Apex**：界面出现「指定 Apex 目录」，用目录选择器指到
   Apex 安装目录，应用记住该路径并重新探测；顶栏「打开文件」也始终可
-  手动选择 `settings.cfg` / `videoconfig.txt` / `autoexec.cfg`。
+  手动选择 `settings.cfg` / `videoconfig.txt`（仅这两类被接受）。
 
 ## 构建与运行
 

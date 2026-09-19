@@ -164,10 +164,19 @@ class InstallLocator {
       }
       autoexecDir ??= '$norm/${_autoexecDirCandidates.first}';
       final autoexecFile = File('$autoexecDir/autoexec.cfg');
+      // 编辑器只支持 settings.cfg（操作设置）与 videoconfig.txt（游戏画质），
+      // 二者位于安装目录下的 Respawn/Apex/local/；EA App 安装目录同样探测，
+      // 不再依赖 autoexec.cfg。
+      final vcInInstall = '$norm/$_videoconfigRelative';
+      final settingsInInstall = '$norm/$_settingsRelative';
+      final hasVc = File(vcInInstall).existsSync();
+      final hasSettings = File(settingsInInstall).existsSync();
       result.add(
         ApexInstall(
           installDir: norm,
           source: source,
+          videoconfigPath: hasVc ? vcInInstall : null,
+          settingsPath: hasSettings ? settingsInInstall : null,
           autoexecDir: autoexecDir,
           autoexecPath: autoexecFile.existsSync() ? autoexecFile.path : null,
         ),

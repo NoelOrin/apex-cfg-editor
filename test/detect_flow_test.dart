@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:apex_cfg_editor/core/backup/backup_service.dart';
+import 'package:apex_cfg_editor/core/parser/cfg_document.dart';
 import 'package:apex_cfg_editor/core/paths/install_locator.dart';
 import 'package:apex_cfg_editor/core/settings/settings_store.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
@@ -55,7 +56,6 @@ Widget _host(Widget home) => MaterialApp(
     saveImpl: (p, t, e) async {},
     listBackupsImpl: backups.listBackups,
     restoreImpl: backups.restore,
-    // 与 main.dart 生产装配一致：打开成功回写 customInstallDir。
     onOpenSucceeded: (dir) {
       store.writeLastOpenDir(dir);
       final install = apexInstallDirFromOpenedDir(dir);
@@ -88,9 +88,13 @@ void main() {
     env: const {},
   );
 
-  testWidgets('EA install with autoexec.cfg auto-opens the file', (t) async {
+  /// 编辑器只接受 settings.cfg（操作设置）与 videoconfig.txt（游戏画质）；
+  /// 仅含 autoexec.cfg 的安装不应被自动打开，进入「未找到」横幅。
+  testWidgets('EA install with only autoexec.cfg is not auto-opened', (
+    t,
+  ) async {
     final apex = Directory('${tmp.path}/EAApex')..createSync(recursive: true);
-    final autoexec = File('${apex.path}/global/cfg/autoexec.cfg')
+    File('${apex.path}/Respawn/Apex/local/autoexec.cfg')
       ..createSync(recursive: true)
       ..writeAsStringSync('// hi\n');
 
@@ -114,16 +118,17 @@ void main() {
     );
     await t.pumpAndSettle();
 
-    expect(_norm(file.state.path!), _norm(autoexec.path));
-    // 打开成功回写 customInstallDir（main.dart 装配语义）。
-    expect(_norm(store.readCustomInstallDir()!), _norm(apex.path));
+    expect(file.state.path, isNull);
+    expect(find.text('Apex not found'), findsOneWidget);
   });
 
-  testWidgets('autoexec missing → create button writes template and opens', (
+  testWidgets('EA install with settings.cfg auto-opens settings.cfg', (
     t,
   ) async {
     final apex = Directory('${tmp.path}/EAApex2')..createSync(recursive: true);
-    Directory('${apex.path}/cfg').createSync(recursive: true);
+    final settings = File('${apex.path}/Respawn/Apex/local/settings.cfg')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -145,26 +150,21 @@ void main() {
     );
     await t.pumpAndSettle();
 
-    expect(file.state.path, isNull);
-    expect(find.text('Create autoexec.cfg'), findsOneWidget);
-
-    await t.tap(find.text('Create autoexec.cfg'));
-    await t.pumpAndSettle();
-
-    final created = File('${apex.path}/cfg/autoexec.cfg');
-    expect(created.existsSync(), isTrue);
-    expect(_norm(file.state.path!), _norm(created.path));
-    for (final line in created.readAsStringSync().split('\n')) {
-      if (line.trim().isEmpty) continue;
-      expect(line.trimLeft().startsWith('//'), isTrue, reason: line);
-    }
+    expect(_norm(file.state.path!), _norm(settings.path));
+    expect(file.state.kind, CfgKind.settings);
   });
 
-  testWidgets('autoexec missing and cfg dir absent → template still created', (
+  testWidgets('preferred videoconfig opens videoconfig.txt over settings.cfg', (
     t,
   ) async {
-    // 安装目录存在但完全没有 cfg 子目录：用第一个候选位置可创建。
     final apex = Directory('${tmp.path}/EAApex3')..createSync(recursive: true);
+    final settings = File('${apex.path}/Respawn/Apex/local/settings.cfg')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
+    final video = File('${apex.path}/Respawn/Apex/local/videoconfig.txt')
+      ..createSync(recursive: true)
+      ..writeAsStringSync('"setting.fps_max" "144"\n');
+    store.writePreferredOpenKind('videoconfig');
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -186,71 +186,18 @@ void main() {
     );
     await t.pumpAndSettle();
 
-    await t.tap(find.text('Create autoexec.cfg'));
-    await t.pumpAndSettle();
-
-    expect(_norm(file.state.path!), _norm('${apex.path}/cfg/autoexec.cfg'));
-  });
-
-  testWidgets('two installs → chooser dialog; picking one opens its autoexec', (
-    t,
-  ) async {
-    final eaApexA = '${tmp.path}/EAApexA';
-    final eaApexB = '${tmp.path}/EAApexB';
-    for (final apex in [eaApexA, eaApexB]) {
-      Directory('$apex/global/cfg').createSync(recursive: true);
-      File('$apex/global/cfg/autoexec.cfg').writeAsStringSync('// $apex\n');
-    }
-
-    final (file, edit, diff) = _wire('${tmp.path}/backups', store);
-    addTearDown(() async {
-      await file.close();
-      await diff.close();
-      await edit.close();
-    });
-
-    await t.pumpWidget(
-      _host(
-        EditorScreen(
-          editBloc: edit,
-          diffBloc: diff,
-          fileBloc: file,
-          settings: store,
-          locator: locatorWith({
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall|<keys>':
-                'EA1|EA2',
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA1|DisplayName':
-                'Apex Legends',
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA1|InstallLocation':
-                eaApexA,
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA2|DisplayName':
-                'Apex Legends',
-            'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\EA2|InstallLocation':
-                eaApexB,
-          }),
-        ),
-      ),
-    );
-    await t.pumpAndSettle();
-
-    expect(find.text('Multiple Apex installations detected'), findsOneWidget);
-    expect(find.text('EA App'), findsNWidgets(2));
-    final installTiles = find.byType(fluent.ListTile);
-    expect(installTiles, findsNWidgets(2));
-
-    await t.tap(installTiles.last);
-    await t.pumpAndSettle();
-
-    expect(_norm(file.state.path!), _norm('$eaApexB/global/cfg/autoexec.cfg'));
+    expect(_norm(file.state.path!), _norm(video.path));
+    expect(file.state.kind, CfgKind.videoconfig);
+    expect(settings.existsSync(), isTrue);
   });
 
   testWidgets('nothing found → empty-state hint; specify dir re-probes and '
-      'opens', (t) async {
+      'opens settings.cfg', (t) async {
     final apex = Directory('${tmp.path}/CustomApex')
       ..createSync(recursive: true);
-    final autoexec = File('${apex.path}/cfg/autoexec.cfg')
+    final settings = File('${apex.path}/Respawn/Apex/local/settings.cfg')
       ..createSync(recursive: true)
-      ..writeAsStringSync('// custom\n');
+      ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
 
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
@@ -280,16 +227,16 @@ void main() {
     await t.tap(find.text('Specify Apex directory'));
     await t.pumpAndSettle();
 
-    expect(_norm(file.state.path!), _norm(autoexec.path));
+    expect(_norm(file.state.path!), _norm(settings.path));
     expect(_norm(store.readCustomInstallDir()!), _norm(apex.path));
   });
 
   testWidgets('reopens last file before auto detection when enabled', (
     t,
   ) async {
-    final last = File('${tmp.path}/last/autoexec.cfg')
+    final last = File('${tmp.path}/last/settings.cfg')
       ..createSync(recursive: true)
-      ..writeAsStringSync('// last\n');
+      ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
     store.writeReopenLastFile(true);
     store.writeLastOpenFile(last.path);
 
@@ -314,6 +261,7 @@ void main() {
     await t.pumpAndSettle();
 
     expect(_norm(file.state.path!), _norm(last.path));
+    expect(file.state.kind, CfgKind.settings);
   });
 
   testWidgets('default preference opens settings.cfg from Saved Games', (
@@ -357,27 +305,10 @@ void main() {
     expect(_norm(file.state.path!), _norm(settingsFile.path));
   });
 
-  testWidgets('prefers EA autoexec over Saved Games configs when configured', (
-    t,
-  ) async {
-    final home = Directory('${tmp.path}/home')..createSync();
-    final local = Directory('${home.path}/Saved Games/Respawn/Apex/local')
-      ..createSync(recursive: true);
-    final settings = File('${local.path}/settings.cfg')
-      ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
-    final videoconfig = File('${local.path}/videoconfig.txt')
-      ..writeAsStringSync('"setting.fps_max" "144"\n');
-    final apex = Directory('${tmp.path}/EAApex5')..createSync(recursive: true);
-    final autoexec = File('${apex.path}/global/cfg/autoexec.cfg')
+  testWidgets('FileBloc opens settings.cfg normally', (t) async {
+    final settings = File('${tmp.path}/settings.cfg')
       ..createSync(recursive: true)
-      ..writeAsStringSync('// auto\n');
-    store.writePreferredOpenKind('autoexec');
-
-    final locator = InstallLocator(
-      registry: FakeRegistry(values: _eaRegistry('EA5', apex.path)),
-      drives: FakeDrives(),
-      env: {'USERPROFILE': home.path},
-    );
+      ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
       await file.close();
@@ -385,51 +316,11 @@ void main() {
       await edit.close();
     });
 
-    await t.pumpWidget(
-      _host(
-        EditorScreen(
-          editBloc: edit,
-          diffBloc: diff,
-          fileBloc: file,
-          settings: store,
-          locator: locator,
-        ),
-      ),
-    );
+    file.add(OpenRequested(settings.path));
     await t.pumpAndSettle();
 
-    expect(videoconfig.existsSync(), isTrue);
-    expect(settings.existsSync(), isTrue);
-    expect(_norm(file.state.path!), _norm(autoexec.path));
-  });
-
-  testWidgets('auto-creates missing template when configured', (t) async {
-    final apex = Directory('${tmp.path}/EAApexAuto')
-      ..createSync(recursive: true);
-    store.writeAutoCreateMissingTemplate(true);
-
-    final (file, edit, diff) = _wire('${tmp.path}/backups', store);
-    addTearDown(() async {
-      await file.close();
-      await diff.close();
-      await edit.close();
-    });
-
-    await t.pumpWidget(
-      _host(
-        EditorScreen(
-          editBloc: edit,
-          diffBloc: diff,
-          fileBloc: file,
-          settings: store,
-          locator: locatorWith(_eaRegistry('EA6', apex.path)),
-        ),
-      ),
-    );
-    await t.pumpAndSettle();
-
-    final created = File('${apex.path}/cfg/autoexec.cfg');
-    expect(created.existsSync(), isTrue);
-    expect(_norm(file.state.path!), _norm(created.path));
+    expect(file.state.kind, CfgKind.settings);
+    expect(file.state.path, settings.path);
+    expect(edit.state.doc, isA<CfgDocument>());
   });
 }

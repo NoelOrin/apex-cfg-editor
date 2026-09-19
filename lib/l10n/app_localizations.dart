@@ -212,6 +212,12 @@ abstract class AppLocalizations {
   /// **'Failed to open file'**
   String get fileOpenFailed;
 
+  /// No description provided for @fileTypeUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Only settings.cfg and videoconfig.txt can be edited.'**
+  String get fileTypeUnsupported;
+
   /// No description provided for @filePickerFailed.
   ///
   /// In en, this message translates to:
@@ -337,24 +343,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Close'**
   String get close;
-
-  /// No description provided for @createAutoexec.
-  ///
-  /// In en, this message translates to:
-  /// **'Create autoexec.cfg'**
-  String get createAutoexec;
-
-  /// No description provided for @autoexecMissingTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Apex install found, but autoexec.cfg is missing'**
-  String get autoexecMissingTitle;
-
-  /// No description provided for @autoexecMissingHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Create a commented template to start configuring; it changes nothing until you edit it.'**
-  String get autoexecMissingHint;
 
   /// No description provided for @apexNotFoundTitle.
   ///
@@ -644,12 +632,6 @@ abstract class AppLocalizations {
   /// **'videoconfig.txt (graphics)'**
   String get preferredVideoconfig;
 
-  /// No description provided for @preferredAutoexec.
-  ///
-  /// In en, this message translates to:
-  /// **'autoexec.cfg (startup commands)'**
-  String get preferredAutoexec;
-
   /// No description provided for @filePurposeVideoconfig.
   ///
   /// In en, this message translates to:
@@ -673,12 +655,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reopen the last file'**
   String get reopenLastFile;
-
-  /// No description provided for @autoCreateMissingTemplate.
-  ///
-  /// In en, this message translates to:
-  /// **'Create missing autoexec template'**
-  String get autoCreateMissingTemplate;
 
   /// No description provided for @backupSection.
   ///
