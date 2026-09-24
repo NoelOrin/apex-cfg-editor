@@ -96,7 +96,11 @@ void main() {
     await tester.pump();
 
     expect(find.byType(WindowResizeFrame), findsOneWidget);
-    // 无边框窗口无系统投影：根容器必须有 1px 主色描边（Windows 11 强调色）。
+    // 无边框窗口无系统投影：根容器必须有 1px 当前强调色描边。
+    // Windows 上强调色跟随系统（注册表），不能写死 AcidPalette.dark.acid。
+    final accent = AcidPalette.of(
+      tester.element(find.byType(EditorScreen)),
+    ).acid;
     final frame = find.ancestor(
       of: find.byType(EditorScreen),
       matching: find.byWidgetPredicate((w) {
@@ -106,7 +110,7 @@ void main() {
         final border = decoration.border;
         return border is Border &&
             border.top.width == 1 &&
-            border.top.color == AcidPalette.dark.acid;
+            border.top.color == accent;
       }),
     );
     expect(frame, findsOneWidget);
