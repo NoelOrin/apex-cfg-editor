@@ -61,12 +61,29 @@ void main() {
     // 模式切换为纯图标段（Tooltip 兼作语义标签），断言随 UI 形态调整。
     expect(find.byTooltip('Table'), findsOneWidget);
     expect(find.byTooltip('Text'), findsOneWidget);
+    // 侧栏承载知识库/变更对比/设置；默认页为编辑器全高工作台。
+    expect(find.byKey(const ValueKey('sidebar.editor')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sidebar.knowledgeBase')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sidebar.diffPreview')), findsOneWidget);
+    expect(find.byKey(const ValueKey('sidebar.settings')), findsOneWidget);
     expect(find.byKey(const ValueKey('workspace.editor')), findsOneWidget);
     expect(
       find.byKey(const ValueKey('workspace.knowledgeBase')),
-      findsOneWidget,
+      findsNothing,
     );
+    expect(find.byKey(const ValueKey('workspace.diffPreview')), findsNothing);
+
+    await t.tap(find.byKey(const ValueKey('sidebar.knowledgeBase')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('workspace.knowledgeBase')), findsOneWidget);
+
+    await t.tap(find.byKey(const ValueKey('sidebar.diffPreview')));
+    await t.pumpAndSettle();
     expect(find.byKey(const ValueKey('workspace.diffPreview')), findsOneWidget);
+
+    await t.tap(find.byKey(const ValueKey('sidebar.editor')));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('workspace.editor')), findsOneWidget);
   });
 
   testWidgets('title bar close button routes dirty exit through ExitGuard', (

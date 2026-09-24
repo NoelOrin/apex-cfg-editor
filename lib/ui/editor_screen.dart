@@ -20,6 +20,7 @@ import 'backup_dialog.dart';
 import 'exit_guard.dart';
 import 'quit_dialog.dart';
 import 'settings_page.dart';
+import 'widgets/app_sidebar.dart';
 import 'widgets/kb_card.dart';
 import 'widgets/kv_table_view.dart';
 import 'widgets/side_by_side_diff.dart';
@@ -151,7 +152,9 @@ class EditorScreen extends StatefulWidget {
 class _EditorScreenState extends State<EditorScreen> with WindowListener {
   BuildContext? _fluentContext;
   bool _textMode = false;
-  bool _showSettings = false;
+
+  /// 侧栏目的地：0 编辑器 / 1 知识库 / 2 变更对比 / 3 设置。
+  int _navIndex = 0;
 
   /// 原生关闭是否被拦截。仅在文档有未保存修改时开启，干净文档直接交给
   /// Windows 处理，避免关窗事件再绕一轮 Dart/平台通道才退出。
@@ -575,58 +578,57 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                             fileName: s.path?.split('/').last.split('\\').last,
                             onClose: () => _exitGuard.confirmExit(),
                             actions: [
-                              if (!_showSettings) ...[
-                                Tooltip(
-                                  message: s.path == null
-                                      ? l.openFile
-                                      : l.reselectFile,
-                                  child: IconButton(
-                                    key: const ValueKey('titlebar.openFile'),
-                                    iconButtonMode: IconButtonMode.small,
-                                    icon: Icon(
-                                      s.path == null
-                                          ? LucideIcons.folderOpen
-                                          : LucideIcons.fileInput,
-                                    ),
-                                    onPressed: _openFileManually,
-                                  ),
-                                ),
-                                const _ToolbarDivider(),
-                                Tooltip(
-                                  message: l.save,
-                                  child: IconButton(
-                                    icon: const Icon(LucideIcons.save),
-                                    onPressed: canSave
-                                        ? () => widget.fileBloc
-                                              .add(SaveRequested())
-                                        : null,
-                                  ),
-                                ),
-                                Tooltip(
-                                  message: l.restore,
-                                  child: IconButton(
-                                    icon: const Icon(LucideIcons.history),
-                                    onPressed: () => showRestoreDialog(
-                                      _fluentContext ?? context,
-                                      fileBloc: widget.fileBloc,
-                                      editBloc: widget.editBloc,
-                                      onRestored: _onRestored,
-                                    ),
-                                  ),
-                                ),
-                                const _ToolbarDivider(),
-                              ],
                               Tooltip(
-                                message: _showSettings ? l.back : l.settings,
+                                message: s.path == null
+                                    ? l.openFile
+                                    : l.reselectFile,
+                                child: IconButton(
+                                  key: const ValueKey('titlebar.openFile'),
+                                  iconButtonMode: IconButtonMode.small,
+                                  icon: Icon(
+                                    s.path == null
+                                        ? LucideIcons.folderOpen
+                                        : LucideIcons.fileInput,
+                                  ),
+                                  onPressed: _openFileManually,
+                                ),
+                              ),
+                              const _ToolbarDivider(),
+                              Tooltip(
+                                message: l.save,
+                                child: IconButton(
+                                  icon: const Icon(LucideIcons.save),
+                                  onPressed: canSave
+                                      ? () => widget.fileBloc
+                                            .add(SaveRequested())
+                                      : null,
+                                ),
+                              ),
+                              Tooltip(
+                                message: l.restore,
+                                child: IconButton(
+                                  icon: const Icon(LucideIcons.history),
+                                  onPressed: () => showRestoreDialog(
+                                    _fluentContext ?? context,
+                                    fileBloc: widget.fileBloc,
+                                    editBloc: widget.editBloc,
+                                    onRestored: _onRestored,
+                                  ),
+                                ),
+                              ),
+                              const _ToolbarDivider(),
+                              Tooltip(
+                                message: _navIndex == 3 ? l.back : l.settings,
                                 child: IconButton(
                                   key: const ValueKey('titlebar.settings'),
                                   icon: Icon(
-                                    _showSettings
+                                    _navIndex == 3
                                         ? LucideIcons.arrowLeft
                                         : LucideIcons.settings2,
                                   ),
                                   onPressed: () => setState(
-                                    () => _showSettings = !_showSettings,
+                                    () =>
+                                        _navIndex = _navIndex == 3 ? 0 : 3,
                                   ),
                                 ),
                               ),
@@ -635,128 +637,229 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                         },
                       ),
                     ),
-                    if (_showSettings)
-                      Expanded(
-                        child: SettingsPage(
-                          updateService: _updateService,
-                          settings: widget.settings,
-                          backupDir: widget.backupDir ?? '',
-                          logDir: widget.logDir ?? '',
-                          openFilePath: widget.fileBloc.state.path,
-                          onSettingsChanged: widget.onSettingsChanged,
-                          onResetSettings: widget.onResetSettings,
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final dockHeight = (constraints.maxHeight * 0.31)
-                                .clamp(190.0, 276.0);
-                            final knowledgeWidth = constraints.maxWidth < 1180
-                                ? 260.0
-                                : 304.0;
-
-                            return Padding(
-                              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                              child: Column(
-                                children: [
-                                  // 探测 v2 空态横幅：未找到配置（指定目录入口）；
-                                  // 打开成功后自动隐藏。
-                                  _buildDetectBanner(context),
-                                  Expanded(
-                                    child: Container(
-                                      key: const ValueKey('workspace.editor'),
-                                      decoration: BoxDecoration(
-                                        color: AcidPalette.of(context).panel,
-                                        border: Border.all(
-                                          color: AcidPalette.of(
-                                            context,
-                                          ).chrome.withValues(alpha: 0.28),
-                                        ),
-                                      ),
-                                      child: Column(
-                                        children: [
-                                          _WorkbenchHeader(
-                                            editBloc: widget.editBloc,
-                                            fileBloc: widget.fileBloc,
-                                            textMode: _textMode,
-                                            onReselectFile: _openFileManually,
-                                            onModeChanged: (next) => setState(
-                                              () => _textMode = next,
-                                            ),
-                                          ),
-                                          Container(
-                                            height: 1,
-                                            color: AcidPalette.of(
-                                              context,
-                                            ).chrome.withValues(alpha: 0.2),
-                                          ),
-                                          Expanded(
-                                            child: _textMode
-                                                ? TextEditorView(
-                                                    key: ValueKey<int>(
-                                                      _textEpoch,
-                                                    ),
-                                                    editBloc: widget.editBloc,
-                                                  )
-                                                : KvTableView(
-                                                    editBloc: widget.editBloc,
-                                                    fileBloc: widget.fileBloc,
-                                                  ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  SizedBox(
-                                    height: dockHeight,
-                                    child: Row(
-                                      children: [
-                                        SizedBox(
-                                          width: knowledgeWidth,
-                                          child: _DockPanel(
-                                            key: const ValueKey(
-                                              'workspace.knowledgeBase',
-                                            ),
-                                            icon: LucideIcons.bookOpen,
-                                            title: l.knowledgeBase,
-                                            child: KbCard(
-                                              editBloc: widget.editBloc,
-                                              showEmptyState: true,
-                                              fileBloc: widget.fileBloc,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 10),
-                                        Expanded(
-                                          child: _DockPanel(
-                                            key: const ValueKey(
-                                              'workspace.diffPreview',
-                                            ),
-                                            icon: LucideIcons.gitCompare,
-                                            title: l.diffPreview,
-                                            child: SideBySideDiff(
-                                              diffBloc: widget.diffBloc,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          AppSidebar(
+                            selectedIndex: _navIndex,
+                            onSelected: (i) => setState(() => _navIndex = i),
+                          ),
+                          Expanded(
+                            child: switch (_navIndex) {
+                              1 => _KnowledgePage(
+                                editBloc: widget.editBloc,
+                                fileBloc: widget.fileBloc,
                               ),
-                            );
-                          },
-                        ),
+                              2 => _DiffPage(diffBloc: widget.diffBloc),
+                              3 => SettingsPage(
+                                updateService: _updateService,
+                                settings: widget.settings,
+                                backupDir: widget.backupDir ?? '',
+                                logDir: widget.logDir ?? '',
+                                openFilePath: widget.fileBloc.state.path,
+                                onSettingsChanged: widget.onSettingsChanged,
+                                onResetSettings: widget.onResetSettings,
+                              ),
+                              _ => _EditorPage(
+                                detectBanner: _buildDetectBanner(context),
+                                editBloc: widget.editBloc,
+                                fileBloc: widget.fileBloc,
+                                textMode: _textMode,
+                                textEpoch: _textEpoch,
+                                onReselectFile: _openFileManually,
+                                onModeChanged: (next) => setState(
+                                  () => _textMode = next,
+                                ),
+                              ),
+                            },
+                          ),
+                        ],
                       ),
+                    ),
                   ],
                 ),
               ),
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// 编辑器主页：探测横幅 + 工作台（模式切换 + 全高表格/文本编辑）。
+class _EditorPage extends StatelessWidget {
+  final Widget detectBanner;
+  final EditBloc editBloc;
+  final FileBloc fileBloc;
+  final bool textMode;
+  final int textEpoch;
+  final VoidCallback onReselectFile;
+  final ValueChanged<bool> onModeChanged;
+
+  const _EditorPage({
+    required this.detectBanner,
+    required this.editBloc,
+    required this.fileBloc,
+    required this.textMode,
+    required this.textEpoch,
+    required this.onReselectFile,
+    required this.onModeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AcidPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Column(
+        children: [
+          detectBanner,
+          Expanded(
+            child: Container(
+              key: const ValueKey('workspace.editor'),
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                color: palette.panel,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: palette.chrome.withValues(alpha: 0.45),
+                ),
+              ),
+              child: Column(
+                children: [
+                  _WorkbenchHeader(
+                    editBloc: editBloc,
+                    fileBloc: fileBloc,
+                    textMode: textMode,
+                    onReselectFile: onReselectFile,
+                    onModeChanged: onModeChanged,
+                  ),
+                  Container(
+                    height: 1,
+                    color: palette.chrome.withValues(alpha: 0.35),
+                  ),
+                  Expanded(
+                    child: textMode
+                        ? TextEditorView(
+                            key: ValueKey<int>(textEpoch),
+                            editBloc: editBloc,
+                          )
+                        : KvTableView(
+                            editBloc: editBloc,
+                            fileBloc: fileBloc,
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 知识库主页：整页说明卡（原底部左栏迁入侧栏）。
+class _KnowledgePage extends StatelessWidget {
+  final EditBloc editBloc;
+  final FileBloc fileBloc;
+
+  const _KnowledgePage({required this.editBloc, required this.fileBloc});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: _SectionScaffold(
+        key: const ValueKey('workspace.knowledgeBase'),
+        icon: LucideIcons.bookOpen,
+        title: l.knowledgeBase,
+        child: KbCard(
+          editBloc: editBloc,
+          showEmptyState: true,
+          fileBloc: fileBloc,
+        ),
+      ),
+    );
+  }
+}
+
+/// 变更对比主页：整页并排 diff（原底部右栏迁入侧栏）。
+class _DiffPage extends StatelessWidget {
+  final DiffBloc diffBloc;
+
+  const _DiffPage({required this.diffBloc});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: _SectionScaffold(
+        key: const ValueKey('workspace.diffPreview'),
+        icon: LucideIcons.gitCompare,
+        title: l.diffPreview,
+        child: SideBySideDiff(diffBloc: diffBloc),
+      ),
+    );
+  }
+}
+
+/// 整页内容壳：圆角卡片 + 标题栏，承接原底部 DockPanel 的视觉职责。
+class _SectionScaffold extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final Widget child;
+
+  const _SectionScaffold({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = AcidPalette.of(context);
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: palette.panel,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: palette.chrome.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 42,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  Icon(icon, size: 15, color: palette.acid),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: kFontUi,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: palette.text,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(height: 1, color: palette.chrome.withValues(alpha: 0.35)),
+          Expanded(child: child),
+        ],
       ),
     );
   }
@@ -869,6 +972,7 @@ class _WorkbenchHeader extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: palette.danger.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(4),
                               border: Border.all(
                                 color: palette.danger.withValues(alpha: 0.42),
                               ),
@@ -890,6 +994,7 @@ class _WorkbenchHeader extends StatelessWidget {
                 Container(
                   decoration: BoxDecoration(
                     color: palette.bg.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(6),
                     border: Border.all(
                       color: palette.chrome.withValues(alpha: 0.28),
                     ),
@@ -925,59 +1030,4 @@ class _WorkbenchHeader extends StatelessWidget {
   }
 }
 
-class _DockPanel extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final Widget child;
 
-  const _DockPanel({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.child,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = AcidPalette.of(context);
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: palette.panel,
-        border: Border.all(color: palette.chrome.withValues(alpha: 0.28)),
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 36,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: [
-                  Icon(icon, size: 14, color: palette.acid),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontFamily: kFontUi,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                        color: palette.textMuted,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Container(height: 1, color: palette.chrome.withValues(alpha: 0.2)),
-          Expanded(child: child),
-        ],
-      ),
-    );
-  }
-}

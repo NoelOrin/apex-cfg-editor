@@ -359,13 +359,13 @@ abstract class AppLocalizations {
   /// No description provided for @apexNotFoundHint.
   ///
   /// In en, this message translates to:
-  /// **'No Apex installation was detected. Open a file manually or specify your Apex install directory.'**
+  /// **'No Apex config was detected. Open a file manually or specify the config directory (Saved Games\\Respawn\\Apex\\local).'**
   String get apexNotFoundHint;
 
   /// No description provided for @specifyApexDir.
   ///
   /// In en, this message translates to:
-  /// **'Specify Apex directory'**
+  /// **'Specify config directory'**
   String get specifyApexDir;
 
   /// No description provided for @chooseInstallTitle.
@@ -415,6 +415,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Toggle theme'**
   String get toggleTheme;
+
+  /// No description provided for @navEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Editor'**
+  String get navEditor;
 
   /// No description provided for @settings.
   ///

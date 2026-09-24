@@ -141,7 +141,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get apexNotFoundTitle => '未找到 Apex';
 
   @override
-  String get apexNotFoundHint => '未检测到 Apex 配置。可手动选择文件，或指定配置目录（Saved Games\\Respawn\\Apex\\local）。';
+  String get apexNotFoundHint =>
+      '未检测到 Apex 配置。可手动选择文件，或指定配置目录（Saved Games\\Respawn\\Apex\\local）。';
 
   @override
   String get specifyApexDir => '指定配置目录';
@@ -169,6 +170,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toggleTheme => '切换主题';
+
+  @override
+  String get navEditor => '编辑器';
 
   @override
   String get settings => '设置';

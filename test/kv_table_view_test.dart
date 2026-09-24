@@ -303,6 +303,45 @@ void main() {
     },
   );
 
+  testWidgets('bind_* keybind rows are hidden in table mode but kept in doc', (
+    t,
+  ) async {
+    const src =
+        'bind_US_standard "w" "+forward" 0\n'
+        '"setting.fps_max" "0"\n'
+        'bind_held_US_standard "g" "+strafe" 0\n'
+        '"setting.r_full" "1"\n';
+    final edit = EditBloc();
+    addTearDown(edit.close);
+    edit.add(
+      DocumentOpened(doc: SettingsParser().parse(src), baseline: src),
+    );
+    final file = _realFileBloc(edit);
+    addTearDown(file.close);
+
+    await t.pumpWidget(_host(KvTableView(editBloc: edit, fileBloc: file)));
+    await t.pumpAndSettle();
+
+    // 两条 bind 行不出现；普通键值行正常显示。
+    expect(find.text('bind_US_standard'), findsNothing);
+    expect(find.text('bind_held_US_standard'), findsNothing);
+    expect(find.text('setting.fps_max'), findsOneWidget);
+    expect(find.text('setting.r_full'), findsOneWidget);
+    // 仅 2 个值编辑框（不是 4 行）。
+    expect(find.byType(fluent.TextBox), findsNWidgets(2));
+
+    // 编辑可见行：事件映射到真实文档下标（0/2 被跳过）。
+    await t.enterText(find.byType(fluent.TextBox).first, '144');
+    await t.pumpAndSettle();
+    expect(
+      edit.state.doc!.serialize(),
+      'bind_US_standard "w" "+forward" 0\n'
+      '"setting.fps_max" "144"\n'
+      'bind_held_US_standard "g" "+strafe" 0\n'
+      '"setting.r_full" "1"\n',
+    );
+  });
+
   testWidgets('tapping a row dispatches SelectionChanged and highlights it', (
     t,
   ) async {

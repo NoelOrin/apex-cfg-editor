@@ -118,57 +118,63 @@ class _TitleBarState extends State<TitleBar> with WindowListener {
     final effectiveDark = theme.brightness == Brightness.dark;
 
     return FluentThemeFallback(
-      child: Container(
-        height: 46,
-        decoration: BoxDecoration(
-          color: theme.micaBackgroundColor,
-          border: Border(
-            bottom: BorderSide(color: palette.chrome.withValues(alpha: 0.22)),
-          ),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 12),
-            const _SlantLogo(),
-            const SizedBox(width: 10),
-            Text(
-              'APEX CFG EDITOR',
-              style: TextStyle(
-                fontFamily: kFontDisplay,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                fontStyle: FontStyle.italic,
-                letterSpacing: 1,
-                color: palette.text,
+      child: Acrylic(
+        tint: theme.micaBackgroundColor,
+        tintAlpha: 0.82,
+        luminosityAlpha: 0.55,
+        blurAmount: 24,
+        child: Container(
+          height: 46,
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: palette.chrome.withValues(alpha: 0.35),
               ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: GestureDetector(
-                key: const ValueKey('titlebar.dragArea'),
-                behavior: HitTestBehavior.opaque,
-                onDoubleTap: _handleMaximizeOrRestore,
-                onPanStart: (_) async {
-                  try {
-                    await windowManager.startDragging();
-                  } catch (_) {}
-                },
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    widget.fileName ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: kFontMono,
-                      fontSize: 12,
-                      color: palette.textMuted,
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: 12),
+              const _SlantLogo(),
+              const SizedBox(width: 10),
+              Text(
+                'APEX CFG EDITOR',
+                style: TextStyle(
+                  fontFamily: kFontDisplay,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  fontStyle: FontStyle.italic,
+                  letterSpacing: 1,
+                  color: palette.text,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: GestureDetector(
+                  key: const ValueKey('titlebar.dragArea'),
+                  behavior: HitTestBehavior.opaque,
+                  onDoubleTap: _handleMaximizeOrRestore,
+                  onPanStart: (_) async {
+                    try {
+                      await windowManager.startDragging();
+                    } catch (_) {}
+                  },
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      widget.fileName ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: kFontMono,
+                        fontSize: 12,
+                        color: palette.textMuted,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            ...widget.actions,
+              ...widget.actions,
             if (scope != null)
               _windowButton(
                 key: const ValueKey('titlebar.themeToggle'),
@@ -212,7 +218,8 @@ class _TitleBarState extends State<TitleBar> with WindowListener {
               onPressed: () => (widget.onClose ?? _defaultClose)(),
             ),
             const SizedBox(width: 6),
-          ],
+            ],
+          ),
         ),
       ),
     );

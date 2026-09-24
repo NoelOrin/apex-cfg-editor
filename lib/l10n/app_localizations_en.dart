@@ -179,6 +179,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toggleTheme => 'Toggle theme';
 
   @override
+  String get navEditor => 'Editor';
+
+  @override
   String get settings => 'Settings';
 
   @override

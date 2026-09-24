@@ -16,6 +16,16 @@ KbFile kbFileForKind(CfgKind? kind) => switch (kind) {
   null => KbFile.autoexec,
 };
 
+/// KV 表格中忽略的键（键位绑定条目数量大且以 bind 指令形式存在，
+/// 表格模式不展示；文本模式仍可查看/编辑，文档原行保留）。
+const kvHiddenKeys = {'bind_US_standard', 'bind_held_US_standard'};
+
+bool _isHidden(CfgLine line) => switch (line) {
+  KeyValueLine(:final key) => kvHiddenKeys.contains(key),
+  CvarLine(:final key) => kvHiddenKeys.contains(key),
+  _ => false,
+};
+
 /// Fluent 键值编辑表格：行结构保持不变，值控件采用 TextBox / ComboBox。
 class KvTableView extends StatelessWidget {
   final EditBloc editBloc;
@@ -45,10 +55,16 @@ class KvTableView extends StatelessWidget {
           // CvarLine（bind_... 等），不能按行类型判断域；统一用 FileBloc
           // 的文件类型映射到对应知识库域。
           final kbFile = kbFileForKind(fileBloc.state.kind);
+          // 过滤后的（展示行下标 → 文档真实下标）映射；事件必须用文档下标。
+          final visible = <int>[
+            for (var i = 0; i < doc.lines.length; i++)
+              if (!_isHidden(doc.lines[i])) i,
+          ];
           return ListView.builder(
             padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 12, 24),
-            itemCount: doc.lines.length,
-            itemBuilder: (context, i) {
+            itemCount: visible.length,
+            itemBuilder: (context, vi) {
+              final i = visible[vi];
               final line = doc.lines[i];
               final kvData = switch (line) {
                 KeyValueLine(:final key, :final value) => (

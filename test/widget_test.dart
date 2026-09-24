@@ -68,7 +68,8 @@ void main() {
       ).languageCode,
       'en',
     );
-    expect(find.text('Settings'), findsOneWidget);
+    // 侧栏「Settings」+ 设置页标题「Settings」两处文案。
+    expect(find.text('Settings'), findsNWidgets(2));
     expect(SettingsStore(settingsPath: settingsPath).readLocaleRaw(), 'en');
   });
 

@@ -262,7 +262,8 @@ fluent.FluentThemeData buildFluentTheme(
     typography: uiTypography,
     scaffoldBackgroundColor: palette.bg,
     micaBackgroundColor: palette.bg,
-    acrylicBackgroundColor: palette.panel,
+    // Acrylic 默认更透一点，侧栏/标题栏叠出 Win11 毛玻璃层次。
+    acrylicBackgroundColor: palette.panel.withValues(alpha: 0.82),
     cardColor: palette.panel,
     activeColor: palette.text,
     inactiveColor: palette.textMuted,
