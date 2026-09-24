@@ -236,6 +236,12 @@ abstract class AppLocalizations {
   /// **'Failed to save file'**
   String get fileSaveFailed;
 
+  /// No description provided for @fileChangedOnDisk.
+  ///
+  /// In en, this message translates to:
+  /// **'File was modified outside the editor. Reopen it before saving.'**
+  String get fileChangedOnDisk;
+
   /// No description provided for @fileRestoreFailed.
   ///
   /// In en, this message translates to:

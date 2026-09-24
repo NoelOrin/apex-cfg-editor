@@ -46,11 +46,27 @@ Future<void> _settle() =>
 List<File> _backupFiles(String backupBase, String fileName) {
   final dir = Directory('$backupBase/$fileName');
   if (!dir.existsSync()) return const [];
+  // 新布局：`<base>/<fileName>/<pathHash>/<stamp>.cfg`。
   return dir
-      .listSync()
+      .listSync(recursive: true)
       .whereType<File>()
       .where((f) => f.path.endsWith('.cfg'))
       .toList();
+}
+
+/// 预置一份备份到新布局目录下，返回备份文件完整路径。
+String _seedBackup(
+  String backupBase,
+  String targetPath,
+  String stampName,
+  String content,
+) {
+  final name = targetPath.split(RegExp(r'[/\\]')).last;
+  final dir = Directory(
+    '$backupBase/$name/${BackupService.pathKeyOf(targetPath)}',
+  )..createSync(recursive: true);
+  final f = File('${dir.path}/$stampName')..writeAsStringSync(content);
+  return f.path;
 }
 
 Widget _host(Widget home) => MaterialApp(
@@ -411,10 +427,7 @@ void main() {
     ) async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
       final backupBase = '${tmp.path}/backups';
-      Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
-      File(
-        '$backupBase/videoconfig.txt/20260101-000000.cfg',
-      ).writeAsStringSync(_old);
+      _seedBackup(backupBase, cfg.path, '20260101-000000.cfg', _old);
       final (file, edit, diff) = _wire(backupBase);
       addTearDown(() async {
         await file.close();
@@ -476,10 +489,7 @@ void main() {
         final cfg = File('${tmp.path}/videoconfig.txt')
           ..writeAsStringSync(_new);
         final backupBase = '${tmp.path}/backups';
-        Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
-        File(
-          '$backupBase/videoconfig.txt/20260101-000000.cfg',
-        ).writeAsStringSync(_old);
+        _seedBackup(backupBase, cfg.path, '20260101-000000.cfg', _old);
         final backups = BackupService(baseDir: backupBase);
         final edit = EditBloc();
         final diff = DiffBloc(editStream: edit.stream);
@@ -547,10 +557,7 @@ void main() {
     ) async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
       final backupBase = '${tmp.path}/backups';
-      Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
-      File(
-        '$backupBase/videoconfig.txt/20260101-000000.cfg',
-      ).writeAsStringSync(_old);
+      _seedBackup(backupBase, cfg.path, '20260101-000000.cfg', _old);
       final (file, edit, diff) = _wire(backupBase);
       addTearDown(() async {
         await file.close();
@@ -612,10 +619,7 @@ void main() {
     testWidgets('restore refresh timeout falls back to table mode', (t) async {
       final cfg = File('${tmp.path}/videoconfig.txt')..writeAsStringSync(_new);
       final backupBase = '${tmp.path}/backups';
-      Directory('$backupBase/videoconfig.txt').createSync(recursive: true);
-      File(
-        '$backupBase/videoconfig.txt/20260101-000000.cfg',
-      ).writeAsStringSync(_old);
+      _seedBackup(backupBase, cfg.path, '20260101-000000.cfg', _old);
       final backups = BackupService(baseDir: backupBase);
       final edit = EditBloc();
       final diff = DiffBloc(editStream: edit.stream);

@@ -507,10 +507,17 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _chooseBackupDir() async {
+    final oldDir = _backupDir;
     final selected = await FilePicker.getDirectoryPath(
       initialDirectory: _backupDir.isEmpty ? null : _backupDir,
     );
     if (selected == null || selected.isEmpty || !mounted) return;
+    if (selected != oldDir && oldDir.isNotEmpty) {
+      // 换备份目录：迁移历史，避免还原列表「消失」。
+      try {
+        BackupService(baseDir: selected).migrateFrom(oldDir);
+      } catch (_) {}
+    }
     setState(() => _backupDir = selected);
     _saveSetting((s) => s.writeBackupDir(selected));
   }

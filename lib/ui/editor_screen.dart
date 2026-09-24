@@ -11,7 +11,6 @@ import 'package:window_manager/window_manager.dart';
 
 import '../core/io/cfg_file_io.dart';
 import '../core/paths/install_locator.dart';
-import '../core/paths/windows_registry.dart';
 import '../core/settings/settings_store.dart';
 import '../core/update/update_service.dart';
 import '../state/diff_bloc.dart';
@@ -35,6 +34,7 @@ String warningText(BuildContext context, String key) {
     'fileBadEncoding' => l.fileBadEncoding,
     'fileOpenFailed' => l.fileOpenFailed,
     'fileSaveFailed' => l.fileSaveFailed,
+    'fileChangedOnDisk' => l.fileChangedOnDisk,
     'fileRestoreFailed' => l.fileRestoreFailed,
     'fileBadBytesDirty' => l.fileBadBytesDirty,
     _ => key,
@@ -274,40 +274,39 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     await _applyResults(_runLocator());
   }
 
-  /// 组装探测器：优先注入（测试），否则生产装配。homeDirOverride 仅测试
-  /// 注入，映射为 USERPROFILE 环境变量供文档根推导。
+  /// 组装探测器：优先注入（测试），否则生产装配（仅 USERPROFILE 环境变量，
+  /// 不再扫描游戏安装目录 / 注册表 / 盘符）。
   InstallLocator _buildLocator() {
     if (widget.locator != null) return widget.locator!;
     final home = widget.homeDirOverride;
     return InstallLocator(
-      registry: defaultRegistryReader(),
-      drives: fixedDriveLister,
       env: (home != null && home.isNotEmpty)
           ? <String, String?>{'USERPROFILE': home}
           : null,
     );
   }
 
-  List<ApexInstall> _runLocator({String? customInstallDir}) =>
+  List<ApexInstall> _runLocator({String? customConfigDir}) =>
       _buildLocator().locate(
-        customInstallDir:
-            customInstallDir ?? widget.settings?.readCustomInstallDir(),
+        customConfigDir:
+            customConfigDir ?? widget.settings?.readCustomInstallDir(),
       );
 
-  /// 探测结果落地：只处理 settings.cfg（操作设置）与 videoconfig.txt（游戏画质），
-  /// 二者均来自 Saved Games；多安装候选弹选择对话框；全空进入「未找到」横幅。
-  /// 编辑器不再支持 autoexec.cfg，因此移除其候选与「创建模板」流程。
+  /// 探测结果落地：只处理 settings.cfg（操作设置）与 videoconfig.txt（游戏画质）。
+  /// 多配置根候选时优先 preferredOpenKind；全空进入「未找到」横幅。
   Future<void> _applyResults(List<ApexInstall> results) async {
-    final configResults = results
-        .where((r) => r.videoconfigPath != null || r.settingsPath != null)
-        .toList();
-
     final preferred = widget.settings?.readPreferredOpenKind() ?? 'settings';
-    final config = configResults.firstOrNull;
-    final openPath = switch (preferred) {
-      'videoconfig' => config?.videoconfigPath ?? config?.settingsPath,
-      _ => config?.settingsPath ?? config?.videoconfigPath,
-    };
+    String? openPath;
+    for (final r in results) {
+      final p = switch (preferred) {
+        'videoconfig' => r.videoconfigPath ?? r.settingsPath,
+        _ => r.settingsPath ?? r.videoconfigPath,
+      };
+      if (p != null) {
+        openPath = p;
+        break;
+      }
+    }
     if (openPath != null && widget.fileBloc.state.path == null) {
       widget.fileBloc.add(OpenRequested(openPath));
     }
@@ -317,8 +316,8 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
     });
   }
 
-  /// 多安装选择对话框（Steam + EA App 双装等）。取消返回 null。
-  /// 重新探测（locate 内部按 fallback 语义合并候选）。
+  /// 指定配置目录（Saved Games\Respawn\Apex\local 或其父级）。仅在确实
+  /// 找到可打开配置后才回写 customConfigDir，避免选错目录污染记忆。
   Future<void> _pickApexDir() async {
     final l = AppLocalizations.of(context)!;
     String? dir;
@@ -336,8 +335,12 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
       return;
     }
     if (dir == null || dir.isEmpty || !mounted) return; // 用户取消
-    widget.settings?.writeCustomInstallDir(dir);
-    await _applyResults(_runLocator(customInstallDir: dir));
+    final results = _runLocator(customConfigDir: dir);
+    final found = results.any(
+      (r) => r.settingsPath != null || r.videoconfigPath != null,
+    );
+    if (found) widget.settings?.writeCustomInstallDir(dir);
+    await _applyResults(results);
   }
 
   Future<void> _openFileManually() async {
@@ -559,65 +562,77 @@ class _EditorScreenState extends State<EditorScreen> with WindowListener {
                   children: [
                     BlocBuilder<FileBloc, FileState>(
                       bloc: widget.fileBloc,
-                      buildWhen: (prev, cur) => prev.path != cur.path,
-                      builder: (_, s) => TitleBar(
-                        fileName: s.path?.split('/').last.split('\\').last,
-                        onClose: () => _exitGuard.confirmExit(),
-                        actions: [
-                          if (!_showSettings) ...[
-                            Tooltip(
-                              message: s.path == null
-                                  ? l.openFile
-                                  : l.reselectFile,
-                              child: IconButton(
-                                key: const ValueKey('titlebar.openFile'),
-                                iconButtonMode: IconButtonMode.small,
-                                icon: Icon(
-                                  s.path == null
-                                      ? LucideIcons.folderOpen
-                                      : LucideIcons.fileInput,
+                      buildWhen: (prev, cur) =>
+                          prev.path != cur.path ||
+                          prev.kind != cur.kind ||
+                          prev.busy != cur.busy,
+                      builder: (_, s) => BlocBuilder<EditBloc, EditState>(
+                        bloc: widget.editBloc,
+                        buildWhen: (prev, cur) => prev.dirty != cur.dirty,
+                        builder: (_, editState) {
+                          final canSave = s.path != null && editState.dirty;
+                          return TitleBar(
+                            fileName: s.path?.split('/').last.split('\\').last,
+                            onClose: () => _exitGuard.confirmExit(),
+                            actions: [
+                              if (!_showSettings) ...[
+                                Tooltip(
+                                  message: s.path == null
+                                      ? l.openFile
+                                      : l.reselectFile,
+                                  child: IconButton(
+                                    key: const ValueKey('titlebar.openFile'),
+                                    iconButtonMode: IconButtonMode.small,
+                                    icon: Icon(
+                                      s.path == null
+                                          ? LucideIcons.folderOpen
+                                          : LucideIcons.fileInput,
+                                    ),
+                                    onPressed: _openFileManually,
+                                  ),
                                 ),
-                                onPressed: _openFileManually,
-                              ),
-                            ),
-                            const _ToolbarDivider(),
-                            Tooltip(
-                              message: l.save,
-                              child: IconButton(
-                                icon: const Icon(LucideIcons.save),
-                                onPressed: () =>
-                                    widget.fileBloc.add(SaveRequested()),
-                              ),
-                            ),
-                            Tooltip(
-                              message: l.restore,
-                              child: IconButton(
-                                icon: const Icon(LucideIcons.history),
-                                onPressed: () => showRestoreDialog(
-                                  _fluentContext ?? context,
-                                  fileBloc: widget.fileBloc,
-                                  editBloc: widget.editBloc,
-                                  onRestored: _onRestored,
+                                const _ToolbarDivider(),
+                                Tooltip(
+                                  message: l.save,
+                                  child: IconButton(
+                                    icon: const Icon(LucideIcons.save),
+                                    onPressed: canSave
+                                        ? () => widget.fileBloc
+                                              .add(SaveRequested())
+                                        : null,
+                                  ),
+                                ),
+                                Tooltip(
+                                  message: l.restore,
+                                  child: IconButton(
+                                    icon: const Icon(LucideIcons.history),
+                                    onPressed: () => showRestoreDialog(
+                                      _fluentContext ?? context,
+                                      fileBloc: widget.fileBloc,
+                                      editBloc: widget.editBloc,
+                                      onRestored: _onRestored,
+                                    ),
+                                  ),
+                                ),
+                                const _ToolbarDivider(),
+                              ],
+                              Tooltip(
+                                message: _showSettings ? l.back : l.settings,
+                                child: IconButton(
+                                  key: const ValueKey('titlebar.settings'),
+                                  icon: Icon(
+                                    _showSettings
+                                        ? LucideIcons.arrowLeft
+                                        : LucideIcons.settings2,
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _showSettings = !_showSettings,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const _ToolbarDivider(),
-                          ],
-                          Tooltip(
-                            message: _showSettings ? l.back : l.settings,
-                            child: IconButton(
-                              key: const ValueKey('titlebar.settings'),
-                              icon: Icon(
-                                _showSettings
-                                    ? LucideIcons.arrowLeft
-                                    : LucideIcons.settings2,
-                              ),
-                              onPressed: () => setState(
-                                () => _showSettings = !_showSettings,
-                              ),
-                            ),
-                          ),
-                        ],
+                            ],
+                          );
+                        },
                       ),
                     ),
                     if (_showSettings)

@@ -13,29 +13,7 @@ import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Windows 上探测引擎用 `\` 拼接（文件系统等价），断言前归一化到 `/`。
 String _norm(String p) => p.replaceAll(r'\', '/');
-
-class FakeRegistry implements RegistryReader {
-  final Map<String, String?> values;
-  FakeRegistry({this.values = const {}});
-
-  @override
-  String? readString(RegistryView view, String keyPath, String valueName) =>
-      values['${view.name}|$keyPath|$valueName'];
-
-  @override
-  List<String> subKeys(RegistryView view, String keyPath) {
-    // 卸载表扫描：带 "keys:" 前缀的单值简化（本文件用 EA 场景）。
-    return values['${view.name}|$keyPath|<keys>']?.split('|').toList() ??
-        const [];
-  }
-}
-
-class FakeDrives implements DriveLister {
-  @override
-  List<String> driveLetters() => const [];
-}
 
 Widget _host(Widget home) => MaterialApp(
   locale: const Locale('en'),
@@ -58,20 +36,11 @@ Widget _host(Widget home) => MaterialApp(
     restoreImpl: backups.restore,
     onOpenSucceeded: (dir) {
       store.writeLastOpenDir(dir);
-      final install = apexInstallDirFromOpenedDir(dir);
-      if (install != null) store.writeCustomInstallDir(install);
+      store.writeCustomInstallDir(dir);
     },
   );
   return (file, edit, diff);
 }
-
-Map<String, String?> _eaRegistry(String id, String installDir) => {
-  'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall|<keys>': id,
-  'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$id|DisplayName':
-      'Apex Legends',
-  'machine|SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\$id|InstallLocation':
-      installDir,
-};
 
 void main() {
   late Directory tmp;
@@ -82,19 +51,12 @@ void main() {
   });
   tearDown(() => tmp.deleteSync(recursive: true));
 
-  InstallLocator locatorWith(Map<String, String?> values) => InstallLocator(
-    registry: FakeRegistry(values: values),
-    drives: FakeDrives(),
-    env: const {},
-  );
-
-  /// 编辑器只接受 settings.cfg（操作设置）与 videoconfig.txt（游戏画质）；
-  /// 仅含 autoexec.cfg 的安装不应被自动打开，进入「未找到」横幅。
-  testWidgets('EA install with only autoexec.cfg is not auto-opened', (
+  testWidgets('custom config root with only autoexec.cfg is not auto-opened', (
     t,
   ) async {
-    final apex = Directory('${tmp.path}/EAApex')..createSync(recursive: true);
-    File('${apex.path}/Respawn/Apex/local/autoexec.cfg')
+    final local = Directory('${tmp.path}/CustomLocal')
+      ..createSync(recursive: true);
+    File('${local.path}/autoexec.cfg')
       ..createSync(recursive: true)
       ..writeAsStringSync('// hi\n');
 
@@ -112,7 +74,8 @@ void main() {
           diffBloc: diff,
           fileBloc: file,
           settings: store,
-          locator: locatorWith(_eaRegistry('EA1', apex.path)),
+          locator: InstallLocator(env: const {}),
+          pickDirectory: () async => local.path,
         ),
       ),
     );
@@ -120,13 +83,15 @@ void main() {
 
     expect(file.state.path, isNull);
     expect(find.text('Apex not found'), findsOneWidget);
+    // 找不到可打开配置：不污染 customConfigDir 记忆。
+    expect(store.readCustomInstallDir(), isNull);
   });
 
-  testWidgets('EA install with settings.cfg auto-opens settings.cfg', (
-    t,
-  ) async {
-    final apex = Directory('${tmp.path}/EAApex2')..createSync(recursive: true);
-    final settings = File('${apex.path}/Respawn/Apex/local/settings.cfg')
+  testWidgets('Saved Games settings.cfg auto-opens settings.cfg', (t) async {
+    final home = Directory('${tmp.path}/home')..createSync();
+    final settings = File(
+      '${home.path}/Saved Games/Respawn/Apex/local/settings.cfg',
+    )
       ..createSync(recursive: true)
       ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
 
@@ -144,7 +109,7 @@ void main() {
           diffBloc: diff,
           fileBloc: file,
           settings: store,
-          locator: locatorWith(_eaRegistry('EA2', apex.path)),
+          locator: InstallLocator(env: {'USERPROFILE': home.path}),
         ),
       ),
     );
@@ -157,11 +122,15 @@ void main() {
   testWidgets('preferred videoconfig opens videoconfig.txt over settings.cfg', (
     t,
   ) async {
-    final apex = Directory('${tmp.path}/EAApex3')..createSync(recursive: true);
-    final settings = File('${apex.path}/Respawn/Apex/local/settings.cfg')
+    final home = Directory('${tmp.path}/home')..createSync();
+    final settings = File(
+      '${home.path}/Saved Games/Respawn/Apex/local/settings.cfg',
+    )
       ..createSync(recursive: true)
       ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
-    final video = File('${apex.path}/Respawn/Apex/local/videoconfig.txt')
+    final video = File(
+      '${home.path}/Saved Games/Respawn/Apex/local/videoconfig.txt',
+    )
       ..createSync(recursive: true)
       ..writeAsStringSync('"setting.fps_max" "144"\n');
     store.writePreferredOpenKind('videoconfig');
@@ -180,7 +149,7 @@ void main() {
           diffBloc: diff,
           fileBloc: file,
           settings: store,
-          locator: locatorWith(_eaRegistry('EA3', apex.path)),
+          locator: InstallLocator(env: {'USERPROFILE': home.path}),
         ),
       ),
     );
@@ -191,11 +160,11 @@ void main() {
     expect(settings.existsSync(), isTrue);
   });
 
-  testWidgets('nothing found → empty-state hint; specify dir re-probes and '
+  testWidgets('nothing found → empty-state; specify config dir re-probes and '
       'opens settings.cfg', (t) async {
-    final apex = Directory('${tmp.path}/CustomApex')
+    final local = Directory('${tmp.path}/CustomLocal')
       ..createSync(recursive: true);
-    final settings = File('${apex.path}/Respawn/Apex/local/settings.cfg')
+    final settings = File('${local.path}/settings.cfg')
       ..createSync(recursive: true)
       ..writeAsStringSync('"setting.mouse_sensitivity" "2.5"\n');
 
@@ -213,8 +182,8 @@ void main() {
           diffBloc: diff,
           fileBloc: file,
           settings: store,
-          locator: locatorWith(const {}),
-          pickDirectory: () async => apex.path,
+          locator: InstallLocator(env: const {}),
+          pickDirectory: () async => local.path,
         ),
       ),
     );
@@ -222,13 +191,13 @@ void main() {
 
     expect(file.state.path, isNull);
     expect(find.text('Apex not found'), findsOneWidget);
-    expect(find.text('Specify Apex directory'), findsOneWidget);
+    expect(find.text('Specify config directory'), findsOneWidget);
 
-    await t.tap(find.text('Specify Apex directory'));
+    await t.tap(find.text('Specify config directory'));
     await t.pumpAndSettle();
 
     expect(_norm(file.state.path!), _norm(settings.path));
-    expect(_norm(store.readCustomInstallDir()!), _norm(apex.path));
+    expect(_norm(store.readCustomInstallDir()!), _norm(local.path));
   });
 
   testWidgets('reopens last file before auto detection when enabled', (
@@ -276,11 +245,7 @@ void main() {
       '${home.path}/Saved Games/Respawn/Apex/local/videoconfig.txt',
     ).writeAsStringSync('"setting.fps_max" "144"\n');
 
-    final locator = InstallLocator(
-      registry: FakeRegistry(),
-      drives: FakeDrives(),
-      env: {'USERPROFILE': home.path},
-    );
+    final locator = InstallLocator(env: {'USERPROFILE': home.path});
     final (file, edit, diff) = _wire('${tmp.path}/backups', store);
     addTearDown(() async {
       await file.close();

@@ -166,6 +166,48 @@ void main() {
     whenListen(
       edit,
       const Stream<EditState>.empty(),
+      initialState: const EditState(dirty: true),
+    );
+    whenListen(
+      diff,
+      const Stream<DiffState>.empty(),
+      initialState: const DiffState(),
+    );
+    whenListen(
+      file,
+      const Stream<FileState>.empty(),
+      initialState: const FileState(path: r'C:\cfg\settings.cfg'),
+    );
+
+    await t.pumpWidget(
+      MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: [
+          fluent.FluentLocalizations.delegate,
+          ...AppLocalizations.localizationsDelegates,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: EditorScreen(editBloc: edit, diffBloc: diff, fileBloc: file),
+      ),
+    );
+
+    await t.tap(find.byTooltip('Save'));
+    await t.pumpAndSettle();
+
+    verify(
+      () => file.add(any<SaveRequested>(that: isA<SaveRequested>())),
+    ).called(1);
+  });
+
+  testWidgets('save button is disabled without an open dirty document', (
+    t,
+  ) async {
+    final edit = MockEditBloc();
+    final diff = MockDiffBloc();
+    final file = MockFileBloc();
+    whenListen(
+      edit,
+      const Stream<EditState>.empty(),
       initialState: const EditState(),
     );
     whenListen(
@@ -191,12 +233,15 @@ void main() {
       ),
     );
 
-    await t.tap(find.byTooltip('Save'));
-    await t.pumpAndSettle();
-
-    verify(
-      () => file.add(any<SaveRequested>(that: isA<SaveRequested>())),
-    ).called(1);
+    final save = t.widget<fluent.IconButton>(
+      find
+          .descendant(
+            of: find.byTooltip('Save'),
+            matching: find.byType(fluent.IconButton),
+          )
+          .first,
+    );
+    expect(save.onPressed, isNull);
   });
 
   testWidgets('reselect file button dispatches the picked path', (t) async {

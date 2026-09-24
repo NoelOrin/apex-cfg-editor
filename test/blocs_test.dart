@@ -493,6 +493,36 @@ void main() {
       await edit.close();
     });
 
+    test('save is blocked when file changed on disk after open', () async {
+      final file = File('${tmp.path}/videoconfig.txt')
+        ..writeAsStringSync(_baseline);
+      final edit = EditBloc();
+      var saveCalls = 0;
+      final bloc = FileBloc(
+        editBloc: edit,
+        saveImpl: (_, _, _) async => saveCalls++,
+        listBackupsImpl: (_) => const [],
+        restoreImpl: (_, _) async {},
+      );
+      bloc.add(OpenRequested(file.path));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(bloc.state.diskBytes, isNotNull);
+
+      edit.add(LineValueChanged(index: 0, value: '144'));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // 外部程序改写磁盘。
+      file.writeAsStringSync('"setting.fps_max" "999"\n');
+      bloc.add(SaveRequested());
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(bloc.state.warning, 'fileChangedOnDisk');
+      expect(saveCalls, 0);
+      expect(file.readAsStringSync(), '"setting.fps_max" "999"\n');
+      expect(edit.state.dirty, true);
+      await bloc.close();
+      await edit.close();
+    });
+
     test('open failure resets state and a retry recovers', () async {
       final file = File('${tmp.path}/videoconfig.txt')
         ..writeAsStringSync(_baseline);

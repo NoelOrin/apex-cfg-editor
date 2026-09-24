@@ -96,7 +96,7 @@ void main() {
     await tester.pump();
 
     expect(find.byType(WindowResizeFrame), findsOneWidget);
-    // 无边框窗口无系统投影：根容器必须有 1px 酸绿描边（当前主题主色）。
+    // 无边框窗口无系统投影：根容器必须有 1px 主色描边（Windows 11 强调色）。
     final frame = find.ancestor(
       of: find.byType(EditorScreen),
       matching: find.byWidgetPredicate((w) {

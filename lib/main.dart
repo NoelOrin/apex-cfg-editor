@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:apex_cfg_editor/core/backup/backup_service.dart';
 import 'package:apex_cfg_editor/core/io/cfg_file_io.dart';
 import 'package:apex_cfg_editor/core/paths/app_data_dir.dart';
-import 'package:apex_cfg_editor/core/paths/install_locator.dart';
 import 'package:apex_cfg_editor/core/settings/settings_store.dart';
 import 'package:apex_cfg_editor/knowledge/kb_service.dart';
 import 'package:apex_cfg_editor/l10n/app_localizations.dart';
@@ -162,10 +161,9 @@ class _ApexCfgEditorAppState extends State<ApexCfgEditorApp> {
       restoreImpl: backups.restore,
       onOpenSucceeded: (dir) {
         settings.writeLastOpenDir(dir); // 规格 R7：记住上次路径
-        // 探测 v2：文件在 Apex 目录结构内时回写 customInstallDir，
-        // 供下次启动探测兜底（推导规则见 apexInstallDirFromOpenedDir）。
-        final install = apexInstallDirFromOpenedDir(dir);
-        if (install != null) settings.writeCustomInstallDir(install);
+        // 探测 v3：打开成功即把配置目录（文件父目录）回写 customConfigDir，
+        // 下次启动可从 Saved Games 之外的自定义位置重新命中。
+        settings.writeCustomInstallDir(dir);
       },
       onOpenFileSucceeded: settings.writeLastOpenFile,
     );

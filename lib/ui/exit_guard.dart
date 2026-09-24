@@ -6,8 +6,12 @@ import '../state/file_bloc.dart';
 /// 退出对话框三选。
 enum QuitChoice { save, discard, cancel }
 
-/// FileBloc 保存失败告警键（FileState.warning），此处用于识别失败。
-const _saveFailedWarning = 'fileSaveFailed';
+/// FileBloc 保存类失败告警键（FileState.warning）：任一出现即中止退出。
+const saveFailureWarnings = {
+  'fileSaveFailed',
+  'fileBadBytesDirty',
+  'fileChangedOnDisk',
+};
 
 /// 退出保护决策逻辑：把「是否脏 + 用户三选」映射为是否允许退出，
 /// 并处理「保存并退出」的落盘等待与失败中止。
@@ -59,9 +63,10 @@ class ExitGuard {
   }
 
   /// 「保存并退出」：SaveRequested 后同时监听两个终态——
-  /// EditBloc 下一次 dirty == false（成功）或 FileBloc 出现
-  /// fileSaveFailed 告警（失败）。成功才 destroy；失败/超时一律中止退出
-  ///（宁可让用户手动重试，不可静默丢数据）。
+  /// EditBloc 下一次 dirty == false（成功）或 FileBloc 出现任一保存类
+  /// 失败告警（fileSaveFailed / fileBadBytesDirty / fileChangedOnDisk）。
+  /// 成功才 destroy；失败/超时一律中止退出（宁可让用户手动重试，不可
+  /// 静默丢数据）。
   Future<bool> _saveThenDestroy() async {
     fileBloc.add(SaveRequested());
     // catchError 吞掉落选方后续的错误（如 bloc 关闭时广播流的 StateError），
@@ -71,7 +76,7 @@ class ExitGuard {
         .then<bool>((_) => true)
         .catchError((Object _) => false);
     final failed = fileBloc.stream
-        .firstWhere((s) => s.warning == _saveFailedWarning)
+        .firstWhere((s) => s.warning != null && saveFailureWarnings.contains(s.warning))
         .then<bool>((_) => false)
         .catchError((Object _) => false);
     final savedOk = await Future.any<bool>([saved, failed])

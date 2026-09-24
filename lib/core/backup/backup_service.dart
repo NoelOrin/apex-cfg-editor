@@ -1,15 +1,29 @@
+import 'dart:convert';
 import 'dart:io';
 
 class BackupService {
   String baseDir; // Windows: %APPDATA%\ApexCfgEditor\backups
   BackupService({required this.baseDir});
 
+  static final _sep = RegExp(r'[/\\]');
+
+  /// 备份目录 = `<文件名>/<路径哈希>`：不同路径的同名文件（两个
+  /// settings.cfg）不再共用命名空间；同一路径的 `/` 与 `\` 写法归一化后
+  /// 哈希一致。
   String _dirFor(String path) {
-    // apex_paths 产出 / 分隔路径，而 Windows 本地路径用 \：统一按两种
-    // 分隔符切，只取文件名做备份目录名（按 Platform.pathSeparator 切在
-    // Windows 上会把整串路径当目录名，备份/保存全挂）。
-    final name = path.split(RegExp(r'[/\\]')).last;
-    return '$baseDir/$name';
+    final name = path.split(_sep).last;
+    return '$baseDir/$name/${pathKeyOf(path)}';
+  }
+
+  /// 目标路径的稳定短键（大小写与分隔符不敏感的 FNV-1a）。
+  static String pathKeyOf(String path) {
+    final norm = path.replaceAll('\\', '/').toLowerCase();
+    var hash = 0xcbf29ce484222325;
+    for (final unit in utf8.encode(norm)) {
+      hash ^= unit;
+      hash = (hash * 0x100000001b3) & 0xFFFFFFFFFFFFFFFF;
+    }
+    return hash.toRadixString(16).padLeft(16, '0');
   }
 
   /// 上一次备份时间戳的毫秒值：保证同一服务实例内时间戳严格递增——
@@ -70,9 +84,22 @@ class BackupService {
     final root = Directory(baseDir);
     if (!root.existsSync()) return 0;
     var removed = 0;
-    for (final entity in root.listSync()) {
-      if (entity is Directory) {
-        removed += pruneBackups(entity.path, limit);
+    for (final entity in root.listSync(recursive: true).whereType<File>()) {
+      if (!entity.path.endsWith('.cfg')) continue;
+      final dir = entity.parent;
+      // 只按「时间戳 .cfg 所在目录」裁剪，兼容 `<name>/<hash>/` 两层结构。
+      final files = dir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.cfg'))
+          .map((f) => f.path)
+          .toList()
+        ..sort((a, b) => b.compareTo(a));
+      for (final old in files.skip(limit < 1 ? 1 : limit)) {
+        try {
+          File(old).deleteSync();
+          removed++;
+        } catch (_) {}
       }
     }
     return removed;
@@ -97,5 +124,24 @@ class BackupService {
     final tmp = '$targetPath.tmp';
     File(tmp).writeAsBytesSync(File(backupPath).readAsBytesSync(), flush: true);
     File(tmp).renameSync(targetPath); // 原子替换，与 CfgFileIo.write 同模式
+  }
+
+  /// 把 [oldBase] 下的全部备份迁移到当前 [baseDir]（换备份目录时不丢历史）。
+  /// 同名备份文件跳过，不覆盖。
+  void migrateFrom(String oldBase) {
+    if (oldBase.isEmpty || oldBase == baseDir) return;
+    final oldRoot = Directory(oldBase);
+    if (!oldRoot.existsSync()) return;
+    final newRoot = Directory(baseDir)..createSync(recursive: true);
+    for (final entity in oldRoot.listSync(recursive: true).whereType<File>()) {
+      if (!entity.path.endsWith('.cfg')) continue;
+      final rel = entity.path.substring(oldRoot.path.length).replaceAll('\\', '/');
+      final target = File('${newRoot.path}$rel');
+      if (target.existsSync()) continue;
+      target.parent.createSync(recursive: true);
+      try {
+        entity.copySync(target.path);
+      } catch (_) {}
+    }
   }
 }

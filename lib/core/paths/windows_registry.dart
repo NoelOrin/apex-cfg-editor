@@ -2,21 +2,30 @@ import 'dart:io';
 
 import 'package:win32_registry/win32_registry.dart';
 
-import 'install_locator.dart';
+/// Windows 个性化设置（强调色 / 明暗）只读探测。失败一律回退 null，
+/// 调用方使用 Fluent 默认强调色与系统 brightness。
+abstract class WindowsAppearanceReader {
+  /// 系统强调色（0xAARRGGBB 的 Flutter Color.value）。失败返回 null。
+  int? readAccentColorValue();
 
-export 'install_locator.dart' show RegistryReader, RegistryView, DriveLister;
+  /// true=浅色 false=深色；读不到返回 null（跟随平台 brightness）。
+  bool? readAppsUseLightTheme();
+}
 
-/// 生产注册表读取（win32_registry 封装，底层即 win32 FFI）。所有失败
-/// （键不存在、权限不足、非字符串值）自吞为 null / 空列表：探测是尽力
-/// 而为，注册表不可读不应让应用崩溃。
-final class Win32RegistryReader implements RegistryReader {
+final class Win32AppearanceReader implements WindowsAppearanceReader {
   @override
-  String? readString(RegistryView view, String keyPath, String valueName) {
+  int? readAccentColorValue() {
     try {
-      final base = view == RegistryView.user ? CURRENT_USER : LOCAL_MACHINE;
-      final key = base.open(keyPath);
+      final key = CURRENT_USER.open(r'Software\Microsoft\Windows\DWM');
       try {
-        return key.getString(valueName);
+        // AccentColor 为 DWORD，字节序 ABGR → 转 ARGB。
+        final abgr = key.getInt('AccentColor');
+        if (abgr == null) return null;
+        final a = (abgr >> 24) & 0xFF;
+        final b = (abgr >> 16) & 0xFF;
+        final g = (abgr >> 8) & 0xFF;
+        final r = abgr & 0xFF;
+        return (a << 24) | (r << 16) | (g << 8) | b;
       } finally {
         key.close();
       }
@@ -26,47 +35,36 @@ final class Win32RegistryReader implements RegistryReader {
   }
 
   @override
-  List<String> subKeys(RegistryView view, String keyPath) {
+  bool? readAppsUseLightTheme() {
     try {
-      final base = view == RegistryView.user ? CURRENT_USER : LOCAL_MACHINE;
-      final key = base.open(keyPath);
+      final key = CURRENT_USER.open(
+        r'Software\Microsoft\Windows\CurrentVersion\Themes\Personalize',
+      );
       try {
-        return List<String>.of(key.keys);
+        final v = key.getInt('AppsUseLightTheme');
+        if (v == null) return null;
+        return v != 0;
       } finally {
         key.close();
       }
     } catch (_) {
-      return const [];
+      return null;
     }
   }
 }
 
-/// 非 Windows 平台的空实现：注册表读取一律落空，探测自然退化为
-/// 文件系统候选（macOS 开发期 / 测试环境安全，绝不触碰真实系统）。
-final class NullRegistryReader implements RegistryReader {
+/// 非 Windows 平台空实现：读不到系统外观，回退 Fluent 默认。
+final class NullAppearanceReader implements WindowsAppearanceReader {
   @override
-  String? readString(RegistryView view, String keyPath, String valueName) =>
-      null;
+  int? readAccentColorValue() => null;
 
   @override
-  List<String> subKeys(RegistryView view, String keyPath) => const [];
+  bool? readAppsUseLightTheme() => null;
 }
 
-/// 平台工厂：Windows 走真实注册表，其余平台走空实现。
+/// 平台工厂：Windows 读真实注册表，其余平台空实现。
 /// [isWindows] 仅测试注入；生产用 [Platform.isWindows]。
-RegistryReader defaultRegistryReader({bool? isWindows}) =>
+WindowsAppearanceReader defaultAppearanceReader({bool? isWindows}) =>
     (isWindows ?? Platform.isWindows)
-    ? Win32RegistryReader()
-    : NullRegistryReader();
-
-/// EA App 常见根目录的盘符枚举（C-F，规格约定；EA 默认装 C 盘，
-/// 自定义库常见 D-F）。真实盘符枚举无跨平台必要——候选根逐个
-/// existsSync 探测，不存在的盘自然落空。
-const fixedDriveLister = _FixedDriveLister();
-
-final class _FixedDriveLister implements DriveLister {
-  const _FixedDriveLister();
-
-  @override
-  List<String> driveLetters() => const ['C', 'D', 'E', 'F'];
-}
+    ? Win32AppearanceReader()
+    : NullAppearanceReader();

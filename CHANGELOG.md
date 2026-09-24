@@ -1,5 +1,36 @@
 # Changelog
 
+## [v1.1.0] - 2026-09-24
+
+### 路径探测（v3）
+
+- 配置探测只认 `%USERPROFILE%\Saved Games\Respawn\Apex\local` 与用户指定的配置目录，不再扫描游戏安装目录 / EA 注册表 / 盘符。
+- 用户指定目录可指向 local 本身、`Respawn/Apex/local` 的父级、或 `Respawn/Apex`；自动探测与自定义根无条件合并去重，Saved Games 优先。
+- 「指定配置目录」仅在确实找到可打开配置后才写入记忆，避免选错污染。
+
+### 备份与保存闭环
+
+- 备份目录改为按目标路径哈希隔离（`文件名/路径哈希/`），不同路径的同名 `settings.cfg` 不再互相串号。
+- 备份时间戳正则兼容毫秒，还原列表时间戳可正常显示；更换备份目录时自动迁移历史备份。
+- 保存前检测外部改动（`fileChangedOnDisk`），避免覆盖游戏或其它工具刚写入的内容。
+- 打开成功后先计算备份列表再更新文档状态，杜绝文档与路径错位。
+
+### 退出与保存保护
+
+- 「保存并退出」失败告警扩展为 `fileSaveFailed` / `fileBadBytesDirty` / `fileChangedOnDisk` 任一即中止退出。
+- 保存按钮仅在已打开且有未保存修改时可点。
+
+### 界面（Fluent + Windows 11）
+
+- 色板对齐 Windows 11 Fluent 设计令牌：暗色 `#202020` / `#2B2B2B`，亮色 `#F3F3F3` / 白面板；文字、次级、描边、危险色均为 Win11 语义色。
+- 强调色跟随系统（读注册表 `AccentColor`），无则回退 Win11 蓝（暗 `#4CC2FF` / 亮 `#0067C0`）。
+- 字体栈切换为 Segoe UI Variable（Display/Text）+ 中文回退雅黑 / 苹方；diff 红绿改为 SystemFillColorCritical / Success 语义。
+
+### 知识库
+
+- `settings.cfg` 全部 40 键补齐中英 name / description / recommended / risk，描述中写明对应游戏内设置页位置（按键绑定、辅助功能字幕、视频高级低延迟、鼠标灵敏度与分倍镜、音频与语音、观战相机等）。
+- 倍镜灵敏度下标映射标注为常见约定，提示以游戏内滑条顺序为准。
+
 ## [v1.0.0] - 2026-09-17
 
 ### 编辑器

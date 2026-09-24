@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../core/io/cfg_file_io.dart';
-import '../core/parser/autoexec_parser.dart';
 import '../core/parser/settings_parser.dart';
 import '../core/parser/videoconfig_parser.dart';
 import 'edit_bloc.dart';
@@ -38,12 +37,17 @@ class FileState {
   final bool busy;
   final String? warning; // i18n 键名，UI 层翻译
   final List<String> backups; // 还原对话框数据
+
+  /// 打开（或保存成功）时磁盘字节：保存前比对，检测外部改动。
+  final List<int>? diskBytes;
+
   const FileState({
     this.path,
     this.kind,
     this.busy = false,
     this.warning,
     this.backups = const [],
+    this.diskBytes,
   });
 
   // `warning` 用闭包传参，以区分「未传」与「显式置 null」。
@@ -53,16 +57,18 @@ class FileState {
     bool? busy,
     String? Function()? warning,
     List<String>? backups,
+    List<int>? diskBytes,
   }) => FileState(
     path: path ?? this.path,
     kind: kind ?? this.kind,
     busy: busy ?? this.busy,
     warning: warning != null ? warning() : this.warning,
     backups: backups ?? this.backups,
+    diskBytes: diskBytes ?? this.diskBytes,
   );
 }
 
-/// IO 编排：真实读写由任务 8/9 服务注入（saveImpl/listBackupsImpl/restoreImpl
+/// IO 编排：真实读写由装配层注入（saveImpl/listBackupsImpl/restoreImpl
 /// 为装配接缝），本 Bloc 只负责事件 → IO → EditBloc 状态的编排。
 class FileBloc extends Bloc<FileEvent, FileState> {
   final EditBloc editBloc;
@@ -114,8 +120,17 @@ class FileBloc extends Bloc<FileEvent, FileState> {
         final doc = switch (kind) {
           CfgKind.videoconfig => VideoconfigParser().parse(data.text),
           CfgKind.settings => SettingsParser().parse(data.text),
-          CfgKind.autoexec => AutoexecParser().parse(data.text),
+          CfgKind.autoexec => throw StateError('unreachable'),
         };
+        // backups 先于 DocumentOpened 计算：listSync 失败只降级为空列表，
+        // 不允许把 EditBloc/FileState 打成「文档已换、path 仍旧」的错位。
+        List<String> backups;
+        try {
+          backups = listBackupsImpl(e.path);
+        } catch (_) {
+          backups = const [];
+        }
+        if (generation != _openGeneration) return;
         editBloc.add(DocumentOpened(doc: doc, baseline: data.text));
         em(
           FileState(
@@ -123,7 +138,8 @@ class FileBloc extends Bloc<FileEvent, FileState> {
             kind: kind,
             busy: false,
             warning: data.hasBadBytes ? 'fileBadEncoding' : null,
-            backups: listBackupsImpl(e.path),
+            backups: backups,
+            diskBytes: data.originalBytes,
           ),
         );
         onOpenSucceeded?.call(parentDirOf(e.path)); // 规格 R7：记住上次路径
@@ -146,6 +162,13 @@ class FileBloc extends Bloc<FileEvent, FileState> {
       em(state.copyWith(warning: () => null));
       try {
         final cur = File(path).readAsBytesSync();
+        // 外部改动检测：磁盘字节 != 打开/上次保存时字节 → 中止，避免
+        // 用陈旧文档覆盖游戏或其它工具刚写入的内容。
+        final known = state.diskBytes;
+        if (known != null && !_bytesEqual(cur, known)) {
+          em(state.copyWith(warning: () => 'fileChangedOnDisk'));
+          return;
+        }
         final probed = CfgFileIo.readBytes(cur);
         // 规格 §7/§9：未编辑行按原始字节写回。含坏字节（U+FFFD）的文件一旦
         // 被编辑，serialize 是全文重编码——坏字节被固化成 U+FFFD 的编码且
@@ -156,14 +179,22 @@ class FileBloc extends Bloc<FileEvent, FileState> {
           return;
         }
         await saveImpl(path, doc.serialize(), probed.encoding);
+        // 保存成功后重读磁盘作为下一次外改比对基线。
+        final after = File(path).readAsBytesSync();
+        List<String> backups;
+        try {
+          backups = listBackupsImpl(path);
+        } catch (_) {
+          backups = state.backups;
+        }
+        editBloc.add(DocumentSaved(doc.serialize()));
+        em(state.copyWith(backups: backups, diskBytes: after));
       } catch (_) {
         // 保存失败：不派发 DocumentSaved（dirty 保持 true，重试不被
         // !dirty no-op 吞掉），置告警由 ExitGuard/UI 中止退出或提示。
         em(state.copyWith(warning: () => 'fileSaveFailed'));
         return;
       }
-      editBloc.add(DocumentSaved(doc.serialize()));
-      em(state.copyWith(backups: listBackupsImpl(path)));
     });
     on<RestoreRequested>((e, em) async {
       final path = state.path;
@@ -188,4 +219,13 @@ class FileBloc extends Bloc<FileEvent, FileState> {
       add(OpenRequested(path));
     });
   }
+}
+
+bool _bytesEqual(List<int> a, List<int> b) {
+  if (identical(a, b)) return true;
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
 }

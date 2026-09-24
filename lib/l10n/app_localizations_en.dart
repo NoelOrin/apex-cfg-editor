@@ -84,6 +84,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fileSaveFailed => 'Failed to save file';
 
   @override
+  String get fileChangedOnDisk =>
+      'File was modified outside the editor. Reopen it before saving.';
+
+  @override
   String get fileRestoreFailed => 'Failed to restore from backup';
 
   @override
@@ -145,10 +149,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apexNotFoundHint =>
-      'No Apex installation was detected. Open a file manually or specify your Apex install directory.';
+      'No Apex config was detected. Open a file manually or specify the config directory (Saved Games\\Respawn\\Apex\\local).';
 
   @override
-  String get specifyApexDir => 'Specify Apex directory';
+  String get specifyApexDir => 'Specify config directory';
 
   @override
   String get chooseInstallTitle => 'Multiple Apex installations detected';

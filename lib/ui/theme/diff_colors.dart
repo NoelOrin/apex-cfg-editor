@@ -2,14 +2,8 @@ import 'package:flutter/material.dart';
 
 /// diff 红绿高亮（删除背景 / 新增背景）。
 ///
-/// 以 `ThemeExtension<DiffColors>` 形式注入，SideBySideDiff 只从
-/// `Theme.of(context).extension<DiffColors>()` 读取，明暗两套值在
-/// acid_theme.dart 的主题里注册；主题未注册时（如部分测试宿主）由
-/// 组件回退到 [DiffColors.dark]。
-///
-/// 酸性语义（v2）：删除行 = 酸性橙红（与警示橙 #FF7A00 同族）、
-/// 新增行 = 酸性绿（#AEEF00 / #BFFF00），删除/新增语义保持分明；
-/// 两者均为 20% 透明叠加（0x33）。
+/// 以 `ThemeExtension<DiffColors>` 形式注入；语义对齐 Windows 11
+/// SystemFillColorCritical（删）/ SystemFillColorSuccess（增）的半透明叠加。
 @immutable
 class DiffColors extends ThemeExtension<DiffColors> {
   /// 删除行背景（左栏，modified / removed）。
@@ -20,16 +14,16 @@ class DiffColors extends ThemeExtension<DiffColors> {
 
   const DiffColors({required this.deleteBg, required this.addBg});
 
-  /// 浅色主题值：纸白 surface 上可读的淡橙 / 淡酸绿。
+  /// 浅色主题值。
   static const light = DiffColors(
-    deleteBg: Color(0x33FF7A00),
-    addBg: Color(0x33BFFF00),
+    deleteBg: Color(0x33C42B1C),
+    addBg: Color(0x330F7B0F),
   );
 
-  /// 深色主题值（默认主题，生产走这套）：近黑 surface 上的暗橙 / 暗酸绿。
+  /// 深色主题值（默认主题，生产走这套）。
   static const dark = DiffColors(
-    deleteBg: Color(0x40FF4D00),
-    addBg: Color(0x40AEEF00),
+    deleteBg: Color(0x40FF99A4),
+    addBg: Color(0x406CCB5F),
   );
 
   @override

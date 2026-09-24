@@ -80,6 +80,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get fileSaveFailed => '保存文件失败';
 
   @override
+  String get fileChangedOnDisk => '文件已在编辑器外被修改。请重新打开后再保存。';
+
+  @override
   String get fileRestoreFailed => '还原备份失败';
 
   @override
@@ -138,10 +141,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get apexNotFoundTitle => '未找到 Apex';
 
   @override
-  String get apexNotFoundHint => '未检测到 Apex 安装。可手动选择文件，或指定 Apex 安装目录。';
+  String get apexNotFoundHint => '未检测到 Apex 配置。可手动选择文件，或指定配置目录（Saved Games\\Respawn\\Apex\\local）。';
 
   @override
-  String get specifyApexDir => '指定 Apex 目录';
+  String get specifyApexDir => '指定配置目录';
 
   @override
   String get chooseInstallTitle => '检测到多个 Apex 安装';

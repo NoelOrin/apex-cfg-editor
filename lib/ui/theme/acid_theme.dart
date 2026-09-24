@@ -2,34 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:fluent_ui/fluent_ui.dart' as fluent;
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import '../../core/paths/windows_registry.dart';
 import '../../l10n/app_localizations.dart';
 import 'diff_colors.dart';
 
-/// 展示字体（Chakra Petch，SIL OFL 1.1，见 assets/fonts/OFL.txt）。
-/// 标题 / 顶栏 / 大数字使用；中文经 [kFontFallbacks] 回退系统字体，
-/// 不影响中文正文渲染。
-const String kFontDisplay = 'ChakraPetch';
+/// 展示字体：Windows 11 / Segoe UI Variable 优先；中文经 [kFontFallbacks]
+/// 回退系统字体。字体家族对齐 Fluent / Win11 系统字体栈。
+const String kFontDisplay = 'Segoe UI Variable Display';
 
-/// UI 字体：微软雅黑 UI 同时覆盖中英文。小字号不再强制使用展示
-/// 字体，避免中西文混排反复切换字体以及 Chakra Petch 低字号发虚。
-const String kFontUi = 'Microsoft YaHei UI';
+/// UI 正文字体：Windows 11 正文栈，中文回退微软雅黑 UI。
+const String kFontUi = 'Segoe UI Variable Text';
 
-/// cfg 内容区维持 monospace（表格 / diff / 文本编辑器已按需指定）。
+/// cfg 内容区 monospace（表格 / diff / 文本编辑器已按需指定）。
 const String kFontMono = 'Consolas';
 
-/// 通用字体回退链：优先同族微软雅黑 UI / 微软雅黑，再回退
-/// Segoe UI / 苹方 / Noto Sans SC，避免缺字时由渲染器随意选择字体。
+/// 通用字体回退链：Segoe → 微软雅黑 UI / 微软雅黑 → 苹方 / Noto。
 const List<String> kFontFallbacks = [
+  'Segoe UI Variable Text',
+  'Segoe UI',
   'Microsoft YaHei UI',
   'Microsoft YaHei',
-  'Segoe UI',
   'PingFang SC',
   'Noto Sans SC',
   'sans-serif',
 ];
 
-/// 等宽字体回退链：Windows 优先 Consolas，避免 generic monospace 映射成
-/// 较旧的点阵/衬线字体；菜单与代码区共享。
+/// 等宽字体回退链。
 const List<String> kFontMonoFallbacks = [
   'Cascadia Mono',
   'Consolas',
@@ -44,39 +42,34 @@ TextStyle? _withFont(
   required List<String> fallbacks,
 }) => style?.copyWith(fontFamily: family, fontFamilyFallback: fallbacks);
 
-/// 酸性风格色板（ThemeExtension）：全应用颜色集中于此与 [DiffColors]，
-/// 组件一律经 `Theme.of(context).extension<AcidPalette>()` 取色，
-/// 禁止散落硬编码。
-///
-/// 色板（docs/ui-style-guide.md「酸性风格 v2」）：
-/// - 主色酸性绿 #BFFF00（暗色下 #AEEF00 保证对比）
-/// - 暗色：近黑底 #0A0B08、面板 #121410、文字 #E8F0E0
-/// - 亮色：纸白底 #F4F6F0、文字 #0C0E08
-/// - 点缀铬银 #C8CCD4；风险/警示酸性橙 #FF7A00
+/// Fluent / Windows 11 语义色板（ThemeExtension）。
+/// 色值全部对齐 Win11 Fluent 设计令牌（ResourceDictionary），
+/// 强调色默认取系统 accent（[systemAccentColor]），无则回退
+/// Windows 默认蓝 #0067C0 / 暗色 #4CC2FF。
 @immutable
 class AcidPalette extends ThemeExtension<AcidPalette> {
-  /// 主色：酸性绿。
+  /// 主色：系统强调色（按钮、选中、品牌点缀）。
   final Color acid;
 
-  /// 酸绿之上的文字（近黑，双主题一致的高对比反白）。
+  /// 强调色之上的文字。
   final Color onAcid;
 
-  /// 窗口底色（暗=近黑 / 亮=纸白）。
+  /// 窗口底色（SolidBackgroundFillColorBase）。
   final Color bg;
 
-  /// 面板底色（顶栏、卡片、对话框浮层）。
+  /// 面板/卡片底色（CardBackgroundFillColorDefault）。
   final Color panel;
 
-  /// 主文字色。
+  /// 主文字色（TextFillColorPrimary）。
   final Color text;
 
-  /// 次级文字色（辅助说明、行号、文件名）。
+  /// 次级文字色（TextFillColorSecondary）。
   final Color textMuted;
 
-  /// 铬银点缀（分隔、描边细节）。
+  /// 描边/分隔（DividerStrokeColorDefault）。
   final Color chrome;
 
-  /// 风险/警示酸性橙（替换原 errorColor 语义，kb 卡片高风险、diff 删除行）。
+  /// 风险/错误（SystemFillColorCritical）。
   final Color danger;
 
   const AcidPalette({
@@ -90,29 +83,37 @@ class AcidPalette extends ThemeExtension<AcidPalette> {
     required this.danger,
   });
 
-  /// 暗色主题值（默认主题：近黑底 + 酸绿 #AEEF00）。
+  /// 暗色主题（Windows 11 Dark）。
   static const dark = AcidPalette(
-    acid: Color(0xFFAEEF00),
-    onAcid: Color(0xFF0A0B08),
-    bg: Color(0xFF0A0B08),
-    panel: Color(0xFF121410),
-    text: Color(0xFFE8F0E0),
-    textMuted: Color(0xFF8A9484),
-    chrome: Color(0xFFC8CCD4),
-    danger: Color(0xFFFF7A00),
+    acid: Color(0xFF4CC2FF),
+    onAcid: Color(0xFF003855),
+    bg: Color(0xFF202020),
+    panel: Color(0xFF2B2B2B),
+    text: Color(0xFFFFFFFF),
+    textMuted: Color(0xFF9E9E9E),
+    chrome: Color(0xFF3B3B3B),
+    danger: Color(0xFFFF99A4),
   );
 
-  /// 亮色主题值（纸白底 + 酸绿 #BFFF00）。
+  /// 亮色主题（Windows 11 Light）。
   static const light = AcidPalette(
-    acid: Color(0xFFBFFF00),
-    onAcid: Color(0xFF0C0E08),
-    bg: Color(0xFFF4F6F0),
-    panel: Color(0xFFFCFDF8),
-    text: Color(0xFF0C0E08),
-    textMuted: Color(0xFF5A6154),
-    chrome: Color(0xFFC8CCD4),
-    danger: Color(0xFFFF7A00),
+    acid: Color(0xFF0067C0),
+    onAcid: Color(0xFFFFFFFF),
+    bg: Color(0xFFF3F3F3),
+    panel: Color(0xFFFFFFFF),
+    text: Color(0xFF1A1A1A),
+    textMuted: Color(0xFF5D5D5D),
+    chrome: Color(0xFFE0E0E0),
+    danger: Color(0xFFC42B1C),
   );
+
+  /// 以系统强调色构造色板（Windows 11 跟随系统主题色）。
+  static AcidPalette withAccent(Brightness brightness, Color accent) {
+    final base = brightness == Brightness.dark ? dark : light;
+    final luminance = accent.computeLuminance();
+    final onAccent = luminance > 0.5 ? const Color(0xFF1A1A1A) : const Color(0xFFFFFFFF);
+    return base.copyWith(acid: accent, onAcid: onAccent);
+  }
 
   /// 快捷读取：主题未注册色板时（部分测试宿主）回退暗色值。
   static AcidPalette of(BuildContext context) =>
@@ -173,24 +174,34 @@ class AcidPalette extends ThemeExtension<AcidPalette> {
       Object.hash(acid, onAcid, bg, panel, text, textMuted, chrome, danger);
 }
 
-/// Fluent 生产主题：保留酸性绿品牌色，同时使用 Fluent 的控件、焦点、
-/// 对话框和信息条设计令牌。Material 版 [buildAcidTheme] 仅供旧的纯主题
-/// 单测和第三方编辑器依赖使用，应用壳不再使用它。
+/// 系统强调色（0xAARRGGBB）。非 Windows / 读取失败返回 null。
+Color? systemAccentColor({WindowsAppearanceReader? reader}) {
+  final r = reader ?? defaultAppearanceReader();
+  final value = r.readAccentColorValue();
+  if (value == null) return null;
+  return Color(value);
+}
+
+/// Fluent 生产主题：Fluent UI 控件 + Windows 11 色板 + 系统强调色。
 fluent.FluentThemeData buildFluentTheme(
   Brightness brightness, {
   Iterable<ThemeExtension<dynamic>> extraExtensions = const [],
+  Color? accent,
+  WindowsAppearanceReader? appearanceReader,
 }) {
-  final palette = brightness == Brightness.dark
-      ? AcidPalette.dark
-      : AcidPalette.light;
-  final accent = fluent.AccentColor.swatch({
-    'darkest': palette.acid.withValues(alpha: 0.72),
-    'darker': palette.acid.withValues(alpha: 0.82),
-    'dark': palette.acid.withValues(alpha: 0.92),
-    'normal': palette.acid,
-    'light': palette.acid.withValues(alpha: 0.94),
-    'lighter': palette.acid.withValues(alpha: 0.82),
-    'lightest': palette.acid.withValues(alpha: 0.68),
+  final resolvedAccent =
+      accent ??
+      systemAccentColor(reader: appearanceReader) ??
+      (brightness == Brightness.dark ? AcidPalette.dark.acid : AcidPalette.light.acid);
+  final palette = AcidPalette.withAccent(brightness, resolvedAccent);
+  final accentSwatch = fluent.AccentColor.swatch({
+    'darkest': Color.lerp(resolvedAccent, Colors.black, 0.28)!,
+    'darker': Color.lerp(resolvedAccent, Colors.black, 0.18)!,
+    'dark': Color.lerp(resolvedAccent, Colors.black, 0.08)!,
+    'normal': resolvedAccent,
+    'light': Color.lerp(resolvedAccent, Colors.white, 0.08)!,
+    'lighter': Color.lerp(resolvedAccent, Colors.white, 0.18)!,
+    'lightest': Color.lerp(resolvedAccent, Colors.white, 0.28)!,
   });
   final typography = fluent.Typography.fromBrightness(
     brightness: brightness,
@@ -247,7 +258,7 @@ fluent.FluentThemeData buildFluentTheme(
   }
   return fluent.FluentThemeData(
     brightness: brightness,
-    accentColor: accent,
+    accentColor: accentSwatch,
     typography: uiTypography,
     scaffoldBackgroundColor: palette.bg,
     micaBackgroundColor: palette.bg,
@@ -258,10 +269,10 @@ fluent.FluentThemeData buildFluentTheme(
     selectionColor: palette.acid.withValues(alpha: 0.36),
     extensions: extensions,
     dividerTheme: fluent.DividerThemeData(
-      decoration: BoxDecoration(color: palette.chrome.withValues(alpha: 0.2)),
+      decoration: BoxDecoration(color: palette.chrome),
     ),
-    infoBarTheme: fluent.InfoBarThemeData(
-      padding: const EdgeInsetsDirectional.all(12),
+    infoBarTheme: const fluent.InfoBarThemeData(
+      padding: EdgeInsetsDirectional.all(12),
     ),
   );
 }
@@ -287,6 +298,8 @@ class FluentThemeFallback extends StatelessWidget {
                       .extensions
                       .values ??
                   const [],
+              // 测试宿主无系统注册表：用默认 Win11 蓝，避免读宿主环境。
+              appearanceReader: NullAppearanceReader(),
             ),
             child: child,
           );
@@ -305,10 +318,7 @@ class FluentThemeFallback extends StatelessWidget {
   }
 }
 
-/// 酸性风格主题构建：light/dark 两套共用结构，色值取自 [AcidPalette]，
-/// 并注册 [AcidPalette] 与 [DiffColors] 两个 ThemeExtension。
-/// 全局字体为展示字体 Chakra Petch（中文回退见 [kFontFallbacks]），
-/// cfg 内容区由各组件显式指定 monospace。
+/// Material 主题构建（旧纯主题单测 / 第三方依赖），色值同 Win11 色板。
 ThemeData buildAcidTheme(Brightness brightness) {
   final p = brightness == Brightness.dark
       ? AcidPalette.dark
@@ -332,95 +342,23 @@ ThemeData buildAcidTheme(Brightness brightness) {
         surfaceContainerHighest: p.panel,
         surfaceTint: Colors.transparent,
         error: p.danger,
-        onError: p.onAcid,
-        outline: isDark
-            ? p.chrome.withValues(alpha: 0.38)
-            : p.chrome.withValues(alpha: 0.55),
-        outlineVariant: isDark
-            ? p.chrome.withValues(alpha: 0.16)
-            : p.chrome.withValues(alpha: 0.30),
+        onError: isDark ? const Color(0xFF1A1A1A) : p.onAcid,
+        outline: isDark ? p.chrome : p.textMuted.withValues(alpha: 0.4),
+        outlineVariant: p.chrome,
       );
   return ThemeData(
     useMaterial3: true,
     brightness: brightness,
     colorScheme: scheme,
     scaffoldBackgroundColor: p.bg,
+    primaryColor: p.acid,
+    cardColor: p.panel,
+    dividerColor: p.chrome,
     fontFamily: kFontUi,
     fontFamilyFallback: kFontFallbacks,
-    splashFactory: NoSplash.splashFactory,
-    // 酸性风格：选中行酸绿薄涂，焦点不再额外发光。
-    splashColor: Colors.transparent,
-    highlightColor: Colors.transparent,
-    extensions: <ThemeExtension<dynamic>>[
+    extensions: [
       p,
       brightness == Brightness.dark ? DiffColors.dark : DiffColors.light,
     ],
-    dividerTheme: DividerThemeData(
-      color: scheme.outlineVariant,
-      thickness: 1,
-      space: 1,
-    ),
-    listTileTheme: ListTileThemeData(
-      selectedTileColor: p.acid.withValues(alpha: 0.14),
-      selectedColor: p.text,
-      iconColor: p.textMuted,
-      dense: true,
-    ),
-    segmentedButtonTheme: SegmentedButtonThemeData(
-      style: ButtonStyle(
-        side: WidgetStatePropertyAll(BorderSide(color: scheme.outline)),
-        shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        ),
-        textStyle: const WidgetStatePropertyAll(
-          TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.5),
-        ),
-      ),
-      selectedIcon: const Icon(Icons.check),
-    ),
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: p.acid,
-        foregroundColor: p.onAcid,
-        shape: const RoundedRectangleBorder(),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
-      ),
-    ),
-    outlinedButtonTheme: OutlinedButtonThemeData(
-      style: OutlinedButton.styleFrom(
-        foregroundColor: p.acid,
-        side: BorderSide(color: p.acid, width: 1),
-        shape: const RoundedRectangleBorder(),
-      ),
-    ),
-    snackBarTheme: SnackBarThemeData(
-      backgroundColor: p.panel,
-      contentTextStyle: TextStyle(color: p.text),
-      behavior: SnackBarBehavior.floating,
-      shape: const RoundedRectangleBorder(),
-    ),
-    dialogTheme: DialogThemeData(
-      backgroundColor: p.panel,
-      shape: const RoundedRectangleBorder(),
-      titleTextStyle: TextStyle(
-        fontFamily: kFontDisplay,
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        color: p.text,
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      border: const OutlineInputBorder(),
-      focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: p.acid, width: 1.5),
-      ),
-    ),
-    tooltipTheme: TooltipThemeData(
-      decoration: BoxDecoration(
-        color: p.panel,
-        border: Border.all(color: scheme.outline),
-      ),
-      textStyle: TextStyle(color: p.text, fontSize: 12),
-    ),
   );
 }
